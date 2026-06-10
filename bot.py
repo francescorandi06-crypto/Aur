@@ -28,6 +28,98 @@ class TokyoHorizonBot(commands.Bot):
 
 bot = TokyoHorizonBot()
 
+# =============================================================================
+# POSIZIONI — aggiungi nuove ville/case qui sotto, una per riga.
+# Per aggiungere foto: copia i file nella cartella principale del bot e
+# inserisci i nomi dei file in "mappa" e "esterno". Usa None se non hai foto.
+# =============================================================================
+
+VILLE = [
+    {
+        "nome": "Villa di Lusso #1 — Zona Rockford Hills",
+        "mappa": "villa1_mappa.jpeg",
+        "esterno": "villa1_esterno.jpeg",
+    },
+    {
+        "nome": "Villa di Lusso #2 — Zona Vinewood Hills",
+        "mappa": "villa2_mappa.jpeg",
+        "esterno": "villa2_esterno.jpeg",
+    },
+    # {"nome": "Villa #3 — ...", "mappa": "villa3_mappa.jpeg", "esterno": "villa3_esterno.jpeg"},
+]
+
+CASE = [
+    {
+        "nome": "Appartamento Standard #1",
+        "mappa": None,      # sostituisci con "casa1_mappa.jpeg" quando hai la foto
+        "esterno": None,    # sostituisci con "casa1_esterno.jpeg" quando hai la foto
+    },
+    # {"nome": "Appartamento #2 — ...", "mappa": "casa2_mappa.jpeg", "esterno": "casa2_esterno.jpeg"},
+]
+
+# =============================================================================
+# OGGETTI CON RARITÀ — "rarità" è il peso: più basso = più raro.
+# Etichette: ✨ Leggendario (1-2) | 💜 Molto Raro (3-6) | 🟠 Raro (7-12)
+#            🟡 Non Comune (13-25) | 🔴 Comune (26+)
+# =============================================================================
+
+OGGETTI_VILLA = [
+    {"nome": "💎 Diamante Purissimo",        "valore": 45000, "rarità": 2},
+    {"nome": "👑 Lingotto d'Oro Massiccio",  "valore": 35000, "rarità": 4},
+    {"nome": "📿 Collana di Smeraldi",        "valore": 30000, "rarità": 7},
+    {"nome": "🖼️ Quadro Antico di Valore",   "valore": 25000, "rarità": 15},
+    {"nome": "⌚ Orologio Rolex Tempestato",  "valore": 20000, "rarità": 28},
+]
+
+OGGETTI_CASA = [
+    {"nome": "📿 Scatola di Gioielli d'Argento", "valore": 10000, "rarità": 4},
+    {"nome": "🏺 Vaso di Porcellana Pregiata",    "valore": 8000,  "rarità": 8},
+    {"nome": "💵 Contanti nascosti nel cassetto",  "valore": 6000,  "rarità": 18},
+    {"nome": "💻 Computer Portatile Gaming",       "valore": 5000,  "rarità": 30},
+    {"nome": "📺 Televisore Led 4K",               "valore": 4000,  "rarità": 42},
+]
+
+def etichetta_rarità(peso: int) -> str:
+    if peso <= 2:   return "✨ Leggendario"
+    if peso <= 6:   return "💜 Molto Raro"
+    if peso <= 12:  return "🟠 Raro"
+    if peso <= 25:  return "🟡 Non Comune"
+    return "🔴 Comune"
+
+def campiona_con_rarità(pool: list, k: int) -> list:
+    """Campiona k oggetti unici dal pool usando i pesi di rarità."""
+    disponibili = list(pool)
+    pesi = [o["rarità"] for o in disponibili]
+    scelti = []
+    for _ in range(k):
+        if not disponibili:
+            break
+        [scelto] = random.choices(disponibili, weights=pesi, k=1)
+        idx = disponibili.index(scelto)
+        scelti.append(scelto)
+        disponibili.pop(idx)
+        pesi.pop(idx)
+    return scelti
+
+def costruisci_pool(oggetti_scelti: list) -> tuple[list, str]:
+    """Restituisce (pool_finale, descrizione_embed) con percentuali basate sulla rarità."""
+    pesi = [o["rarità"] for o in oggetti_scelti]
+    somma = sum(pesi)
+    # Inverti: oggetto più raro ha MENO probabilità di estrazione
+    pesi_inv = [round((1 / p) * 100, 2) for p in pesi]
+    somma_inv = sum(pesi_inv)
+    pool = []
+    desc = ""
+    for i, ogg in enumerate(oggetti_scelti):
+        perc = round((pesi_inv[i] / somma_inv) * 100)
+        perc = max(1, perc)  # minimo 1%
+        o = ogg.copy()
+        o["percentuale"] = perc
+        pool.append(o)
+        label = etichetta_rarità(ogg["rarità"])
+        desc += f"• {ogg['nome']} {label} — `{perc}%` (Valore: `{ogg['valore']:,}€`)\n"
+    return pool, desc
+
 # --- DATABASE IN MEMORIA PER L'ECONOMIA ---
 economia = {}
 
@@ -156,104 +248,91 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
 
     # --- LOGICA VILLA ---
     if tipo_scelto == "villa":
-        oggetti_totali = [
-            {"nome": "💎 Diamante Purissimo", "valore": 45000},
-            {"nome": "👑 Lingotto d'Oro Massiccio", "valore": 35000},
-            {"nome": "🖼️ Quadro Antico di Valore", "valore": 25000},
-            {"nome": "⌚ Orologio Rolex Tempestato", "valore": 20000},
-            {"nome": "📿 Collana di Smeraldi", "valore": 30000}
-        ]
-        oggetti_azione = random.sample(oggetti_totali, k=random.randint(3, 4))
-        pesi_grezzi = [random.randint(10, 50) for _ in range(len(oggetti_azione))]
-        somma_pesi = sum(pesi_grezzi)
+        oggetti_scelti = campiona_con_rarità(OGGETTI_VILLA, k=random.randint(3, 4))
+        pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti)
+        valore_max = max(o["valore"] for o in oggetti_scelti)
 
-        descrizione_oggetti = ""
-        pool_finale = []
-        for i, ogg in enumerate(oggetti_azione):
-            percentuale_dinamica = round((pesi_grezzi[i] / somma_pesi) * 100)
-            ogg_aggiornato = ogg.copy()
-            ogg_aggiornato["percentuale"] = percentuale_dinamica
-            pool_finale.append(ogg_aggiornato)
-            descrizione_oggetti += f"• {ogg['nome']} - `{percentuale_dinamica}%` (Valore: {ogg['valore']:,}€)\n"
-
-        # Scelta casuale tra Villa 1 e Villa 2
-        villa_scelta = random.choice([1, 2])
-        if villa_scelta == 1:
-            file_mappa = discord.File("villa1_mappa.jpeg", filename="villa_mappa.jpeg")
-            file_esterno = discord.File("villa1_esterno.jpeg", filename="villa_esterno.jpeg")
-            nome_villa = "Villa di Lusso #1 — Zona Rockford Hills"
-        else:
-            file_mappa = discord.File("villa2_mappa.jpeg", filename="villa_mappa.jpeg")
-            file_esterno = discord.File("villa2_esterno.jpeg", filename="villa_esterno.jpeg")
-            nome_villa = "Villa di Lusso #2 — Zona Vinewood Hills"
+        location = random.choice(VILLE)
 
         embed = discord.Embed(
-            title=f"🏰 Furto Selezionato: {nome_villa}",
+            title=f"🏰 Furto Selezionato: {location['nome']}",
             description=(
                 "**INFORMAZIONI SUL COLPO OTTENUTE DAI SATELLITI**\n\n"
                 "**Scegli la modalità di infiltrazione:**\n"
                 "• 🪟 Forza la finestra sul retro\n"
                 "• 🚪 Forza la porta d'ingresso principale\n\n"
-                f"📦 **Merci preziose rilevate all'interno (Max 45.000€):\n**{descrizione_oggetti}\n"
+                f"📦 **Merci preziose rilevate all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
                 "🔑 **Oggetto richiesto:** 🪓 `Piede di Porco o Grimaldello`"
             ),
             color=discord.Color.purple()
         )
-        embed.set_image(url="attachment://villa_esterno.jpeg")
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
 
-        embed_mappa = discord.Embed(
-            description="📍 **Posizione sulla mappa**",
-            color=discord.Color.purple()
-        )
-        embed_mappa.set_image(url="attachment://villa_mappa.jpeg")
-
         view = ScassoButtons(interaction.user.id, "villa", pool_finale)
-        await interaction.followup.send(
-            embeds=[embed, embed_mappa],
-            files=[file_esterno, file_mappa],
-            view=view
-        )
+        files = []
+        embeds = []
+
+        if location["esterno"]:
+            file_esterno = discord.File(location["esterno"], filename="villa_esterno.jpeg")
+            files.append(file_esterno)
+            embed.set_image(url="attachment://villa_esterno.jpeg")
+        embeds.append(embed)
+
+        if location["mappa"]:
+            file_mappa = discord.File(location["mappa"], filename="villa_mappa.jpeg")
+            files.append(file_mappa)
+            embed_mappa = discord.Embed(
+                description="📍 **Posizione sulla mappa**",
+                color=discord.Color.purple()
+            )
+            embed_mappa.set_image(url="attachment://villa_mappa.jpeg")
+            embeds.append(embed_mappa)
+
+        await interaction.followup.send(embeds=embeds, files=files, view=view)
 
     # --- LOGICA CASA ---
     elif tipo_scelto == "casa":
-        oggetti_totali = [
-            {"nome": "📿 Scatola di Gioielli d'Argento", "valore": 10000},
-            {"nome": "🏺 Vaso di Porcellana", "valore": 8000},
-            {"nome": "💵 Contanti nascosti nel cassetto", "valore": 6000},
-            {"nome": "💻 Computer Portatile Gaming", "valore": 5000},
-            {"nome": "📺 Televisore Led 4K", "valore": 4000}
-        ]
-        oggetti_azione = random.sample(oggetti_totali, k=random.randint(3, 4))
-        pesi_grezzi = [random.randint(15, 60) for _ in range(len(oggetti_azione))]
-        somma_pesi = sum(pesi_grezzi)
+        oggetti_scelti = campiona_con_rarità(OGGETTI_CASA, k=random.randint(3, 4))
+        pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti)
+        valore_max = max(o["valore"] for o in oggetti_scelti)
 
-        descrizione_oggetti = ""
-        pool_finale = []
-        for i, ogg in enumerate(oggetti_azione):
-            percentuale_dinamica = round((pesi_grezzi[i] / somma_pesi) * 100)
-            ogg_aggiornato = ogg.copy()
-            ogg_aggiornato["percentuale"] = percentuale_dinamica
-            pool_finale.append(ogg_aggiornato)
-            descrizione_oggetti += f"• {ogg['nome']} - `{percentuale_dinamica}%` (Valore: {ogg['valore']:,}€)\n"
+        location = random.choice(CASE)
 
-        link_mappa_casa = "https://i.imgur.com/vaxK08B.png"
         embed = discord.Embed(
-            title="🏡 Furto Selezionato: Casa o Appartamento",
+            title=f"🏡 Furto Selezionato: {location['nome']}",
             description=(
                 "**SOPRALLUOGO EFFETTUATO. OBIETTIVO STANDARD.**\n\n"
                 "**Scegli come entrare:**\n"
                 "• 🪟 Forza la finestra\n"
                 "• 🚪 Forza la porta\n\n"
-                f"📦 **Beni comuni individuati all'interno (Max 10.000€):\n**{descrizione_oggetti}\n"
+                f"📦 **Beni comuni individuati all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
                 "🔑 **Strumento richiesto:** 🛠️ `Cacciavite o Piede di Porco`"
             ),
             color=discord.Color.dark_green()
         )
-        embed.set_image(url=link_mappa_casa)
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
+
         view = ScassoButtons(interaction.user.id, "casa", pool_finale)
-        await interaction.followup.send(embed=embed, view=view)
+        files = []
+        embeds = []
+
+        if location["esterno"]:
+            file_esterno = discord.File(location["esterno"], filename="casa_esterno.jpeg")
+            files.append(file_esterno)
+            embed.set_image(url="attachment://casa_esterno.jpeg")
+        embeds.append(embed)
+
+        if location["mappa"]:
+            file_mappa = discord.File(location["mappa"], filename="casa_mappa.jpeg")
+            files.append(file_mappa)
+            embed_mappa = discord.Embed(
+                description="📍 **Posizione sulla mappa**",
+                color=discord.Color.dark_green()
+            )
+            embed_mappa.set_image(url="attachment://casa_mappa.jpeg")
+            embeds.append(embed_mappa)
+
+        await interaction.followup.send(embeds=embeds, files=files, view=view)
 
     # --- LOGICA MACCHINA ---
     elif tipo_scelto == "macchina":
