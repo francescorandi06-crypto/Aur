@@ -159,9 +159,19 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             pool_finale.append(ogg_aggiornato)
             descrizione_oggetti += f"• {ogg['nome']} - `{percentuale_dinamica}%` (Valore: {ogg['valore']:,}€)\n"
 
-        link_mappa_villa = "https://i.imgur.com/vaxK08B.png"
+        # Scelta casuale tra Villa 1 e Villa 2
+        villa_scelta = random.choice([1, 2])
+        if villa_scelta == 1:
+            file_mappa = discord.File("villa1_mappa.jpeg", filename="villa_mappa.jpeg")
+            file_esterno = discord.File("villa1_esterno.jpeg", filename="villa_esterno.jpeg")
+            nome_villa = "Villa di Lusso #1 — Zona Rockford Hills"
+        else:
+            file_mappa = discord.File("villa2_mappa.jpeg", filename="villa_mappa.jpeg")
+            file_esterno = discord.File("villa2_esterno.jpeg", filename="villa_esterno.jpeg")
+            nome_villa = "Villa di Lusso #2 — Zona Vinewood Hills"
+
         embed = discord.Embed(
-            title="🏰 Furto Selezionato: Villa di Lusso",
+            title=f"🏰 Furto Selezionato: {nome_villa}",
             description=(
                 "**INFORMAZIONI SUL COLPO OTTENUTE DAI SATELLITI**\n\n"
                 "**Scegli la modalità di infiltrazione:**\n"
@@ -172,10 +182,21 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             ),
             color=discord.Color.purple()
         )
-        embed.set_image(url=link_mappa_villa)
+        embed.set_image(url="attachment://villa_esterno.jpeg")
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
+
+        embed_mappa = discord.Embed(
+            description="📍 **Posizione sulla mappa**",
+            color=discord.Color.purple()
+        )
+        embed_mappa.set_image(url="attachment://villa_mappa.jpeg")
+
         view = ScassoButtons(interaction.user.id, "villa", pool_finale)
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.response.send_message(
+            embeds=[embed, embed_mappa],
+            files=[file_esterno, file_mappa],
+            view=view
+        )
 
     # --- LOGICA CASA ---
     elif tipo_scelto == "casa":
