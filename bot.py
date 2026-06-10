@@ -126,6 +126,20 @@ class VeicoloButtons(discord.ui.View):
         await interaction.response.send_message(embed=embed_successo)
 
 
+# --- GESTORE ERRORI GLOBALE ---
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    print(f"[ERRORE COMANDO] {type(error).__name__}: {error}")
+    msg = "❌ Si è verificato un errore interno. Riprova tra qualche secondo."
+    try:
+        if interaction.response.is_done():
+            await interaction.followup.send(msg, ephemeral=True)
+        else:
+            await interaction.response.send_message(msg, ephemeral=True)
+    except Exception as e:
+        print(f"[ERRORE] Impossibile inviare messaggio di errore: {e}")
+
+
 # --- COMANDO UNICO /FURTO CON PARAMETRO TIPO ---
 @bot.tree.command(name="furto", description="Seleziona il tipo di furto da effettuare nel server")
 @app_commands.describe(tipo="Seleziona il tipo di furto (Villa, Casa o Macchina)")
@@ -135,6 +149,9 @@ class VeicoloButtons(discord.ui.View):
     app_commands.Choice(name="Macchina", value="macchina")
 ])
 async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
+    # Defer subito: dice a Discord "sto elaborando" ed evita il timeout di 3s
+    await interaction.response.defer()
+
     tipo_scelto = tipo.value
 
     # --- LOGICA VILLA ---
@@ -192,7 +209,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         embed_mappa.set_image(url="attachment://villa_mappa.jpeg")
 
         view = ScassoButtons(interaction.user.id, "villa", pool_finale)
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embeds=[embed, embed_mappa],
             files=[file_esterno, file_mappa],
             view=view
@@ -236,7 +253,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         embed.set_image(url=link_mappa_casa)
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
         view = ScassoButtons(interaction.user.id, "casa", pool_finale)
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.followup.send(embed=embed, view=view)
 
     # --- LOGICA MACCHINA ---
     elif tipo_scelto == "macchina":
@@ -285,7 +302,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
 
         view = VeicoloButtons(interaction.user.id, guadagno, destinazione_scelta)
-        await interaction.response.send_message(embed=embed, view=view)
+        await interaction.followup.send(embed=embed, view=view)
 
         await asyncio.sleep(600)
         if not view.consegnato:
