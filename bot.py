@@ -4,6 +4,24 @@ from discord import app_commands
 import random
 import asyncio
 import os
+# --- AGGIUNTA PER IL KEEP ALIVE ---
+from flask import Flask
+from threading import Thread
+
+# Configurazione mini-server finto per Render e UptimeRobot
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Il bot è vivo!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.start()
+# ----------------------------------
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -45,22 +63,18 @@ VILLE = [
         "mappa": "villa2_mappa.jpeg",
         "esterno": "villa2_esterno.jpeg",
     },
-    # {"nome": "Villa #3 — ...", "mappa": "villa3_mappa.jpeg", "esterno": "villa3_esterno.jpeg"},
 ]
 
 CASE = [
     {
         "nome": "Appartamento Standard #1",
-        "mappa": None,      # sostituisci con "casa1_mappa.jpeg" quando hai la foto
-        "esterno": None,    # sostituisci con "casa1_esterno.jpeg" quando hai la foto
+        "mappa": None,      
+        "esterno": None,    
     },
-    # {"nome": "Appartamento #2 — ...", "mappa": "casa2_mappa.jpeg", "esterno": "casa2_esterno.jpeg"},
 ]
 
 # =============================================================================
 # OGGETTI CON RARITÀ — "rarità" è il peso: più basso = più raro.
-# Etichette: ✨ Leggendario (1-2) | 💜 Molto Raro (3-6) | 🟠 Raro (7-12)
-#            🟡 Non Comune (13-25) | 🔴 Comune (26+)
 # =============================================================================
 
 OGGETTI_VILLA = [
@@ -87,7 +101,6 @@ def etichetta_rarità(peso: int) -> str:
     return "🔴 Comune"
 
 def campiona_con_rarità(pool: list, k: int) -> list:
-    """Campiona k oggetti unici dal pool usando i pesi di rarità."""
     disponibili = list(pool)
     pesi = [o["rarità"] for o in disponibili]
     scelti = []
@@ -102,17 +115,15 @@ def campiona_con_rarità(pool: list, k: int) -> list:
     return scelti
 
 def costruisci_pool(oggetti_scelti: list) -> tuple[list, str]:
-    """Restituisce (pool_finale, descrizione_embed) con percentuali basate sulla rarità."""
     pesi = [o["rarità"] for o in oggetti_scelti]
     somma = sum(pesi)
-    # Inverti: oggetto più raro ha MENO probabilità di estrazione
     pesi_inv = [round((1 / p) * 100, 2) for p in pesi]
     somma_inv = sum(pesi_inv)
     pool = []
     desc = ""
     for i, ogg in enumerate(oggetti_scelti):
         perc = round((pesi_inv[i] / somma_inv) * 100)
-        perc = max(1, perc)  # minimo 1%
+        perc = max(1, perc)  
         o = ogg.copy()
         o["percentuale"] = perc
         pool.append(o)
@@ -232,7 +243,7 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         print(f"[ERRORE] Impossibile inviare messaggio di errore: {e}")
 
 
-# --- COMANDO UNICO /FURTO CON PARAMETRO TIPO ---
+# --- COMANDO UNICO /FURTO ---
 @bot.tree.command(name="furto", description="Seleziona il tipo di furto da effettuare nel server")
 @app_commands.describe(tipo="Seleziona il tipo di furto (Villa, Casa o Macchina)")
 @app_commands.choices(tipo=[
@@ -241,17 +252,13 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
     app_commands.Choice(name="Macchina", value="macchina")
 ])
 async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
-    # Defer subito: dice a Discord "sto elaborando" ed evita il timeout di 3s
     await interaction.response.defer()
-
     tipo_scelto = tipo.value
 
-    # --- LOGICA VILLA ---
     if tipo_scelto == "villa":
         oggetti_scelti = campiona_con_rarità(OGGETTI_VILLA, k=random.randint(3, 4))
         pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti)
         valore_max = max(o["valore"] for o in oggetti_scelti)
-
         location = random.choice(VILLE)
 
         embed = discord.Embed(
@@ -290,12 +297,10 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
 
         await interaction.followup.send(embeds=embeds, files=files, view=view)
 
-    # --- LOGICA CASA ---
     elif tipo_scelto == "casa":
         oggetti_scelti = campiona_con_rarità(OGGETTI_CASA, k=random.randint(3, 4))
         pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti)
         valore_max = max(o["valore"] for o in oggetti_scelti)
-
         location = random.choice(CASE)
 
         embed = discord.Embed(
@@ -334,20 +339,14 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
 
         await interaction.followup.send(embeds=embeds, files=files, view=view)
 
-    # --- LOGICA MACCHINA ---
     elif tipo_scelto == "macchina":
         rarita_scelta = random.choice(["Bassa", "Media", "Alta"])
         destinazioni_mappa = [
-            "Sfasciacarrozze di Sandy Shores (Desert)",
-            "Discarica Centrale di South Los Santos",
-            "Molo di Carico dei Container (Porto di LS)",
-            "Chop Shop clandestino di Paleto Bay",
-            "Garage Segreto a El Burro Heights",
-            "Rimessa Industriale di Cypress Flats",
-            "Officina Meccanica di Harmony (Route 68)",
-            "Parcheggio Sotterraneo Clienti Privati (Richman)",
-            "Hangar dell'Esportatore a Grapeseed",
-            "Pontile di Contrabbando a Chumash"
+            "Sfasciacarrozze di Sandy Shores (Desert)", "Discarica Centrale di South Los Santos",
+            "Molo di Carico dei Container (Porto di LS)", "Chop Shop clandestino di Paleto Bay",
+            "Garage Segreto a El Burro Heights", "Rimessa Industriale di Cypress Flats",
+            "Officina Meccanica di Harmony (Route 68)", "Parcheggio Sotterraneo Clienti Privati (Richman)",
+            "Hangar dell'Esportatore a Grapeseed", "Pontile di Contrabbando a Chumash"
         ]
         destinazione_scelta = random.choice(destinazioni_mappa)
 
@@ -387,10 +386,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         if not view.consegnato:
             embed_fallimento = discord.Embed(
                 title="❌ TEMPO SCADUTO - AZIONE FALLITA",
-                description=(
-                    f"Il timer di 10 minuti è scaduto prima che potessi consegnare il veicolo `{veicolo}`.\n"
-                    f"Nessun compenso accreditato."
-                ),
+                description=f"Il timer di 10 minuti è scaduto prima che potessi consegnare il veicolo `{veicolo}`.",
                 color=discord.Color.red()
             )
             embed_fallimento.set_footer(text="Tokyo Horizon RP | Sistema Furto")
@@ -398,7 +394,6 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
                 await interaction.edit_original_response(embed=embed_fallimento, view=None)
             except Exception:
                 pass
-
 
 # --- COMANDO /BILANCIO ---
 @bot.tree.command(name="bilancio", description="Verifica il tuo conto corrente e il contante in tasca")
@@ -415,8 +410,7 @@ async def bilancio(interaction: discord.Interaction):
     embed.set_footer(text="Tokyo Horizon RP | Sistema Economia")
     await interaction.response.send_message(embed=embed)
 
-
-# --- COOLDOWN DEPOSITA/PRELEVA (60 secondi) ---
+# --- COOLDOWN E ALTRI COMANDI BANCA ---
 cooldown_banca = {}
 
 def controlla_cooldown(user_id: int, azione: str, secondi: int = 60):
@@ -429,167 +423,64 @@ def controlla_cooldown(user_id: int, azione: str, secondi: int = 60):
     cooldown_banca[chiave] = ora
     return 0
 
-
-# --- COMANDO /DEPOSITA ---
 @bot.tree.command(name="deposita", description="Deposita contanti dal portafoglio alla banca")
-@app_commands.describe(importo="Importo in euro da depositare (es. 5000)")
+@app_commands.describe(importo="Importo in euro da depositare")
 async def deposita(interaction: discord.Interaction, importo: int):
     attesa = controlla_cooldown(interaction.user.id, "deposita")
     if attesa > 0:
-        embed_cd = discord.Embed(
-            title="⏳ Operazione non disponibile",
-            description=f"Devi aspettare ancora **{attesa} secondi** prima di poter depositare di nuovo.",
-            color=discord.Color.orange()
-        )
-        embed_cd.set_footer(text="Tokyo Horizon RP | Maze Bank")
-        await interaction.response.send_message(embed=embed_cd, ephemeral=True)
+        await interaction.response.send_message(f"⏳ Devi aspettare ancora **{attesa} secondi**.", ephemeral=True)
         return
-
     if importo <= 0:
         await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
         return
-
     bil = get_balance(interaction.user.id)
     if importo > bil["portafoglio"]:
-        embed_err = discord.Embed(
-            title="❌ Fondi insufficienti",
-            description=(
-                f"Non hai abbastanza contanti in tasca.\n\n"
-                f"💵 **Contanti disponibili:** `{bil['portafoglio']:,}€`\n"
-                f"❌ **Importo richiesto:** `{importo:,}€`"
-            ),
-            color=discord.Color.red()
-        )
-        embed_err.set_footer(text="Tokyo Horizon RP | Maze Bank")
-        await interaction.response.send_message(embed=embed_err, ephemeral=True)
+        await interaction.response.send_message("❌ Non hai abbastanza contanti in tasca.", ephemeral=True)
         return
-
     bil["portafoglio"] -= importo
     bil["banca"] += importo
+    await interaction.response.send_message(f"🏛️ Depositati con successo **`{importo:,}€`**.")
 
-    embed = discord.Embed(
-        title="🏛️ Deposito Effettuato — Maze Bank",
-        description=(
-            f"Hai depositato con successo **`{importo:,}€`** sul tuo conto.\n\n"
-            f"💵 **Contanti in Tasca:** `{bil['portafoglio']:,}€`\n"
-            f"🏛️ **Deposito Bancario:** `{bil['banca']:,}€`"
-        ),
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="Tokyo Horizon RP | Maze Bank • Prossima operazione tra 60s")
-    await interaction.response.send_message(embed=embed)
-
-
-# --- COMANDO /PRELEVA ---
 @bot.tree.command(name="preleva", description="Preleva contanti dalla banca al portafoglio")
-@app_commands.describe(importo="Importo in euro da prelevare (es. 5000)")
+@app_commands.describe(importo="Importo in euro da prelevare")
 async def preleva(interaction: discord.Interaction, importo: int):
     attesa = controlla_cooldown(interaction.user.id, "preleva")
     if attesa > 0:
-        embed_cd = discord.Embed(
-            title="⏳ Operazione non disponibile",
-            description=f"Devi aspettare ancora **{attesa} secondi** prima di poter prelevare di nuovo.",
-            color=discord.Color.orange()
-        )
-        embed_cd.set_footer(text="Tokyo Horizon RP | Maze Bank")
-        await interaction.response.send_message(embed=embed_cd, ephemeral=True)
+        await interaction.response.send_message(f"⏳ Devi aspettare ancora **{attesa} secondi**.", ephemeral=True)
         return
-
     if importo <= 0:
         await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
         return
-
     bil = get_balance(interaction.user.id)
     if importo > bil["banca"]:
-        embed_err = discord.Embed(
-            title="❌ Fondi insufficienti",
-            description=(
-                f"Non hai abbastanza soldi in banca.\n\n"
-                f"🏛️ **Saldo Bancario:** `{bil['banca']:,}€`\n"
-                f"❌ **Importo richiesto:** `{importo:,}€`"
-            ),
-            color=discord.Color.red()
-        )
-        embed_err.set_footer(text="Tokyo Horizon RP | Maze Bank")
-        await interaction.response.send_message(embed=embed_err, ephemeral=True)
+        await interaction.response.send_message("❌ Non hai abbastanza soldi in banca.", ephemeral=True)
         return
-
     bil["banca"] -= importo
     bil["portafoglio"] += importo
+    await interaction.response.send_message(f"💵 Prelevati con successo **`{importo:,}€`**.")
 
-    embed = discord.Embed(
-        title="💵 Prelievo Effettuato — Maze Bank",
-        description=(
-            f"Hai prelevato con successo **`{importo:,}€`** dal tuo conto.\n\n"
-            f"💵 **Contanti in Tasca:** `{bil['portafoglio']:,}€`\n"
-            f"🏛️ **Deposito Bancario:** `{bil['banca']:,}€`"
-        ),
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="Tokyo Horizon RP | Maze Bank • Prossima operazione tra 60s")
-    await interaction.response.send_message(embed=embed)
-
-
-# --- COMANDO /PAGA ---
 @bot.tree.command(name="paga", description="Paga un altro giocatore con i contanti in tasca")
-@app_commands.describe(
-    utente="Il giocatore a cui vuoi pagare",
-    importo="Importo in euro da pagare (es. 1000)"
-)
+@app_commands.describe(utente="Il giocatore a cui vuoi pagare", importo="Importo in euro da pagare")
 async def paga(interaction: discord.Interaction, utente: discord.Member, importo: int):
     mittente = interaction.user
-
-    if utente.id == mittente.id:
-        await interaction.response.send_message("❌ Non puoi pagare te stesso.", ephemeral=True)
+    if utente.id == mittente.id or utente.bot or importo <= 0:
+        await interaction.response.send_message("❌ Transazione non valida.", ephemeral=True)
         return
-
-    if utente.bot:
-        await interaction.response.send_message("❌ Non puoi pagare un bot.", ephemeral=True)
-        return
-
-    if importo <= 0:
-        await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
-        return
-
     bil_mittente = get_balance(mittente.id)
     if importo > bil_mittente["portafoglio"]:
-        embed_err = discord.Embed(
-            title="❌ Contanti insufficienti",
-            description=(
-                f"Non hai abbastanza contanti **in tasca** per questa transazione.\n\n"
-                f"💵 **Contanti disponibili:** `{bil_mittente['portafoglio']:,}€`\n"
-                f"❌ **Importo richiesto:** `{importo:,}€`\n\n"
-                f"Usa `/preleva` per prelevare fondi dalla banca."
-            ),
-            color=discord.Color.red()
-        )
-        embed_err.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-        await interaction.response.send_message(embed=embed_err, ephemeral=True)
+        await interaction.response.send_message("❌ Contanti insufficienti in tasca.", ephemeral=True)
         return
-
     bil_mittente["portafoglio"] -= importo
     bil_destinatario = get_balance(utente.id)
     bil_destinatario["portafoglio"] += importo
+    await interaction.response.send_message(f"💸 Hai pagato a {utente.mention} l'importo di `{importo:,}€`.")
 
-    embed = discord.Embed(
-        title="💸 Pagamento Effettuato",
-        description=(
-            f"{mittente.mention} ha pagato {utente.mention}\n\n"
-            f"💵 **Importo Trasferito:** `{importo:,}€`\n\n"
-            f"**📤 {mittente.display_name}**\n"
-            f"└ Contanti rimasti: `{bil_mittente['portafoglio']:,}€`\n\n"
-            f"**📥 {utente.display_name}**\n"
-            f"└ Contanti ricevuti: `{bil_destinatario['portafoglio']:,}€` in tasca"
-        ),
-        color=discord.Color.gold()
-    )
-    embed.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-    await interaction.response.send_message(embed=embed)
-
-
-# --- AVVIO BOT ---
+# --- AVVIO BOT CON FUNZIONE KEEP ALIVE INCLUSA ---
 token = os.environ.get("DISCORD_TOKEN")
 if not token:
     print("❌ ERRORE: Il token Discord non è stato trovato. Imposta la variabile DISCORD_TOKEN.")
 else:
+    keep_alive()
     bot.run(token)
+
+
