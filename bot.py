@@ -337,6 +337,120 @@ async def bilancio(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 
+# --- COOLDOWN DEPOSITA/PRELEVA (60 secondi) ---
+cooldown_banca = {}
+
+def controlla_cooldown(user_id: int, azione: str, secondi: int = 60):
+    chiave = f"{user_id}_{azione}"
+    ora = asyncio.get_event_loop().time()
+    if chiave in cooldown_banca:
+        trascorso = ora - cooldown_banca[chiave]
+        if trascorso < secondi:
+            return int(secondi - trascorso)
+    cooldown_banca[chiave] = ora
+    return 0
+
+
+# --- COMANDO /DEPOSITA ---
+@bot.tree.command(name="deposita", description="Deposita contanti dal portafoglio alla banca")
+@app_commands.describe(importo="Importo in euro da depositare (es. 5000)")
+async def deposita(interaction: discord.Interaction, importo: int):
+    attesa = controlla_cooldown(interaction.user.id, "deposita")
+    if attesa > 0:
+        embed_cd = discord.Embed(
+            title="⏳ Operazione non disponibile",
+            description=f"Devi aspettare ancora **{attesa} secondi** prima di poter depositare di nuovo.",
+            color=discord.Color.orange()
+        )
+        embed_cd.set_footer(text="Tokyo Horizon RP | Maze Bank")
+        await interaction.response.send_message(embed=embed_cd, ephemeral=True)
+        return
+
+    if importo <= 0:
+        await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
+        return
+
+    bil = get_balance(interaction.user.id)
+    if importo > bil["portafoglio"]:
+        embed_err = discord.Embed(
+            title="❌ Fondi insufficienti",
+            description=(
+                f"Non hai abbastanza contanti in tasca.\n\n"
+                f"💵 **Contanti disponibili:** `{bil['portafoglio']:,}€`\n"
+                f"❌ **Importo richiesto:** `{importo:,}€`"
+            ),
+            color=discord.Color.red()
+        )
+        embed_err.set_footer(text="Tokyo Horizon RP | Maze Bank")
+        await interaction.response.send_message(embed=embed_err, ephemeral=True)
+        return
+
+    bil["portafoglio"] -= importo
+    bil["banca"] += importo
+
+    embed = discord.Embed(
+        title="🏛️ Deposito Effettuato — Maze Bank",
+        description=(
+            f"Hai depositato con successo **`{importo:,}€`** sul tuo conto.\n\n"
+            f"💵 **Contanti in Tasca:** `{bil['portafoglio']:,}€`\n"
+            f"🏛️ **Deposito Bancario:** `{bil['banca']:,}€`"
+        ),
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Maze Bank • Prossima operazione tra 60s")
+    await interaction.response.send_message(embed=embed)
+
+
+# --- COMANDO /PRELEVA ---
+@bot.tree.command(name="preleva", description="Preleva contanti dalla banca al portafoglio")
+@app_commands.describe(importo="Importo in euro da prelevare (es. 5000)")
+async def preleva(interaction: discord.Interaction, importo: int):
+    attesa = controlla_cooldown(interaction.user.id, "preleva")
+    if attesa > 0:
+        embed_cd = discord.Embed(
+            title="⏳ Operazione non disponibile",
+            description=f"Devi aspettare ancora **{attesa} secondi** prima di poter prelevare di nuovo.",
+            color=discord.Color.orange()
+        )
+        embed_cd.set_footer(text="Tokyo Horizon RP | Maze Bank")
+        await interaction.response.send_message(embed=embed_cd, ephemeral=True)
+        return
+
+    if importo <= 0:
+        await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
+        return
+
+    bil = get_balance(interaction.user.id)
+    if importo > bil["banca"]:
+        embed_err = discord.Embed(
+            title="❌ Fondi insufficienti",
+            description=(
+                f"Non hai abbastanza soldi in banca.\n\n"
+                f"🏛️ **Saldo Bancario:** `{bil['banca']:,}€`\n"
+                f"❌ **Importo richiesto:** `{importo:,}€`"
+            ),
+            color=discord.Color.red()
+        )
+        embed_err.set_footer(text="Tokyo Horizon RP | Maze Bank")
+        await interaction.response.send_message(embed=embed_err, ephemeral=True)
+        return
+
+    bil["banca"] -= importo
+    bil["portafoglio"] += importo
+
+    embed = discord.Embed(
+        title="💵 Prelievo Effettuato — Maze Bank",
+        description=(
+            f"Hai prelevato con successo **`{importo:,}€`** dal tuo conto.\n\n"
+            f"💵 **Contanti in Tasca:** `{bil['portafoglio']:,}€`\n"
+            f"🏛️ **Deposito Bancario:** `{bil['banca']:,}€`"
+        ),
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Maze Bank • Prossima operazione tra 60s")
+    await interaction.response.send_message(embed=embed)
+
+
 # --- AVVIO BOT ---
 token = os.environ.get("DISCORD_TOKEN")
 if not token:
