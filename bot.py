@@ -530,6 +530,63 @@ async def preleva(interaction: discord.Interaction, importo: int):
     await interaction.response.send_message(embed=embed)
 
 
+# --- COMANDO /PAGA ---
+@bot.tree.command(name="paga", description="Paga un altro giocatore con i contanti in tasca")
+@app_commands.describe(
+    utente="Il giocatore a cui vuoi pagare",
+    importo="Importo in euro da pagare (es. 1000)"
+)
+async def paga(interaction: discord.Interaction, utente: discord.Member, importo: int):
+    mittente = interaction.user
+
+    if utente.id == mittente.id:
+        await interaction.response.send_message("❌ Non puoi pagare te stesso.", ephemeral=True)
+        return
+
+    if utente.bot:
+        await interaction.response.send_message("❌ Non puoi pagare un bot.", ephemeral=True)
+        return
+
+    if importo <= 0:
+        await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
+        return
+
+    bil_mittente = get_balance(mittente.id)
+    if importo > bil_mittente["portafoglio"]:
+        embed_err = discord.Embed(
+            title="❌ Contanti insufficienti",
+            description=(
+                f"Non hai abbastanza contanti **in tasca** per questa transazione.\n\n"
+                f"💵 **Contanti disponibili:** `{bil_mittente['portafoglio']:,}€`\n"
+                f"❌ **Importo richiesto:** `{importo:,}€`\n\n"
+                f"Usa `/preleva` per prelevare fondi dalla banca."
+            ),
+            color=discord.Color.red()
+        )
+        embed_err.set_footer(text="Tokyo Horizon RP | Sistema Economia")
+        await interaction.response.send_message(embed=embed_err, ephemeral=True)
+        return
+
+    bil_mittente["portafoglio"] -= importo
+    bil_destinatario = get_balance(utente.id)
+    bil_destinatario["portafoglio"] += importo
+
+    embed = discord.Embed(
+        title="💸 Pagamento Effettuato",
+        description=(
+            f"{mittente.mention} ha pagato {utente.mention}\n\n"
+            f"💵 **Importo Trasferito:** `{importo:,}€`\n\n"
+            f"**📤 {mittente.display_name}**\n"
+            f"└ Contanti rimasti: `{bil_mittente['portafoglio']:,}€`\n\n"
+            f"**📥 {utente.display_name}**\n"
+            f"└ Contanti ricevuti: `{bil_destinatario['portafoglio']:,}€` in tasca"
+        ),
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Sistema Economia")
+    await interaction.response.send_message(embed=embed)
+
+
 # --- AVVIO BOT ---
 token = os.environ.get("DISCORD_TOKEN")
 if not token:
