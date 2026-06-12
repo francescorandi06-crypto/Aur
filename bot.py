@@ -875,7 +875,8 @@ async def inventario_cmd(interaction: discord.Interaction):
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
+    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
+    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
@@ -906,7 +907,8 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
 ])
 async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
+    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
+    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
@@ -960,7 +962,8 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
 ])
 async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
+    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
+    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
@@ -1012,7 +1015,8 @@ async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: 
 @bot.tree.command(name="backup", description="[MOD] Scarica il file di salvataggio completo del bot")
 async def backup(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
+    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
+    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
