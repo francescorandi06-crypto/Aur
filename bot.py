@@ -215,11 +215,25 @@ class ScassoButtons(discord.ui.View):
                 embed_vittoria.set_footer(text="Tokyo Horizon RP | Sistema Economia")
                 await interaction.followup.send(embed=embed_vittoria)
             else:
+                penale = 2000 if self.tipo_furto == "villa" else 1000
+                bilancio = get_balance(self.autore_id)
+                bilancio_precedente = bilancio["portafoglio"] + bilancio["banca"]
+                sottrazione = min(penale, bilancio["portafoglio"] + bilancio["banca"])
+                if bilancio["portafoglio"] >= penale:
+                    bilancio["portafoglio"] -= penale
+                elif bilancio["portafoglio"] > 0:
+                    resto = penale - bilancio["portafoglio"]
+                    bilancio["portafoglio"] = 0
+                    bilancio["banca"] = max(0, bilancio["banca"] - resto)
+                else:
+                    bilancio["banca"] = max(0, bilancio["banca"] - penale)
+
                 embed_fallito = discord.Embed(
                     title=f"❌ FURTO IN {self.tipo_furto.upper()} FALLITO!",
                     description=(
-                        f"L'accesso **{accesso['label']}** non è riuscito!\n\n"
-                        f"⚠️ Sei stato scoperto o hai dovuto abbandonare il colpo. Nessun guadagno."
+                        f"L'accesso **{accesso['label']}** non è riuscito! Sei stato scoperto!\n\n"
+                        f"🚑 **Spese Ospedaliere / Multa:** `-{penale:,}€` scalati dal tuo conto.\n"
+                        f"⚠️ Stai più attento la prossima volta."
                     ),
                     color=discord.Color.red()
                 )
@@ -452,6 +466,41 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
                 await interaction.edit_original_response(embed=embed_fallimento, view=None)
             except Exception:
                 pass
+
+
+# --- COMANDO /CLASSIFICA ---
+@bot.tree.command(name="classifica", description="Mostra i giocatori più ricchi del server")
+async def classifica(interaction: discord.Interaction):
+    if not economia:
+        await interaction.response.send_message("📊 Nessun dato disponibile. Nessuno ha ancora usato il sistema economia!", ephemeral=True)
+        return
+
+    classifica_list = []
+    for user_id, dati in economia.items():
+        totale = dati["portafoglio"] + dati["banca"]
+        classifica_list.append((user_id, totale, dati["portafoglio"], dati["banca"]))
+
+    classifica_list.sort(key=lambda x: x[1], reverse=True)
+    top = classifica_list[:10]
+
+    medaglie = ["🥇", "🥈", "🥉"]
+    descrizione = ""
+    for i, (user_id, totale, portafoglio, banca) in enumerate(top):
+        try:
+            member = interaction.guild.get_member(user_id)
+            nome = member.display_name if member else f"Utente #{user_id}"
+        except Exception:
+            nome = f"Utente #{user_id}"
+        posizione = medaglie[i] if i < 3 else f"`#{i+1}`"
+        descrizione += f"{posizione} **{nome}** — `{totale:,}€`\n"
+
+    embed = discord.Embed(
+        title="🏆 Classifica Ricchezza — Tokyo Horizon RP",
+        description=descrizione,
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Sistema Economia")
+    await interaction.response.send_message(embed=embed)
 
 
 # --- COMANDO /BILANCIO ---
