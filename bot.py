@@ -4,13 +4,9 @@ from discord import app_commands
 import random
 import asyncio
 import os
-import json
-import time
-# --- AGGIUNTA PER IL KEEP ALIVE ---
 from flask import Flask
 from threading import Thread
 
-# Configurazione mini-server finto per Render e UptimeRobot
 app = Flask('')
 
 @app.route('/')
@@ -18,12 +14,11 @@ def home():
     return "Il bot è vivo!"
 
 def run_flask():
-    app.run(host='0.0.0.0', port=8081)
+    app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
     t = Thread(target=run_flask)
     t.start()
-# ----------------------------------
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -49,16 +44,24 @@ class TokyoHorizonBot(commands.Bot):
 bot = TokyoHorizonBot()
 
 # =============================================================================
-# POSIZIONI — aggiungi nuove ville/case qui sotto, una per riga.
-# Per aggiungere foto: copia i file nella cartella principale del bot e
-# inserisci i nomi dei file in "mappa" e "esterno". Usa None se non hai foto.
+# VILLE — aggiungi nuove ville qui sotto.
 # =============================================================================
 
 VILLE = [
     {
-        "nome": "Villa di Lusso — Zona Richman",
+        "nome": "Villa di Lusso #1 — Zona Rockford Hills",
+        "mappa": "villa1_mappa.jpeg",
+        "esterno": "villa1_esterno.jpeg",
+    },
+    {
+        "nome": "Villa di Lusso #2 — Zona Tongva Hills",
         "mappa": None,
-        "esterno": "villa_lusso_esterno.png",
+        "esterno": "villa2_esterno.png",
+    },
+    {
+        "nome": "Villa di Lusso #3 — Zona Vinewood Hills",
+        "mappa": None,
+        "esterno": "villa3_esterno.png",
     },
 ]
 
@@ -71,25 +74,7 @@ CASE = [
 ]
 
 # =============================================================================
-# DESTINAZIONI CONSEGNA VEICOLI — aggiungi la foto per ogni punto.
-# Copia il file nella cartella principale e metti il nome in "foto".
-# Usa None finché non hai la foto.
-# =============================================================================
-DESTINAZIONI_MACCHINA = [
-    {"nome": "Sfasciacarrozze di Sandy Shores (Desert)",         "foto": None},
-    {"nome": "Discarica Centrale di South Los Santos",           "foto": None},
-    {"nome": "Molo di Carico dei Container (Porto di LS)",       "foto": None},
-    {"nome": "Chop Shop clandestino di Paleto Bay",              "foto": None},
-    {"nome": "Garage Segreto a El Burro Heights",                "foto": None},
-    {"nome": "Rimessa Industriale di Cypress Flats",             "foto": None},
-    {"nome": "Officina Meccanica di Harmony (Route 68)",         "foto": None},
-    {"nome": "Parcheggio Sotterraneo Clienti Privati (Richman)", "foto": None},
-    {"nome": "Hangar dell'Esportatore a Grapeseed",              "foto": None},
-    {"nome": "Pontile di Contrabbando a Chumash",                "foto": None},
-]
-
-# =============================================================================
-# OGGETTI CON RARITÀ — "rarità" è il peso: più basso = più raro.
+# OGGETTI — Pool completo per ville standard, pool premium per ville nuove.
 # =============================================================================
 
 OGGETTI_VILLA = [
@@ -100,6 +85,12 @@ OGGETTI_VILLA = [
     {"nome": "⌚ Orologio Rolex Tempestato",  "valore": 20000, "rarità": 28},
 ]
 
+OGGETTI_VILLA_PREMIUM = [
+    {"nome": "💎 Diamante Purissimo",        "valore": 45000, "rarità": 2},
+    {"nome": "👑 Lingotto d'Oro Massiccio",  "valore": 35000, "rarità": 4},
+    {"nome": "📿 Collana di Smeraldi",        "valore": 30000, "rarità": 7},
+]
+
 OGGETTI_CASA = [
     {"nome": "📿 Scatola di Gioielli d'Argento", "valore": 10000, "rarità": 4},
     {"nome": "🏺 Vaso di Porcellana Pregiata",    "valore": 8000,  "rarità": 8},
@@ -107,48 +98,6 @@ OGGETTI_CASA = [
     {"nome": "💻 Computer Portatile Gaming",       "valore": 5000,  "rarità": 30},
     {"nome": "📺 Televisore Led 4K",               "valore": 4000,  "rarità": 42},
 ]
-
-def classifica_macchina(modello: str):
-    """Valuta la classe GTA di un veicolo. Restituisce (label, guadagno, colore)."""
-    m = modello.lower()
-
-    alta = [
-        "grotti", "cheetah", "itali", "turismo r", "pegassi", "zentorno", "osiris",
-        "tempesta", "torero", "vacca", "truffade", "adder", "thrax", "nero custom",
-        "nero", "t20", "fmj", "pariah", "überflöd", "overflöd", "entity", "tyrant",
-        "krieger", "s80", "deveste", "cyclone", "pr4", "taipan", "emerus",
-        "vigilante", "scramjet", "xa-21", "vagner", "revolter", "pfister 811",
-        "811", "le7b", "autarch", "shinsen", "formula", "dr1", "br8", "r88",
-        "etr1", "sc1", "ra4", "p1", "im-t", "neo", "x80", "dewbauchee",
-        "specter custom", "growler", "visione", "reaper", "infernus classic",
-        "massacro", "900r",
-    ]
-
-    media = [
-        "sultan rs", "sultan", "elegy rh8", "elegy retro", "elegy", "kuruma",
-        "rapid gt", "comet", "banshee 900r", "banshee", "buffalo", "coquette",
-        "mamba", "jester", "stirling", "carbonizzare", "alpha", "sentinel xs",
-        "sentinel", "dubsta", "felon gt", "felon", "exemplar", "zion cabrio",
-        "zion", "oracle xs", "oracle", "schafter v12", "schafter lts", "schafter",
-        "sabre turbo custom", "sabre turbo", "phoenix", "ruiner 2000", "ruiner",
-        "gauntlet hellfire", "gauntlet", "dominator gtx", "dominator asc",
-        "dominator", "nightshade", "faction custom", "faction", "tornado custom",
-        "voodoo custom", "voodoo", "buccaneer custom", "buccaneer", "tornado",
-        "camaro", "tampa", "zr380", "imponte", "ocelot", "recepter", "wraith",
-        "specter", "bravado", "vapid", "issi sport", "gb200", "seven-70",
-        "tyrus", "le chaud", "lynx", "locust", "neon", "furia", "outlaw",
-        "drafter", "italirsx", "euros", "cypher", "vectre", "previon", "calico",
-        "jester4", "sugoi", "imorgon",
-    ]
-
-    for k in alta:
-        if k in m:
-            return "🔴 Alta", 25000, discord.Color.gold()
-    for k in media:
-        if k in m:
-            return "🟡 Media", 15000, discord.Color.blue()
-    return "⚪ Bassa", 5000, discord.Color.light_gray()
-
 
 def etichetta_rarità(peso: int) -> str:
     if peso <= 2:   return "✨ Leggendario"
@@ -173,14 +122,13 @@ def campiona_con_rarità(pool: list, k: int) -> list:
 
 def costruisci_pool(oggetti_scelti: list) -> tuple[list, str]:
     pesi = [o["rarità"] for o in oggetti_scelti]
-    somma = sum(pesi)
     pesi_inv = [round((1 / p) * 100, 2) for p in pesi]
     somma_inv = sum(pesi_inv)
     pool = []
     desc = ""
     for i, ogg in enumerate(oggetti_scelti):
         perc = round((pesi_inv[i] / somma_inv) * 100)
-        perc = max(1, perc)  
+        perc = max(1, perc)
         o = ogg.copy()
         o["percentuale"] = perc
         pool.append(o)
@@ -188,282 +136,97 @@ def costruisci_pool(oggetti_scelti: list) -> tuple[list, str]:
         desc += f"• {ogg['nome']} {label} — `{perc}%` (Valore: `{ogg['valore']:,}€`)\n"
     return pool, desc
 
-# --- SALVATAGGIO PERSISTENTE ---
-DATI_FILE = "dati_bot.json"
-
-def carica_dati():
-    if os.path.exists(DATI_FILE):
-        try:
-            with open(DATI_FILE, "r") as f:
-                dati = json.load(f)
-                # Migrazione: vecchia struttura {uid: float} → nuova {uid: {tipo: float}}
-                cooldown_raw = {int(k): v for k, v in dati.get("furto_cooldown", {}).items()}
-                cooldown = {}
-                for uid, val in cooldown_raw.items():
-                    cooldown[uid] = val if isinstance(val, dict) else {}
-                return (
-                    {int(k): v for k, v in dati.get("economia", {}).items()},
-                    cooldown,
-                    {int(k): v for k, v in dati.get("inventario", {}).items()},
-                )
-        except Exception:
-            pass
-    return {}, {}, {}
-
-def salva_dati():
-    with open(DATI_FILE, "w") as f:
-        json.dump({
-            "economia":       {str(k): v for k, v in economia.items()},
-            "furto_cooldown": {str(k): v for k, v in furto_cooldown.items()},
-            "inventario":     {str(k): v for k, v in inventario.items()},
-        }, f, indent=2)
-
-economia, furto_cooldown, inventario = carica_dati()
+# --- DATABASE IN MEMORIA PER L'ECONOMIA ---
+economia = {}
 
 def get_balance(user_id):
     if user_id not in economia:
         economia[user_id] = {"portafoglio": 0, "banca": 5000}
     return economia[user_id]
 
-def get_inventario(user_id):
-    if user_id not in inventario:
-        inventario[user_id] = {}
-    return inventario[user_id]
+# =============================================================================
+# PUNTI D'ACCESSO CON TASSO DI RIUSCITA
+# Frontale: 10% | Dal tetto: 70% | Garage: 45% | Dietro: 55%
+# =============================================================================
 
-# --- NEGOZIO ---
-NEGOZIO = {
-    "Piede di Porco": {"prezzo": 800,  "emoji": "🪓", "descrizione": "Forza porte e finestre. Usato per ville e case."},
-    "Grimaldello":    {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di lusso. Usato solo per le ville."},
-}
-RUOLI_STAFF = {"Founder", "CEO", "CO CEO", "Moderatore"}
+ACCESSI_VILLA = [
+    {"label": "Frontale",  "emoji": "🚪", "stile": discord.ButtonStyle.danger,    "tasso": 10},
+    {"label": "Dal tetto", "emoji": "🏠", "stile": discord.ButtonStyle.primary,   "tasso": 70},
+    {"label": "Garage",    "emoji": "🚗", "stile": discord.ButtonStyle.secondary, "tasso": 45},
+    {"label": "Dietro",    "emoji": "🌿", "stile": discord.ButtonStyle.secondary, "tasso": 55},
+]
 
-# --- VISTE INTERATTIVE (BOTTONI) ---
 class ScassoButtons(discord.ui.View):
-    def __init__(self, autore_id, tipo_furto, pool_oggetti, strumento):
+    def __init__(self, autore_id, tipo_furto, pool_oggetti):
         super().__init__(timeout=600)
         self.autore_id = autore_id
         self.tipo_furto = tipo_furto
         self.pool_oggetti = pool_oggetti
-        self.strumento = strumento
 
-    async def avvia_scasso(self, interaction: discord.Interaction, metodo: str):
-        if interaction.user.id != self.autore_id:
-            await interaction.response.send_message("❌ Questa non è la tua azione!", ephemeral=True)
-            return
+        for accesso in ACCESSI_VILLA:
+            btn = discord.ui.Button(
+                label=f"{accesso['label']} ({accesso['tasso']}%)",
+                emoji=accesso["emoji"],
+                style=accesso["stile"],
+                custom_id=f"accesso_{accesso['label'].lower().replace(' ', '_')}"
+            )
+            btn.callback = self._make_callback(accesso)
+            self.add_item(btn)
 
-        inv = get_inventario(self.autore_id)
-        if inv.get(self.strumento, 0) <= 0:
+    def _make_callback(self, accesso):
+        async def callback(interaction: discord.Interaction):
+            if interaction.user.id != self.autore_id:
+                await interaction.response.send_message("❌ Questa non è la tua azione!", ephemeral=True)
+                return
+
+            for child in self.children:
+                child.disabled = True
+            await interaction.message.edit(view=self)
+
             await interaction.response.send_message(
-                f"❌ Non hai più `{self.strumento}` nell'inventario!", ephemeral=True
+                f"{accesso['emoji']} Hai scelto l'accesso **{accesso['label']}** "
+                f"(Tasso di riuscita: `{accesso['tasso']}%`). "
+                f"L'azione richiederà **5 minuti** come da regolamento. Rimani in zona!",
+                ephemeral=True
             )
-            return
-        inv[self.strumento] -= 1
-        if inv[self.strumento] == 0:
-            del inv[self.strumento]
-        salva_dati()
 
-        await interaction.response.send_message(
-            f"🛠️ Hai iniziato a `{metodo}`. L'azione richiederà **5 minuti** come da regolamento. Rimani in zona!",
-            ephemeral=True
-        )
+            await asyncio.sleep(300)
 
-        for child in self.children:
-            child.disabled = True
-        await interaction.message.edit(view=self)
+            successo = random.randint(1, 100) <= accesso["tasso"]
 
-        await asyncio.sleep(300)
+            if successo:
+                scelte = [ogg for ogg in self.pool_oggetti]
+                pesi = [ogg["percentuale"] for ogg in self.pool_oggetti]
+                oggetto_estratto = random.choices(scelte, weights=pesi, k=1)[0]
+                valore_finale = oggetto_estratto["valore"]
 
-        scelte = [ogg for ogg in self.pool_oggetti]
-        pesi = [ogg["percentuale"] for ogg in self.pool_oggetti]
+                bilancio = get_balance(self.autore_id)
+                bilancio["banca"] += valore_finale
 
-        oggetto_estratto = random.choices(scelte, weights=pesi, k=1)[0]
-        valore_finale = oggetto_estratto["valore"]
+                embed_vittoria = discord.Embed(
+                    title=f"✅ FURTO IN {self.tipo_furto.upper()} COMPLETATO!",
+                    description=(
+                        f"Accesso **{accesso['label']}** riuscito! Hai ripulito la zona senza lasciare tracce!\n\n"
+                        f"📦 **Refurtiva:** `{oggetto_estratto['nome']}`\n"
+                        f"💰 **Valore Guadagnato:** `{valore_finale:,}€` depositati in **Banca**."
+                    ),
+                    color=discord.Color.green()
+                )
+                embed_vittoria.set_footer(text="Tokyo Horizon RP | Sistema Economia")
+                await interaction.followup.send(embed=embed_vittoria)
+            else:
+                embed_fallito = discord.Embed(
+                    title=f"❌ FURTO IN {self.tipo_furto.upper()} FALLITO!",
+                    description=(
+                        f"L'accesso **{accesso['label']}** non è riuscito!\n\n"
+                        f"⚠️ Sei stato scoperto o hai dovuto abbandonare il colpo. Nessun guadagno."
+                    ),
+                    color=discord.Color.red()
+                )
+                embed_fallito.set_footer(text="Tokyo Horizon RP | Sistema Economia")
+                await interaction.followup.send(embed=embed_fallito)
 
-        bilancio = get_balance(self.autore_id)
-        bilancio["banca"] += valore_finale
-        salva_dati()
-
-        embed_vittoria = discord.Embed(
-            title=f"✅ FURTO IN {self.tipo_furto.upper()} COMPLETATO!",
-            description=(
-                f"Hai ripulito la zona senza lasciare tracce!\n\n"
-                f"📦 **Refurtiva:** `{oggetto_estratto['nome']}`\n"
-                f"💰 **Valore Guadagnato:** `{valore_finale:,}€` depositati in **Banca**."
-            ),
-            color=discord.Color.green()
-        )
-        embed_vittoria.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-        await interaction.followup.send(embed=embed_vittoria)
-
-    @discord.ui.button(label="Forza la finestra", style=discord.ButtonStyle.secondary, emoji="🪟")
-    async def finestra(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_scasso(interaction, "Forzare la finestra")
-
-    @discord.ui.button(label="Forza la porta", style=discord.ButtonStyle.secondary, emoji="🚪")
-    async def porta(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_scasso(interaction, "Forzare la porta")
-
-
-class VillaScassoButtons(discord.ui.View):
-    RISCHI = {
-        "davanti": 10,
-        "sopra":   70,
-        "dietro":  40,
-        "garage":  55,
-    }
-
-    def __init__(self, autore_id, pool_oggetti, strumento):
-        super().__init__(timeout=600)
-        self.autore_id = autore_id
-        self.pool_oggetti = pool_oggetti
-        self.strumento = strumento
-
-    async def avvia_ingresso(self, interaction: discord.Interaction, metodo: str, chiave: str):
-        if interaction.user.id != self.autore_id:
-            await interaction.response.send_message("❌ Questa non è la tua azione!", ephemeral=True)
-            return
-
-        inv = get_inventario(self.autore_id)
-        if inv.get(self.strumento, 0) <= 0:
-            await interaction.response.send_message(
-                f"❌ Non hai più `{self.strumento}` nell'inventario!", ephemeral=True
-            )
-            return
-        inv[self.strumento] -= 1
-        if inv[self.strumento] == 0:
-            del inv[self.strumento]
-        salva_dati()
-
-        await interaction.response.send_message(
-            f"🛠️ Hai scelto di entrare **{metodo}**. L'azione richiederà **5 minuti** come da regolamento. Rimani in zona!",
-            ephemeral=True
-        )
-
-        for child in self.children:
-            child.disabled = True
-        await interaction.message.edit(view=self)
-
-        await asyncio.sleep(300)
-
-        rischio = self.RISCHI[chiave]
-        beccato = random.randint(1, 100) <= rischio
-
-        if beccato:
-            bilancio = get_balance(self.autore_id)
-            multa = 2000
-            bilancio["banca"] = max(0, bilancio["banca"] - multa)
-            salva_dati()
-            embed_fail = discord.Embed(
-                title="🚨 SEI STATO ARRESTATO!",
-                description=(
-                    f"Le forze dell'ordine ti hanno sorpreso durante il furto!\n\n"
-                    f"💸 **Multa:** `{multa:,}€` scalati dalla **Banca**."
-                ),
-                color=discord.Color.red()
-            )
-            embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto")
-            await interaction.followup.send(embed=embed_fail)
-        else:
-            scelte = list(self.pool_oggetti)
-            pesi = [ogg["percentuale"] for ogg in scelte]
-            oggetto_estratto = random.choices(scelte, weights=pesi, k=1)[0]
-            valore_finale = oggetto_estratto["valore"]
-            bilancio = get_balance(self.autore_id)
-            bilancio["banca"] += valore_finale
-            embed_vittoria = discord.Embed(
-                title="✅ FURTO IN VILLA COMPLETATO!",
-                description=(
-                    f"Hai ripulito la villa senza lasciare tracce!\n\n"
-                    f"📦 **Refurtiva:** `{oggetto_estratto['nome']}`\n"
-                    f"💰 **Valore Guadagnato:** `{valore_finale:,}€` depositati in **Banca**."
-                ),
-                color=discord.Color.green()
-            )
-            embed_vittoria.set_footer(text="Tokyo Horizon RP | Sistema Furto")
-            await interaction.followup.send(embed=embed_vittoria)
-
-    @discord.ui.button(label="Ingresso principale", style=discord.ButtonStyle.secondary, emoji="🚪")
-    async def davanti(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dall'ingresso principale", "davanti")
-
-    @discord.ui.button(label="Dal tetto", style=discord.ButtonStyle.secondary, emoji="🏠")
-    async def sopra(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dal tetto", "sopra")
-
-    @discord.ui.button(label="Ingresso sul retro", style=discord.ButtonStyle.secondary, emoji="🔙")
-    async def dietro(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dall'ingresso sul retro", "dietro")
-
-    @discord.ui.button(label="Dal garage", style=discord.ButtonStyle.secondary, emoji="🚗")
-    async def garage(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dal garage", "garage")
-
-
-class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il modello"):
-    modello = discord.ui.TextInput(
-        label="Modello del veicolo",
-        placeholder="Es. Grotti Cheetah, Karin Dilettante, Sultan RS...",
-        min_length=3,
-        max_length=60,
-        required=True,
-    )
-
-    def __init__(self, autore_id: int):
-        super().__init__()
-        self.autore_id = autore_id
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        modello_input = self.modello.value.strip()
-        rarita_label, guadagno, colore = classifica_macchina(modello_input)
-        dest = random.choice(DESTINAZIONI_MACCHINA)
-
-        emoji_rarita = {"🔴 Alta": "🏎️", "🟡 Media": "🚘", "⚪ Bassa": "🚗"}.get(rarita_label, "🚗")
-
-        embed = discord.Embed(
-            title="🚘 Veicolo Agganciato — Ordine di Consegna",
-            description=(
-                f"Hai agganciato il veicolo tramite la centralina!\n\n"
-                f"{emoji_rarita} **Modello:** `{modello_input}`\n"
-                f"📊 **Fascia di Rarità:** {rarita_label}\n"
-                f"💵 **Compenso:** `{guadagno:,}€` alla consegna\n\n"
-                f"📍 **Punto di Consegna:** `{dest['nome']}`\n\n"
-                f"⚠️ **REGOLAMENTO:** Hai **10 MINUTI** reali per raggiungere il punto in mappa e premere il tasto verde. Occhio alla Crash-Rule delle FDO!"
-            ),
-            color=colore
-        )
-        embed.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
-
-        files = []
-        embeds = [embed]
-
-        if dest["foto"]:
-            ext = dest["foto"].rsplit(".", 1)[-1]
-            fname = f"dest_foto.{ext}"
-            file_foto = discord.File(dest["foto"], filename=fname)
-            files.append(file_foto)
-            embed_foto = discord.Embed(
-                description="📍 **Posizione di consegna sulla mappa**",
-                color=colore
-            )
-            embed_foto.set_image(url=f"attachment://{fname}")
-            embeds.append(embed_foto)
-
-        view = VeicoloButtons(self.autore_id, guadagno, dest["nome"])
-        msg = await interaction.followup.send(embeds=embeds, files=files, view=view, wait=True)
-
-        await asyncio.sleep(600)
-        if not view.consegnato:
-            embed_fail = discord.Embed(
-                title="❌ TEMPO SCADUTO — AZIONE FALLITA",
-                description=f"Il timer di 10 minuti è scaduto. Il veicolo `{modello_input}` non è stato consegnato.",
-                color=discord.Color.red()
-            )
-            embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
-            try:
-                await msg.edit(embeds=[embed_fail], view=None)
-            except Exception:
-                pass
+        return callback
 
 
 class VeicoloButtons(discord.ui.View):
@@ -488,7 +251,6 @@ class VeicoloButtons(discord.ui.View):
 
         bilancio = get_balance(self.autore_id)
         bilancio["banca"] += self.guadagno
-        salva_dati()
 
         embed_successo = discord.Embed(
             title="🚗 VEICOLO CONSEGNATO AL RICETTATORE!",
@@ -499,8 +261,8 @@ class VeicoloButtons(discord.ui.View):
             color=discord.Color.green()
         )
         embed_successo.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-        await interaction.message.edit(view=self)
-        await interaction.response.send_message(embed=embed_successo)
+        await interaction.response.edit_message(view=self)
+        await interaction.followup.send(embed=embed_successo)
 
 
 # --- GESTORE ERRORI GLOBALE ---
@@ -526,83 +288,30 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
     app_commands.Choice(name="Macchina", value="macchina")
 ])
 async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
-    uid = interaction.user.id
+    await interaction.response.defer()
     tipo_scelto = tipo.value
 
-    # --- MACCHINA: flusso speciale con modal (non possiamo defer prima del modal) ---
-    if tipo_scelto == "macchina":
-        ora_attuale = time.time()
-        cooldown_sec = 2 * 3600  # 2 ore per le macchine
-        ultimo = furto_cooldown.get(uid, {}).get("macchina", 0)
-        if ora_attuale - ultimo < cooldown_sec:
-            rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
-            ore = rimanenti // 3600
-            minuti = (rimanenti % 3600) // 60
-            await interaction.response.send_message(
-                f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter rubare un'altra macchina.",
-                ephemeral=True
-            )
-            return
-        furto_cooldown.setdefault(uid, {})["macchina"] = ora_attuale
-        salva_dati()
-        await interaction.response.send_modal(MacchinaModal(uid))
-        return
-
-    # --- VILLA / CASA ---
-    await interaction.response.defer()
-
-    # Controllo inventario (prima del cooldown, no penalità se manca lo strumento)
     if tipo_scelto == "villa":
-        preferenza = ["Grimaldello", "Piede di Porco"]
-    elif tipo_scelto == "casa":
-        preferenza = ["Piede di Porco"]
-    else:
-        preferenza = []
-
-    strumento_usato = None
-    if preferenza:
-        inv = get_inventario(uid)
-        strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
-        if not strumento_usato:
-            nomi = " o ".join(f"`{s}`" for s in preferenza)
-            await interaction.followup.send(
-                f"🔒 Non puoi fare il furto senza strumenti!\n"
-                f"Hai bisogno di {nomi}. Acquistali con `/negozio`.",
-                ephemeral=True
-            )
-            return
-
-    # Controllo cooldown separato per tipo (villa = 6h, casa = 4h)
-    ora_attuale = time.time()
-    cooldown_sec = 6 * 3600 if tipo_scelto == "villa" else 4 * 3600
-    ultimo = furto_cooldown.get(uid, {}).get(tipo_scelto, 0)
-    if ora_attuale - ultimo < cooldown_sec:
-        rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
-        ore = rimanenti // 3600
-        minuti = (rimanenti % 3600) // 60
-        await interaction.followup.send(
-            f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.",
-            ephemeral=True
-        )
-        return
-    furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
-    salva_dati()
-
-    if tipo_scelto == "villa":
-        oggetti_scelti = campiona_con_rarità(OGGETTI_VILLA, k=random.randint(3, 4))
+        location = random.choice(VILLE)
+        is_premium = location["nome"] in [
+            "Villa di Lusso #2 — Zona Tongva Hills",
+            "Villa di Lusso #3 — Zona Vinewood Hills",
+        ]
+        pool_oggetti = OGGETTI_VILLA_PREMIUM if is_premium else OGGETTI_VILLA
+        k = 3 if is_premium else random.randint(3, 4)
+        oggetti_scelti = campiona_con_rarità(pool_oggetti, k=k)
         pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti)
         valore_max = max(o["valore"] for o in oggetti_scelti)
-        location = random.choice(VILLE)
 
         embed = discord.Embed(
             title=f"🏰 Furto Selezionato: {location['nome']}",
             description=(
                 "**INFORMAZIONI SUL COLPO OTTENUTE DAI SATELLITI**\n\n"
-                "**Scegli il punto di ingresso:**\n"
-                "• 🚪 Ingresso principale\n"
-                "• 🏠 Dal tetto\n"
-                "• 🔙 Ingresso sul retro\n"
-                "• 🚗 Dal garage\n\n"
+                "**Scegli il punto d'accesso:**\n"
+                "• 🚪 Frontale — Tasso riuscita `10%`\n"
+                "• 🏠 Dal tetto — Tasso riuscita `70%`\n"
+                "• 🚗 Garage — Tasso riuscita `45%`\n"
+                "• 🌿 Dietro — Tasso riuscita `55%`\n\n"
                 f"📦 **Merci preziose rilevate all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
                 "🔑 **Oggetto richiesto:** 🪓 `Piede di Porco o Grimaldello`"
             ),
@@ -610,29 +319,31 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         )
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
 
-        view = VillaScassoButtons(interaction.user.id, pool_finale, strumento_usato)
+        view = ScassoButtons(interaction.user.id, "villa", pool_finale)
         files = []
         embeds = []
 
         if location["esterno"]:
-            ext = location["esterno"].rsplit(".", 1)[-1]
-            fname = f"villa_esterno.{ext}"
-            file_esterno = discord.File(location["esterno"], filename=fname)
-            files.append(file_esterno)
-            embed.set_image(url=f"attachment://{fname}")
+            try:
+                file_esterno = discord.File(location["esterno"], filename="villa_esterno.png")
+                files.append(file_esterno)
+                embed.set_image(url="attachment://villa_esterno.png")
+            except FileNotFoundError:
+                pass
         embeds.append(embed)
 
         if location["mappa"]:
-            ext_m = location["mappa"].rsplit(".", 1)[-1]
-            fname_m = f"villa_mappa.{ext_m}"
-            file_mappa = discord.File(location["mappa"], filename=fname_m)
-            files.append(file_mappa)
-            embed_mappa = discord.Embed(
-                description="📍 **Posizione sulla mappa**",
-                color=discord.Color.purple()
-            )
-            embed_mappa.set_image(url=f"attachment://{fname_m}")
-            embeds.append(embed_mappa)
+            try:
+                file_mappa = discord.File(location["mappa"], filename="villa_mappa.jpeg")
+                files.append(file_mappa)
+                embed_mappa = discord.Embed(
+                    description="📍 **Posizione sulla mappa**",
+                    color=discord.Color.purple()
+                )
+                embed_mappa.set_image(url="attachment://villa_mappa.jpeg")
+                embeds.append(embed_mappa)
+            except FileNotFoundError:
+                pass
 
         await interaction.followup.send(embeds=embeds, files=files, view=view)
 
@@ -646,9 +357,11 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             title=f"🏡 Furto Selezionato: {location['nome']}",
             description=(
                 "**SOPRALLUOGO EFFETTUATO. OBIETTIVO STANDARD.**\n\n"
-                "**Scegli come entrare:**\n"
-                "• 🪟 Forza la finestra\n"
-                "• 🚪 Forza la porta\n\n"
+                "**Scegli il punto d'accesso:**\n"
+                "• 🚪 Frontale — Tasso riuscita `10%`\n"
+                "• 🏠 Dal tetto — Tasso riuscita `70%`\n"
+                "• 🚗 Garage — Tasso riuscita `45%`\n"
+                "• 🌿 Dietro — Tasso riuscita `55%`\n\n"
                 f"📦 **Beni comuni individuati all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
                 "🔑 **Strumento richiesto:** 🛠️ `Cacciavite o Piede di Porco`"
             ),
@@ -656,27 +369,89 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         )
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
 
-        view = ScassoButtons(interaction.user.id, "casa", pool_finale, strumento_usato)
+        view = ScassoButtons(interaction.user.id, "casa", pool_finale)
         files = []
         embeds = []
 
         if location["esterno"]:
-            file_esterno = discord.File(location["esterno"], filename="casa_esterno.jpeg")
-            files.append(file_esterno)
-            embed.set_image(url="attachment://casa_esterno.jpeg")
+            try:
+                file_esterno = discord.File(location["esterno"], filename="casa_esterno.jpeg")
+                files.append(file_esterno)
+                embed.set_image(url="attachment://casa_esterno.jpeg")
+            except FileNotFoundError:
+                pass
         embeds.append(embed)
 
         if location["mappa"]:
-            file_mappa = discord.File(location["mappa"], filename="casa_mappa.jpeg")
-            files.append(file_mappa)
-            embed_mappa = discord.Embed(
-                description="📍 **Posizione sulla mappa**",
-                color=discord.Color.dark_green()
-            )
-            embed_mappa.set_image(url="attachment://casa_mappa.jpeg")
-            embeds.append(embed_mappa)
+            try:
+                file_mappa = discord.File(location["mappa"], filename="casa_mappa.jpeg")
+                files.append(file_mappa)
+                embed_mappa = discord.Embed(
+                    description="📍 **Posizione sulla mappa**",
+                    color=discord.Color.dark_green()
+                )
+                embed_mappa.set_image(url="attachment://casa_mappa.jpeg")
+                embeds.append(embed_mappa)
+            except FileNotFoundError:
+                pass
 
         await interaction.followup.send(embeds=embeds, files=files, view=view)
+
+    elif tipo_scelto == "macchina":
+        rarita_scelta = random.choice(["Bassa", "Media", "Alta"])
+        destinazioni_mappa = [
+            "Sfasciacarrozze di Sandy Shores (Desert)", "Discarica Centrale di South Los Santos",
+            "Molo di Carico dei Container (Porto di LS)", "Chop Shop clandestino di Paleto Bay",
+            "Garage Segreto a El Burro Heights", "Rimessa Industriale di Cypress Flats",
+            "Officina Meccanica di Harmony (Route 68)", "Parcheggio Sotterraneo Clienti Privati (Richman)",
+            "Hangar dell'Esportatore a Grapeseed", "Pontile di Contrabbando a Chumash"
+        ]
+        destinazione_scelta = random.choice(destinazioni_mappa)
+
+        if rarita_scelta == "Bassa":
+            veicolo = "🚗 Karin Dilettante (Utilitaria)"
+            guadagno = 5000
+            colore_embed = discord.Color.light_gray()
+        elif rarita_scelta == "Media":
+            veicolo = "🚘 Ubermacht Sentinel (Sportiva)"
+            guadagno = 15000
+            colore_embed = discord.Color.blue()
+        else:
+            veicolo = "🏎️ Pegassi Zentorno (Supercar)"
+            guadagno = 25000
+            colore_embed = discord.Color.gold()
+
+        link_mappa_veicolo = "https://i.imgur.com/vaxK08B.png"
+        embed = discord.Embed(
+            title="🚘 Furto Selezionato: Veicolo da Esportazione",
+            description=(
+                f"Hai agganciato una vettura tramite la centralina!\n\n"
+                f"🚘 **Modello Mezzo:** `{veicolo}`\n"
+                f"📊 **Fascia di Rarità:** `{rarita_scelta}`\n"
+                f"📍 **Punto di Consegna:** `{destinazione_scelta}`\n"
+                f"💵 **Pagamento Pulito:** `{guadagno:,}€` valore fisso\n\n"
+                f"⚠️ **REGOLAMENTO:** Hai **10 MINUTI** reali per viaggiare in mappa fino al punto stabilito e premere il tasto verde. Occhio alla Crash-Rule delle FDO!"
+            ),
+            color=colore_embed
+        )
+        embed.set_image(url=link_mappa_veicolo)
+        embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
+
+        view = VeicoloButtons(interaction.user.id, guadagno, destinazione_scelta)
+        await interaction.followup.send(embed=embed, view=view)
+
+        await asyncio.sleep(600)
+        if not view.consegnato:
+            embed_fallimento = discord.Embed(
+                title="❌ TEMPO SCADUTO - AZIONE FALLITA",
+                description=f"Il timer di 10 minuti è scaduto prima che potessi consegnare il veicolo `{veicolo}`.",
+                color=discord.Color.red()
+            )
+            embed_fallimento.set_footer(text="Tokyo Horizon RP | Sistema Furto")
+            try:
+                await interaction.edit_original_response(embed=embed_fallimento, view=None)
+            except Exception:
+                pass
 
 
 # --- COMANDO /BILANCIO ---
@@ -693,6 +468,7 @@ async def bilancio(interaction: discord.Interaction):
     embed.add_field(name="💼 Patrimonio Totale:", value=f"`{totale:,}€`", inline=False)
     embed.set_footer(text="Tokyo Horizon RP | Sistema Economia")
     await interaction.response.send_message(embed=embed)
+
 
 # --- COOLDOWN E ALTRI COMANDI BANCA ---
 cooldown_banca = {}
@@ -723,7 +499,6 @@ async def deposita(interaction: discord.Interaction, importo: int):
         return
     bil["portafoglio"] -= importo
     bil["banca"] += importo
-    salva_dati()
     await interaction.response.send_message(f"🏛️ Depositati con successo **`{importo:,}€`**.")
 
 @bot.tree.command(name="preleva", description="Preleva contanti dalla banca al portafoglio")
@@ -742,7 +517,6 @@ async def preleva(interaction: discord.Interaction, importo: int):
         return
     bil["banca"] -= importo
     bil["portafoglio"] += importo
-    salva_dati()
     await interaction.response.send_message(f"💵 Prelevati con successo **`{importo:,}€`**.")
 
 @bot.tree.command(name="paga", description="Paga un altro giocatore con i contanti in tasca")
@@ -759,114 +533,13 @@ async def paga(interaction: discord.Interaction, utente: discord.Member, importo
     bil_mittente["portafoglio"] -= importo
     bil_destinatario = get_balance(utente.id)
     bil_destinatario["portafoglio"] += importo
-    salva_dati()
     await interaction.response.send_message(f"💸 Hai pagato a {utente.mention} l'importo di `{importo:,}€`.")
 
-# --- NEGOZIO, INVENTARIO, RESET COOLDOWN ---
 
-@bot.tree.command(name="negozio", description="Visualizza gli articoli disponibili nel negozio")
-async def negozio(interaction: discord.Interaction):
-    await interaction.response.defer()
-    embed = discord.Embed(
-        title="🏪 NEGOZIO — Tokyo Horizon RP",
-        description="Acquista gli strumenti necessari per i furti con `/compra <articolo>`.",
-        color=discord.Color.gold()
-    )
-    for nome, info in NEGOZIO.items():
-        embed.add_field(
-            name=f"{info['emoji']} {nome} — `{info['prezzo']:,}€`",
-            value=info["descrizione"],
-            inline=False
-        )
-    embed.set_footer(text="Tokyo Horizon RP | Sistema Negozio")
-    await interaction.followup.send(embed=embed)
-
-
-@bot.tree.command(name="compra", description="Acquista un articolo dal negozio")
-@app_commands.describe(articolo="L'articolo che vuoi acquistare")
-@app_commands.choices(articolo=[
-    app_commands.Choice(name="Piede di Porco (800€)", value="Piede di Porco"),
-    app_commands.Choice(name="Grimaldello (1500€)",   value="Grimaldello"),
-])
-async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
-    await interaction.response.defer(ephemeral=True)
-    nome = articolo.value
-    info = NEGOZIO[nome]
-    prezzo = info["prezzo"]
-    bil = get_balance(interaction.user.id)
-    if bil["portafoglio"] < prezzo:
-        await interaction.followup.send(
-            f"❌ Non hai abbastanza contanti in tasca! Ti servono `{prezzo:,}€` ma ne hai solo `{bil['portafoglio']:,}€`.",
-            ephemeral=True
-        )
-        return
-    bil["portafoglio"] -= prezzo
-    inv = get_inventario(interaction.user.id)
-    inv[nome] = inv.get(nome, 0) + 1
-    salva_dati()
-    embed = discord.Embed(
-        title="✅ Acquisto Completato!",
-        description=(
-            f"Hai acquistato **{info['emoji']} {nome}** per `{prezzo:,}€`.\n\n"
-            f"💵 **Contanti rimasti:** `{bil['portafoglio']:,}€`\n"
-            f"🎒 **In inventario:** `{inv[nome]}x {nome}`"
-        ),
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="Tokyo Horizon RP | Sistema Negozio")
-    await interaction.followup.send(embed=embed)
-
-
-@bot.tree.command(name="inventario", description="Visualizza il tuo inventario")
-async def inventario_cmd(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    inv = get_inventario(interaction.user.id)
-    if not inv:
-        await interaction.followup.send(
-            "🎒 Il tuo inventario è vuoto. Acquista qualcosa con `/negozio`!",
-            ephemeral=True
-        )
-        return
-    righe = "\n".join(
-        f"• {NEGOZIO[n]['emoji'] if n in NEGOZIO else '📦'} **{n}** — `{q}x`"
-        for n, q in inv.items()
-    )
-    embed = discord.Embed(
-        title=f"🎒 Inventario di {interaction.user.display_name}",
-        description=righe,
-        color=discord.Color.blue()
-    )
-    embed.set_footer(text="Tokyo Horizon RP | Sistema Inventario")
-    await interaction.followup.send(embed=embed)
-
-
-@bot.tree.command(name="resetcooldown", description="[MOD] Azzera il cooldown furto di un giocatore")
-@app_commands.describe(utente="Il giocatore di cui resettare il cooldown")
-async def resetcooldown(interaction: discord.Interaction, utente: discord.Member):
-    await interaction.response.defer(ephemeral=True)
-    ha_permesso = (
-        any(r.name in RUOLI_STAFF for r in interaction.user.roles)
-        or interaction.user.guild_permissions.administrator
-    )
-    if not ha_permesso:
-        await interaction.followup.send(
-            "❌ Non hai i permessi per usare questo comando.", ephemeral=True
-        )
-        return
-    if utente.id in furto_cooldown:
-        furto_cooldown[utente.id] = {}
-        salva_dati()
-    await interaction.followup.send(
-        f"✅ Cooldown furto di {utente.mention} azzerato per tutti i tipi (villa, casa, macchina).", ephemeral=True
-    )
-
-
-# --- AVVIO BOT CON FUNZIONE KEEP ALIVE INCLUSA ---
+# --- AVVIO ---
 token = os.environ.get("DISCORD_TOKEN")
 if not token:
     print("❌ ERRORE: Il token Discord non è stato trovato. Imposta la variabile DISCORD_TOKEN.")
 else:
     keep_alive()
     bot.run(token)
-
-
