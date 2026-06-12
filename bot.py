@@ -53,8 +53,8 @@ bot = TokyoHorizonBot()
 VILLE = [
     {
         "nome": "Villa di Lusso #1 — Zona Rockford Hills",
-        "mappa": "villa1_mappa.jpeg",
-        "esterno": "villa1_esterno.jpeg",
+        "mappa": None,
+        "esterno": "villa1_esterno.png",
     },
     {
         "nome": "Villa di Lusso #2 — Zona Tongva Hills",
@@ -375,19 +375,19 @@ class VillaScassoButtons(discord.ui.View):
             embed_vittoria.set_footer(text="Tokyo Horizon RP | Sistema Furto")
             await interaction.followup.send(embed=embed_vittoria)
 
-    @discord.ui.button(label="Ingresso principale (10%)", style=discord.ButtonStyle.danger, emoji="🚪")
+    @discord.ui.button(label="Ingresso principale", style=discord.ButtonStyle.danger, emoji="🚪")
     async def davanti(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.avvia_ingresso(interaction, "dall'ingresso principale", "davanti")
 
-    @discord.ui.button(label="Dal tetto (70%)", style=discord.ButtonStyle.primary, emoji="🏠")
+    @discord.ui.button(label="Dal tetto", style=discord.ButtonStyle.primary, emoji="🏠")
     async def sopra(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.avvia_ingresso(interaction, "dal tetto", "sopra")
 
-    @discord.ui.button(label="Ingresso sul retro (40%)", style=discord.ButtonStyle.secondary, emoji="🔙")
+    @discord.ui.button(label="Ingresso sul retro", style=discord.ButtonStyle.secondary, emoji="🔙")
     async def dietro(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.avvia_ingresso(interaction, "dall'ingresso sul retro", "dietro")
 
-    @discord.ui.button(label="Dal garage (55%)", style=discord.ButtonStyle.secondary, emoji="🚗")
+    @discord.ui.button(label="Dal garage", style=discord.ButtonStyle.secondary, emoji="🚗")
     async def garage(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.avvia_ingresso(interaction, "dal garage", "garage")
 
@@ -582,10 +582,10 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             description=(
                 "**INFORMAZIONI SUL COLPO OTTENUTE DAI SATELLITI**\n\n"
                 "**Scegli il punto di ingresso:**\n"
-                "• 🚪 Ingresso principale (10%)\n"
-                "• 🏠 Dal tetto (70%)\n"
-                "• 🔙 Ingresso sul retro (40%)\n"
-                "• 🚗 Dal garage (55%)\n\n"
+                "• 🚪 Ingresso principale\n"
+                "• 🏠 Dal tetto\n"
+                "• 🔙 Ingresso sul retro\n"
+                "• 🚗 Dal garage\n\n"
                 f"📦 **Merci preziose rilevate all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
                 "🔑 **Oggetto richiesto:** 🪓 `Piede di Porco o Grimaldello`"
             ),

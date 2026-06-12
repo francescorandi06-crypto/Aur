@@ -1,9 +1,19 @@
 {
-  "economia": {},
-  "furto_cooldown": {
+  "economia": {
     "1083459553892499476": {
-      "macchina": 1781258212.4921236
+      "portafoglio": 0,
+      "banca": 4000
     }
   },
-  "inventario": {}
+  "furto_cooldown": {
+    "1083459553892499476": {
+      "macchina": 1781258212.4921236,
+      "villa": 1781271693.275047
+    }
+  },
+  "inventario": {
+    "1083459553892499476": {
+      "Piede di Porco": 1
+    }
+  }
 }
