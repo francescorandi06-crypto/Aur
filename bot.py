@@ -497,7 +497,12 @@ class VeicoloButtons(discord.ui.View):
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     print(f"[ERRORE COMANDO] {type(error).__name__}: {error}")
-    msg = "❌ Si è verificato un errore interno. Riprova tra qualche secondo."
+    if isinstance(error, app_commands.CommandSignatureMismatch):
+        print("[INFO] Firma comando non aggiornata — risincronizzazione in corso...")
+        await bot.tree.sync()
+        msg = "⚠️ Il comando è stato appena aggiornato. **Riprova tra 10 secondi** — Discord deve ricaricare la nuova versione."
+    else:
+        msg = "❌ Si è verificato un errore interno. Riprova tra qualche secondo."
     try:
         if interaction.response.is_done():
             await interaction.followup.send(msg, ephemeral=True)
@@ -936,6 +941,69 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
                 f"🎒 Ha ora `{inv[valore]}x {valore}` in inventario."
             ),
             color=discord.Color.green()
+        )
+    embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="togli", description="[MOD] Rimuovi contanti o oggetti da un giocatore")
+@app_commands.describe(
+    utente="Il giocatore a cui rimuovere qualcosa",
+    tipo="Cosa vuoi togliere",
+    quantita="Importo in € (per contanti) o quantità (per oggetti)"
+)
+@app_commands.choices(tipo=[
+    app_commands.Choice(name="Contanti in tasca",    value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca",    value="banca"),
+    app_commands.Choice(name="Grimaldello",          value="Grimaldello"),
+    app_commands.Choice(name="Piede di Porco",       value="Piede di Porco"),
+])
+async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
+    await interaction.response.defer(ephemeral=True)
+    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
+    if not ha_permesso:
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+    if utente.bot or quantita <= 0:
+        await interaction.followup.send("❌ Valore non valido.", ephemeral=True)
+        return
+
+    valore = tipo.value
+    if valore in ("portafoglio", "banca"):
+        bil = get_balance(utente.id)
+        disponibile = bil[valore]
+        rimosso = min(quantita, disponibile)
+        bil[valore] = max(0, bil[valore] - quantita)
+        salva_dati()
+        dove = "in tasca" if valore == "portafoglio" else "in banca"
+        avviso = f"\n⚠️ Aveva solo `{disponibile:,}€` — rimosso il disponibile." if rimosso < quantita else ""
+        embed = discord.Embed(
+            title="💸 Fondi Rimossi",
+            description=(
+                f"Hai rimosso **`{rimosso:,}€`** {dove} da {utente.mention}.{avviso}\n\n"
+                f"💵 Tasca: `{bil['portafoglio']:,}€` | 🏛️ Banca: `{bil['banca']:,}€`"
+            ),
+            color=discord.Color.red()
+        )
+    else:
+        inv = get_inventario(utente.id)
+        attuale = inv.get(valore, 0)
+        if attuale == 0:
+            await interaction.followup.send(f"❌ {utente.mention} non ha nessun **{valore}** in inventario.", ephemeral=True)
+            return
+        rimosso = min(quantita, attuale)
+        inv[valore] = attuale - rimosso
+        salva_dati()
+        info = NEGOZIO.get(valore, {})
+        emoji = info.get("emoji", "📦")
+        avviso = f"\n⚠️ Ne aveva solo `{attuale}` — rimossi tutti." if rimosso < quantita else ""
+        embed = discord.Embed(
+            title="🗑️ Oggetto Rimosso",
+            description=(
+                f"Hai rimosso **{rimosso}x {emoji} {valore}** da {utente.mention}.{avviso}\n\n"
+                f"🎒 Ne ha ora `{inv[valore]}x` in inventario."
+            ),
+            color=discord.Color.red()
         )
     embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
     await interaction.followup.send(embed=embed, ephemeral=True)
