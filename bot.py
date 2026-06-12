@@ -168,7 +168,7 @@ def campiona_con_rarità(pool: list, k: int) -> list:
         pesi.pop(idx)
     return scelti
 
-def costruisci_pool(oggetti_scelti: list) -> tuple[list, str]:
+def costruisci_pool(oggetti_scelti: list, mostra_perc: bool = True) -> tuple[list, str]:
     pesi = [o["rarità"] for o in oggetti_scelti]
     pesi_inv = [round((1 / p) * 100, 2) for p in pesi]
     somma_inv = sum(pesi_inv)
@@ -176,12 +176,15 @@ def costruisci_pool(oggetti_scelti: list) -> tuple[list, str]:
     desc = ""
     for i, ogg in enumerate(oggetti_scelti):
         perc = round((pesi_inv[i] / somma_inv) * 100)
-        perc = max(1, perc)  
+        perc = max(1, perc)
         o = ogg.copy()
         o["percentuale"] = perc
         pool.append(o)
         label = etichetta_rarità(ogg["rarità"])
-        desc += f"• {ogg['nome']} {label} — `{perc}%` (Valore: `{ogg['valore']:,}€`)\n"
+        if mostra_perc:
+            desc += f"• {ogg['nome']} {label} — `{perc}%` (Valore: `{ogg['valore']:,}€`)\n"
+        else:
+            desc += f"• {ogg['nome']} {label} — Valore: `{ogg['valore']:,}€`\n"
     return pool, desc
 
 # --- SALVATAGGIO PERSISTENTE ---
@@ -566,7 +569,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
     if tipo_scelto == "villa":
         location = random.choice(VILLE)
         oggetti_scelti = campiona_con_rarità(OGGETTI_VILLA, k=3)
-        pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti)
+        pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti, mostra_perc=False)
         valore_max = max(o["valore"] for o in oggetti_scelti)
 
         embed = discord.Embed(
