@@ -232,7 +232,12 @@ NEGOZIO = {
     "Piede di Porco": {"prezzo": 1000, "emoji": "🪓", "descrizione": "Forza porte e finestre. Usato per ville e case."},
     "Grimaldello":    {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di lusso. Usato solo per le ville."},
 }
-RUOLI_STAFF = {"Founder", "CEO", "CO CEO", "Moderatore"}
+RUOLI_STAFF = {
+    1514817350359060571,  # Founder
+    1514817646229717174,  # CEO
+    1514818027882024960,  # CO CEO
+    1513686043155763280,  # Moderatore
+}
 
 # =============================================================================
 # INTERFACCE BOTTONI (PUNTI DI ACCESSO)
@@ -859,7 +864,7 @@ async def inventario_cmd(interaction: discord.Interaction):
 @app_commands.describe(utente="Il giocatore di cui resettare il cooldown")
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.name in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    ha_permesso = any(r.id in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
@@ -883,7 +888,7 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
 ])
 async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.name in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    ha_permesso = any(r.id in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
@@ -926,7 +931,7 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
 @bot.tree.command(name="backup", description="[MOD] Scarica il file di salvataggio completo del bot")
 async def backup(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.name in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    ha_permesso = any(r.id in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
