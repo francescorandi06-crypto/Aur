@@ -231,7 +231,7 @@ def get_inventario(user_id):
     return inventario[user_id]
 
 NEGOZIO = {
-    "Piede di Porco": {"prezzo": 800,  "emoji": "🪓", "descrizione": "Forza porte e finestre. Usato per ville e case."},
+    "Piede di Porco": {"prezzo": 1000, "emoji": "🪓", "descrizione": "Forza porte e finestre. Usato per ville e case."},
     "Grimaldello":    {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di lusso. Usato solo per le ville."},
 }
 RUOLI_STAFF = {"Founder", "CEO", "CO CEO", "Moderatore"}
@@ -803,7 +803,7 @@ async def negozio(interaction: discord.Interaction):
 @bot.tree.command(name="compra", description="Acquista un articolo dal negozio")
 @app_commands.describe(articolo="L'articolo che vuoi acquistare")
 @app_commands.choices(articolo=[
-    app_commands.Choice(name="Piede di Porco (800€)", value="Piede di Porco"),
+    app_commands.Choice(name="Piede di Porco (1000€)", value="Piede di Porco"),
     app_commands.Choice(name="Grimaldello (1500€)",   value="Grimaldello"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
