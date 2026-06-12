@@ -55,16 +55,19 @@ VILLE = [
         "nome": "Villa di Lusso #1 — Zona Rockford Hills",
         "mappa": None,
         "esterno": "villa1_esterno.png",
+        "rarità": "🔴 Leggendaria",
     },
     {
         "nome": "Villa di Lusso #2 — Zona Tongva Hills",
         "mappa": None,
         "esterno": "villa2_esterno.png",
+        "rarità": "🔴 Leggendaria",
     },
     {
         "nome": "Villa di Lusso #3 — Zona Vinewood Hills",
         "mappa": None,
         "esterno": "villa3_esterno.png",
+        "rarità": "🔴 Leggendaria",
     },
 ]
 
@@ -569,6 +572,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         embed = discord.Embed(
             title=f"🏰 Furto Selezionato: {location['nome']}",
             description=(
+                f"⭐ **Rarità Obiettivo:** {location.get('rarità', '—')}\n\n"
                 "**INFORMAZIONI SUL COLPO OTTENUTE DAI SATELLITI**\n\n"
                 "**Scegli il punto di ingresso:**\n"
                 "• 🚪 Ingresso principale\n"
@@ -826,14 +830,26 @@ async def compra(interaction: discord.Interaction, articolo: app_commands.Choice
 @bot.tree.command(name="inventario", description="Visualizza il tuo inventario")
 async def inventario_cmd(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    inv = get_inventario(interaction.user.id)
-    if not inv:
-        await interaction.followup.send("🎒 Il tuo inventario è vuoto. Acquista qualcosa con `/negozio`!", ephemeral=True)
-        return
-    righe = "\n".join(f"• {NEGOZIO[n]['emoji'] if n in NEGOZIO else '📦'} **{n}** — `{q}x`" for n, q in inv.items())
-    embed = discord.Embed(title=f"🎒 Inventario di {interaction.user.display_name}", description=righe, color=discord.Color.blue())
-    embed.set_footer(text="Tokyo Horizon RP | Sistema Inventario")
-    await interaction.followup.send(embed=embed)
+    try:
+        inv = get_inventario(interaction.user.id)
+        inv_filtrato = {n: q for n, q in inv.items() if isinstance(q, int) and q > 0}
+        if not inv_filtrato:
+            await interaction.followup.send("🎒 Il tuo inventario è vuoto. Acquista qualcosa con `/negozio`!", ephemeral=True)
+            return
+        righe = "\n".join(
+            f"• {NEGOZIO[n]['emoji'] if n in NEGOZIO else '📦'} **{n}** — `{q}x`"
+            for n, q in inv_filtrato.items()
+        )
+        embed = discord.Embed(
+            title=f"🎒 Inventario di {interaction.user.display_name}",
+            description=righe,
+            color=discord.Color.blue()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Sistema Inventario")
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    except Exception as e:
+        print(f"[ERRORE INVENTARIO] {e}")
+        await interaction.followup.send("❌ Errore nel caricare l'inventario. Riprova.", ephemeral=True)
 
 
 @bot.tree.command(name="resetcooldown", description="[MOD] Azzera il cooldown furto di un giocatore")
@@ -902,6 +918,35 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
         )
     embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
     await interaction.followup.send(embed=embed)
+
+
+@bot.tree.command(name="backup", description="[MOD] Scarica il file di salvataggio completo del bot")
+async def backup(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    ha_permesso = any(r.name in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    if not ha_permesso:
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+    salva_dati()
+    if not os.path.exists(DATI_FILE):
+        await interaction.followup.send("❌ Nessun file di salvataggio trovato.", ephemeral=True)
+        return
+    file = discord.File(DATI_FILE, filename="tokyo_horizon_backup.json")
+    embed = discord.Embed(
+        title="💾 Backup Dati — Tokyo Horizon RP",
+        description=(
+            "Ecco il file di salvataggio completo del bot.\n\n"
+            "**Per trasferirlo su un altro Replit:**\n"
+            "1. Scarica questo file\n"
+            "2. Caricalo nella root del nuovo progetto\n"
+            f"3. Rinominalo `{DATI_FILE}`\n"
+            "4. Riavvia il bot\n\n"
+            "Tutti i dati (economia, inventari, cooldown) verranno ripristinati."
+        ),
+        color=discord.Color.gold()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Sistema Backup")
+    await interaction.followup.send(embed=embed, file=file, ephemeral=True)
 
 
 # --- AVVIO BOT ---
