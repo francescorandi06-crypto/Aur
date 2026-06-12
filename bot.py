@@ -864,7 +864,7 @@ async def inventario_cmd(interaction: discord.Interaction):
 @app_commands.describe(utente="Il giocatore di cui resettare il cooldown")
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.id in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
@@ -888,7 +888,7 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
 ])
 async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.id in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
@@ -931,7 +931,7 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
 @bot.tree.command(name="backup", description="[MOD] Scarica il file di salvataggio completo del bot")
 async def backup(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    ha_permesso = any(r.id in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
