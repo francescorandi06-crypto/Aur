@@ -553,19 +553,20 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             )
             return
 
-    ora_attuale = time.time()
-    cooldown_sec = 6 * 3600 if tipo_scelto == "villa" else 4 * 3600
-    ultimo = furto_cooldown.get(uid, {}).get(tipo_scelto, 0)
-    if ora_attuale - ultimo < cooldown_sec:
-        rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
-        ore = rimanenti // 3600
-        minuti = (rimanenti % 3600) // 60
-        await interaction.followup.send(
-            f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.", ephemeral=True
-        )
-        return
-    furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
-    salva_dati()
+    if tipo_scelto != "villa":
+        ora_attuale = time.time()
+        cooldown_sec = 4 * 3600
+        ultimo = furto_cooldown.get(uid, {}).get(tipo_scelto, 0)
+        if ora_attuale - ultimo < cooldown_sec:
+            rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
+            ore = rimanenti // 3600
+            minuti = (rimanenti % 3600) // 60
+            await interaction.followup.send(
+                f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.", ephemeral=True
+            )
+            return
+        furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
+        salva_dati()
 
     if tipo_scelto == "villa":
         location = random.choice(VILLE)
@@ -859,6 +860,60 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
         furto_cooldown[utente.id] = {}
         salva_dati()
     await interaction.followup.send(f"✅ Cooldown furto di {utente.mention} azzerato per tutti i tipi (villa, casa, macchina).", ephemeral=True)
+
+
+@bot.tree.command(name="dai", description="[MOD] Dai contanti o oggetti a un giocatore")
+@app_commands.describe(
+    utente="Il giocatore a cui dare qualcosa",
+    tipo="Cosa vuoi dare",
+    quantita="Importo in € (per contanti) o quantità (per oggetti)"
+)
+@app_commands.choices(tipo=[
+    app_commands.Choice(name="Contanti in tasca",    value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca",    value="banca"),
+    app_commands.Choice(name="Grimaldello",          value="Grimaldello"),
+    app_commands.Choice(name="Piede di Porco",       value="Piede di Porco"),
+])
+async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
+    await interaction.response.defer(ephemeral=True)
+    ha_permesso = any(r.name in RUOLI_STAFF for r in interaction.user.roles) or interaction.user.guild_permissions.administrator
+    if not ha_permesso:
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+    if utente.bot or quantita <= 0:
+        await interaction.followup.send("❌ Valore non valido.", ephemeral=True)
+        return
+
+    valore = tipo.value
+    if valore in ("portafoglio", "banca"):
+        bil = get_balance(utente.id)
+        bil[valore] += quantita
+        salva_dati()
+        dove = "in tasca" if valore == "portafoglio" else "in banca"
+        embed = discord.Embed(
+            title="💸 Fondi Accreditati",
+            description=(
+                f"Hai accreditato **`{quantita:,}€`** {dove} a {utente.mention}.\n\n"
+                f"💵 Tasca: `{bil['portafoglio']:,}€` | 🏛️ Banca: `{bil['banca']:,}€`"
+            ),
+            color=discord.Color.green()
+        )
+    else:
+        inv = get_inventario(utente.id)
+        inv[valore] = inv.get(valore, 0) + quantita
+        salva_dati()
+        info = NEGOZIO.get(valore, {})
+        emoji = info.get("emoji", "📦")
+        embed = discord.Embed(
+            title="🎒 Oggetto Consegnato",
+            description=(
+                f"Hai dato **{quantita}x {emoji} {valore}** a {utente.mention}.\n\n"
+                f"🎒 Ha ora `{inv[valore]}x {valore}` in inventario."
+            ),
+            color=discord.Color.green()
+        )
+    embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+    await interaction.followup.send(embed=embed)
 
 
 # --- AVVIO BOT ---
