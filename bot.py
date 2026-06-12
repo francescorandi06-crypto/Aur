@@ -97,17 +97,9 @@ DESTINAZIONI_MACCHINA = [
 # =============================================================================
 
 OGGETTI_VILLA = [
-    {"nome": "💎 Diamante Purissimo",        "valore": 45000, "rarità": 2},
-    {"nome": "👑 Lingotto d'Oro Massiccio",  "valore": 35000, "rarità": 4},
-    {"nome": "📿 Collana di Smeraldi",        "valore": 30000, "rarità": 7},
-    {"nome": "🖼️ Quadro Antico di Valore",   "valore": 25000, "rarità": 15},
-    {"nome": "⌚ Orologio Rolex Tempestato",  "valore": 20000, "rarità": 28},
-]
-
-OGGETTI_VILLA_PREMIUM = [
-    {"nome": "💎 Diamante Purissimo",        "valore": 45000, "rarità": 2},
-    {"nome": "👑 Lingotto d'Oro Massiccio",  "valore": 35000, "rarità": 4},
-    {"nome": "📿 Collana di Smeraldi",        "valore": 30000, "rarità": 7},
+    {"nome": "💎 Diamante Purissimo",       "valore": 45000, "rarità": 2},
+    {"nome": "👑 Lingotto d'Oro Massiccio", "valore": 40000, "rarità": 4},
+    {"nome": "📿 Collana di Smeraldi",       "valore": 35000, "rarità": 7},
 ]
 
 OGGETTI_CASA = [
@@ -570,11 +562,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
 
     if tipo_scelto == "villa":
         location = random.choice(VILLE)
-        is_premium = location["nome"] in ["Villa di Lusso #2 — Zona Tongva Hills", "Villa di Lusso #3 — Zona Vinewood Hills"]
-        pool_oggetti = OGGETTI_VILLA_PREMIUM if is_premium else OGGETTI_VILLA
-        k = 3 if is_premium else random.randint(3, 4)
-
-        oggetti_scelti = campiona_con_rarità(pool_oggetti, k=k)
+        oggetti_scelti = campiona_con_rarità(OGGETTI_VILLA, k=3)
         pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti)
         valore_max = max(o["valore"] for o in oggetti_scelti)
 
