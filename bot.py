@@ -861,17 +861,30 @@ async def inventario_cmd(interaction: discord.Interaction):
 
 
 @bot.tree.command(name="resetcooldown", description="[MOD] Azzera il cooldown furto di un giocatore")
-@app_commands.describe(utente="Il giocatore di cui resettare il cooldown")
-async def resetcooldown(interaction: discord.Interaction, utente: discord.Member):
+@app_commands.describe(utente="Il giocatore di cui resettare il cooldown", tipo="Quale cooldown azzerare")
+@app_commands.choices(tipo=[
+    app_commands.Choice(name="🏰 Villa",       value="villa"),
+    app_commands.Choice(name="🏠 Casa",        value="casa"),
+    app_commands.Choice(name="🚗 Macchina",    value="macchina"),
+    app_commands.Choice(name="🔄 Tutti",       value="tutti"),
+])
+async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
     await interaction.response.defer(ephemeral=True)
     ha_permesso = any(r.id in RUOLI_STAFF for r in getattr(interaction.user, "roles", [])) or interaction.permissions.administrator
     if not ha_permesso:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
-    if utente.id in furto_cooldown:
+    cd = furto_cooldown.get(utente.id, {})
+    if tipo.value == "tutti":
         furto_cooldown[utente.id] = {}
-        salva_dati()
-    await interaction.followup.send(f"✅ Cooldown furto di {utente.mention} azzerato per tutti i tipi (villa, casa, macchina).", ephemeral=True)
+        msg = "tutti i cooldown (villa, casa, macchina)"
+    else:
+        cd.pop(tipo.value, None)
+        furto_cooldown[utente.id] = cd
+        nomi = {"villa": "🏰 Villa", "casa": "🏠 Casa", "macchina": "🚗 Macchina"}
+        msg = f"il cooldown **{nomi[tipo.value]}**"
+    salva_dati()
+    await interaction.followup.send(f"✅ Azzerato {msg} per {utente.mention}.", ephemeral=True)
 
 
 @bot.tree.command(name="dai", description="[MOD] Dai contanti o oggetti a un giocatore")
@@ -925,7 +938,7 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
             color=discord.Color.green()
         )
     embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
-    await interaction.followup.send(embed=embed)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="backup", description="[MOD] Scarica il file di salvataggio completo del bot")
