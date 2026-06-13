@@ -650,7 +650,7 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             embeds.append(embed_foto)
 
         view = VeicoloButtons()
-        msg = await interaction.channel.send(embeds=embeds, files=files, view=view)
+        msg = await interaction.followup.send(embeds=embeds, files=files, view=view, wait=True)
 
         ordini_pendenti_macchina[msg.id] = {
             "autore_id":   self.autore_id,
