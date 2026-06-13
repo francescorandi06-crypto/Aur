@@ -17,10 +17,10 @@
   "ordini_macchina": {
     "1083459553892499476": {
       "guadagno": 5000,
-      "destinazione": "Discarica Centrale di South Los Santos",
-      "modello": "Aura",
+      "destinazione": "Chop Shop clandestino di Paleto Bay",
+      "modello": "Aur",
       "foto_ok": true,
-      "in_attesa": false,
+      "in_attesa": true,
       "consegnato": false
     }
   }

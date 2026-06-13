@@ -78,62 +78,25 @@ bot = TokyoHorizonBot()
 # =============================================================================
 
 VILLE = [
-    {
-        "nome": "Villa di Lusso #1 — Zona Rockford Hills",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_1353_1781292290177.png",
-        "rarità": "🟠 Rara",
-        "loot_tier": "rara",
-    },
-    {
-        "nome": "Villa di Lusso #2 — Zona Tongva Hills",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_1349_1781292290177.png",
-        "rarità": "🟠 Rara",
-        "loot_tier": "rara",
-    },
-    {
-        "nome": "Villa di Lusso #3 — Zona Vinewood Hills",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_1346_1781292290177.png",
-        "rarità": "🔴 Leggendaria",
-        "loot_tier": "leggendaria",
-    },
-    {
-        "nome": "Villa di Lusso #4 — Zona Richman",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_1339_1781292290178.png",
-        "rarità": "🟠 Rara",
-        "loot_tier": "rara",
-    },
-    {
-        "nome": "Villa di Lusso #5 — Zona Palomino Highlands",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_1334_1781292290178.png",
-        "rarità": "🟣 Epica",
-        "loot_tier": "epica",
-    },
-    {
-        "nome": "Villa di Lusso #6 — Zona Chumash",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_1326_1781271755457.png",
-        "rarità": "🔴 Leggendaria",
-        "loot_tier": "leggendaria_elite",
-    },
-    {
-        "nome": "Villa di Lusso #7 — Zona Morningwood",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_0102_1781294056129.png",
-        "rarità": "🔴 Leggendaria",
-        "loot_tier": "leggendaria_elite",
-    },
-    {
-        "nome": "Villa di Lusso #8 — Zona Great Chaparral",
-        "mappa": None,
-        "esterno": "attached_assets/IMG_1329_1781268979063.png",
-        "rarità": "🔴 Leggendaria",
-        "loot_tier": "leggendaria_elite",
-    },
+    {"nome": "Villa #1",  "esterno": "attached_assets/IMG_1326_1781366502000.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
+    {"nome": "Villa #2",  "esterno": "attached_assets/IMG_1329_1781366502000.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
+    {"nome": "Villa #3",  "esterno": "attached_assets/IMG_1320_1781366502000.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
+    {"nome": "Villa #4",  "esterno": "attached_assets/IMG_1334_1781366502001.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #5",  "esterno": "attached_assets/IMG_1339_1781366502001.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #6",  "esterno": "attached_assets/IMG_1349_1781366502001.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #7",  "esterno": "attached_assets/IMG_1351_1781366502001.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #8",  "esterno": "attached_assets/IMG_1424_1781366502001.jpeg", "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #9",  "esterno": "attached_assets/IMG_1419_1781366502001.png",  "rarità": "🟣 Epica",       "loot_tier": "epica"},
+    {"nome": "Villa #10", "esterno": "attached_assets/IMG_1416_1781366502001.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
+    {"nome": "Villa #11", "esterno": "attached_assets/IMG_1413_1781366502001.png",  "rarità": "🟣 Epica",       "loot_tier": "epica"},
+    {"nome": "Villa #12", "esterno": "attached_assets/IMG_1410_1781366502001.png",  "rarità": "🟣 Epica",       "loot_tier": "epica"},
+    {"nome": "Villa #13", "esterno": "attached_assets/IMG_1407_1781366502001.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #14", "esterno": "attached_assets/IMG_1404_1781366502001.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #15", "esterno": "attached_assets/IMG_1401_1781366514831.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
+    {"nome": "Villa #16", "esterno": "attached_assets/IMG_1395_1781366551705.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
+    {"nome": "Villa #17", "esterno": "attached_assets/IMG_1398_1781366590844.png",  "rarità": "🟣 Epica",       "loot_tier": "epica"},
+    {"nome": "Villa #18", "esterno": "attached_assets/IMG_1346_1781366641199.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
+    {"nome": "Villa #19", "esterno": "attached_assets/IMG_1347_1781366688414.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
 ]
 
 CASE = [
@@ -180,12 +143,6 @@ LOOT_VILLA = {
         {"nome": "👑 Lingotto d'Oro Massiccio",   "valore": 40000, "rarità": 5},
         {"nome": "💎 Diamante Purissimo",          "valore": 45000, "rarità": 2},
     ],
-    "leggendaria_elite": [
-        {"nome": "🏺 Anfora Antica di Valore",    "valore": 30000, "rarità": 12},
-        {"nome": "📿 Collana di Smeraldi",        "valore": 35000, "rarità": 7},
-        {"nome": "👑 Lingotto d'Oro Massiccio",   "valore": 40000, "rarità": 4},
-        {"nome": "💎 Diamante Purissimo",          "valore": 45000, "rarità": 2},
-    ],
 }
 
 CONFIGURAZIONE_INGRESSI = {
@@ -203,15 +160,9 @@ CONFIGURAZIONE_INGRESSI = {
     ],
     "leggendaria": [
         {"chiave": "davanti", "label": "Ingresso principale",        "descr": "dall'ingresso principale",          "emoji": "🚪", "style": discord.ButtonStyle.danger,    "rischio": 90},
-        {"chiave": "garage",  "label": "Dal garage",                 "descr": "dal garage",                        "emoji": "🚗", "style": discord.ButtonStyle.secondary, "rischio": 55},
         {"chiave": "dietro",  "label": "Entrata secondaria (retro)", "descr": "dall'entrata secondaria sul retro", "emoji": "🔙", "style": discord.ButtonStyle.secondary, "rischio": 40},
         {"chiave": "tetto",   "label": "Dal tetto",                  "descr": "dal tetto",                         "emoji": "🏠", "style": discord.ButtonStyle.primary,   "rischio": 25},
-    ],
-    "leggendaria_elite": [
-        {"chiave": "davanti", "label": "Ingresso principale",        "descr": "dall'ingresso principale",          "emoji": "🚪", "style": discord.ButtonStyle.danger,    "rischio": 90},
-        {"chiave": "garage",  "label": "Dal garage",                 "descr": "dal garage",                        "emoji": "🚗", "style": discord.ButtonStyle.secondary, "rischio": 55},
-        {"chiave": "dietro",  "label": "Entrata secondaria (retro)", "descr": "dall'entrata secondaria sul retro", "emoji": "🔙", "style": discord.ButtonStyle.secondary, "rischio": 40},
-        {"chiave": "tetto",   "label": "Dal tetto",                  "descr": "dal tetto",                         "emoji": "🏠", "style": discord.ButtonStyle.primary,   "rischio": 25},
+        {"chiave": "garage",  "label": "Dal garage",                 "descr": "dal garage",                        "emoji": "🚗", "style": discord.ButtonStyle.secondary, "rischio": 60},
     ],
 }
 
@@ -347,8 +298,9 @@ def get_inventario(user_id):
     return inventario[user_id]
 
 NEGOZIO = {
-    "Piede di Porco": {"prezzo": 1000, "emoji": "🪓", "descrizione": "Forza porte e finestre. Usato per ville e case."},
-    "Grimaldello":    {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di lusso. Usato solo per le ville."},
+    "Piede di Porco":      {"prezzo": 1000, "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usato per ville e case."},
+    "Grimaldello":         {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di lusso. Usato per le ville."},
+    "Sistema di Hacking":  {"prezzo": 4000, "emoji": "💻",  "descrizione": "Disabilita l'allarme della villa. Obbligatorio per il furto in villa insieme al Piede di Porco o Grimaldello."},
 }
 
 RUOLI_STAFF = {
@@ -524,6 +476,7 @@ class VillaScassoButtons(discord.ui.View):
         self.autore_id = autore_id
         self.pool_oggetti = pool_oggetti
         self.strumento = strumento
+        self.usata = False
 
         ingressi = CONFIGURAZIONE_INGRESSI.get(tier, CONFIGURAZIONE_INGRESSI["rara"])
         for ing in ingressi:
@@ -545,26 +498,29 @@ class VillaScassoButtons(discord.ui.View):
         if interaction.user.id != self.autore_id:
             await interaction.response.send_message("❌ Questa non è la tua azione!", ephemeral=True)
             return
+        if self.usata:
+            await interaction.response.send_message("⚠️ Hai già effettuato un tentativo di ingresso!", ephemeral=True)
+            return
+        self.usata = True
 
         inv = get_inventario(self.autore_id)
         if inv.get(self.strumento, 0) <= 0:
             await interaction.response.send_message(f"❌ Non hai più `{self.strumento}` nell'inventario!", ephemeral=True)
+            self.usata = False
             return
         inv[self.strumento] -= 1
         if inv[self.strumento] == 0:
             del inv[self.strumento]
+
+        if inv.get("Sistema di Hacking", 0) <= 0:
+            await interaction.response.send_message("❌ Non hai più il `Sistema di Hacking` nell'inventario!", ephemeral=True)
+            self.usata = False
+            return
+        inv["Sistema di Hacking"] -= 1
+        if inv["Sistema di Hacking"] == 0:
+            del inv["Sistema di Hacking"]
+
         salva_dati()
-
-        await interaction.response.send_message(
-            f"🛠️ Hai scelto di entrare **{metodo}**. L'azione richiederà **5 minuti** come da regolamento. Rimani in zona!",
-            ephemeral=True
-        )
-
-        for child in self.children:
-            child.disabled = True
-        await interaction.message.edit(view=self)
-
-        await asyncio.sleep(300)
 
         beccato = random.randint(1, 100) <= rischio
 
@@ -576,13 +532,13 @@ class VillaScassoButtons(discord.ui.View):
             embed_fail = discord.Embed(
                 title="🚨 SEI STATO ARRESTATO!",
                 description=(
-                    f"Le forze dell'ordine ti hanno sorpreso durante il furto!\n\n"
+                    f"Hai tentato di entrare **{metodo}** ma le forze dell'ordine ti hanno sorpreso!\n\n"
                     f"💸 **Multa:** `{multa:,}€` scalati dalla **Banca**."
                 ),
                 color=discord.Color.red()
             )
             embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto")
-            await interaction.followup.send(embed=embed_fail)
+            await interaction.response.send_message(embed=embed_fail, ephemeral=True)
         else:
             scelte = list(self.pool_oggetti)
             pesi = [ogg["percentuale"] for ogg in scelte]
@@ -594,14 +550,14 @@ class VillaScassoButtons(discord.ui.View):
             embed_vittoria = discord.Embed(
                 title="✅ FURTO IN VILLA COMPLETATO!",
                 description=(
-                    f"Hai ripulito la villa senza lasciare tracce!\n\n"
+                    f"Sei entrato **{metodo}** e hai ripulito la villa senza lasciare tracce!\n\n"
                     f"📦 **Refurtiva:** `{oggetto_estratto['nome']}`\n"
                     f"💰 **Valore Guadagnato:** `{valore_finale:,}€` depositati in **Banca**."
                 ),
                 color=discord.Color.green()
             )
             embed_vittoria.set_footer(text="Tokyo Horizon RP | Sistema Furto")
-            await interaction.followup.send(embed=embed_vittoria)
+            await interaction.response.send_message(embed=embed_vittoria, ephemeral=True)
 
 
 class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il modello"):
@@ -938,7 +894,20 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         preferenza = []
 
     strumento_usato = None
-    if preferenza:
+    if tipo_scelto == "villa":
+        inv = get_inventario(uid)
+        strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
+        if not strumento_usato:
+            await interaction.followup.send(
+                "🔒 Per il furto in villa servono **`Piede di Porco`** o **`Grimaldello`** e **`Sistema di Hacking`**. Acquistali con `/negozio`.", ephemeral=True
+            )
+            return
+        if inv.get("Sistema di Hacking", 0) <= 0:
+            await interaction.followup.send(
+                "💻 Hai lo strumento da scasso ma ti manca il **`Sistema di Hacking`** (4.000€). Acquistalo con `/negozio`.", ephemeral=True
+            )
+            return
+    elif preferenza:
         inv = get_inventario(uid)
         strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
         if not strumento_usato:
@@ -948,20 +917,19 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             )
             return
 
-    if tipo_scelto != "villa":
-        ora_attuale = time.time()
-        cooldown_sec = 4 * 3600
-        ultimo = furto_cooldown.get(uid, {}).get(tipo_scelto, 0)
-        if ora_attuale - ultimo < cooldown_sec:
-            rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
-            ore = rimanenti // 3600
-            minuti = (rimanenti % 3600) // 60
-            await interaction.followup.send(
-                f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.", ephemeral=True
-            )
-            return
-        furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
-        salva_dati()
+    ora_attuale = time.time()
+    cooldown_sec = 24 * 3600 if tipo_scelto == "villa" else 4 * 3600
+    ultimo = furto_cooldown.get(uid, {}).get(tipo_scelto, 0)
+    if ora_attuale - ultimo < cooldown_sec:
+        rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
+        ore = rimanenti // 3600
+        minuti = (rimanenti % 3600) // 60
+        await interaction.followup.send(
+            f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.", ephemeral=True
+        )
+        return
+    furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
+    salva_dati()
 
     if tipo_scelto == "villa":
         location = random.choice(VILLE)
@@ -981,7 +949,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
                 "**INFORMAZIONI SUL COLPO OTTENUTE DAI SATELLITI**\n\n"
                 f"**Scegli il punto di ingresso:**\n{lista_ingressi}\n\n"
                 f"📦 **Merci preziose rilevate all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
-                "🔑 **Oggetto richiesto:** 🪓 `Piede di Porco o Grimaldello`"
+                "🔑 **Oggetti richiesti:** 🪓 `Piede di Porco` o `Grimaldello` + 💻 `Sistema di Hacking`"
             ),
             color=discord.Color.purple()
         )
@@ -1212,8 +1180,9 @@ async def negozio(interaction: discord.Interaction):
 @bot.tree.command(name="compra", description="Acquista un articolo dal negozio")
 @app_commands.describe(articolo="L'articolo che vuoi acquistare")
 @app_commands.choices(articolo=[
-    app_commands.Choice(name="Piede di Porco (1000€)", value="Piede di Porco"),
-    app_commands.Choice(name="Grimaldello (1500€)",    value="Grimaldello"),
+    app_commands.Choice(name="Piede di Porco (1000€)",     value="Piede di Porco"),
+    app_commands.Choice(name="Grimaldello (1500€)",        value="Grimaldello"),
+    app_commands.Choice(name="Sistema di Hacking (4000€)", value="Sistema di Hacking"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
     await interaction.response.defer(ephemeral=True)
