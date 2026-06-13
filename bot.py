@@ -618,7 +618,6 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
         self.autore_id = autore_id
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer()
         modello_input = self.modello.value.strip()
         rarita_label, guadagno, colore = classifica_macchina(modello_input)
         dest = random.choice(DESTINAZIONI_MACCHINA)
@@ -650,7 +649,8 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             embeds.append(embed_foto)
 
         view = VeicoloButtons()
-        msg = await interaction.followup.send(embeds=embeds, files=files, view=view, wait=True)
+        await interaction.response.send_message(embeds=embeds, files=files, view=view)
+        msg = await interaction.original_response()
 
         ordini_pendenti_macchina[msg.id] = {
             "autore_id":   self.autore_id,
@@ -662,6 +662,7 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             "consegnato":  False,
         }
         salva_dati()
+        print(f"[ORDINE] Creato ordine msg_id={msg.id} autore={self.autore_id} modello={modello_input}")
 
         await interaction.followup.send(
             "📸 **Verifica obbligatoria:** invia la foto del veicolo in questo canale, poi clicca **📸 Ho Inviato la Foto** nel messaggio qui sopra.",
