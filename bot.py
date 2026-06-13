@@ -650,7 +650,7 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             embeds.append(embed_foto)
 
         view = VeicoloButtons()
-        msg = await interaction.followup.send(embeds=embeds, files=files, view=view, wait=True)
+        msg = await interaction.channel.send(embeds=embeds, files=files, view=view)
 
         ordini_pendenti_macchina[msg.id] = {
             "autore_id":   self.autore_id,
@@ -817,6 +817,7 @@ class VeicoloButtons(discord.ui.View):
             await interaction.response.send_message("⚠️ Questo furto è già stato processato.", ephemeral=True)
             return
 
+        await interaction.response.defer(ephemeral=True)
         ordine["foto_ok"] = True
         salva_dati()
         button.disabled = True
@@ -825,7 +826,10 @@ class VeicoloButtons(discord.ui.View):
             if isinstance(child, discord.ui.Button) and child.custom_id == "vei:consegna":
                 child.disabled = False
 
-        await interaction.response.edit_message(view=self)
+        try:
+            await interaction.message.edit(view=self)
+        except Exception as e:
+            print(f"[ERRORE] edit messaggio foto: {e}")
         await interaction.followup.send(
             "✅ **Foto confermata!** Ora raggiungi la destinazione e premi **🏁 Consegna Veicolo** quando sei arrivato. Hai **10 minuti**!",
             ephemeral=True

@@ -14,24 +14,5 @@
     }
   },
   "canale_furti_id": 1515093746671292547,
-  "ordini_macchina": {
-    "1515304142598312056": {
-      "autore_id": 1083459553892499476,
-      "guadagno": 25000,
-      "destinazione": "Molo di Carico dei Container (Porto di LS)",
-      "modello": "Zentorno",
-      "foto_ok": true,
-      "in_attesa": false,
-      "consegnato": false
-    },
-    "1515304955874115676": {
-      "autore_id": 1083459553892499476,
-      "guadagno": 5000,
-      "destinazione": "Pontile di Contrabbando a Chumash",
-      "modello": "Dilettante",
-      "foto_ok": true,
-      "in_attesa": false,
-      "consegnato": false
-    }
-  }
+  "ordini_macchina": {}
 }
