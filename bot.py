@@ -648,12 +648,7 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             embed_foto.set_image(url=f"attachment://{fname}")
             embeds.append(embed_foto)
 
-        view = VeicoloButtons()
-        await interaction.response.send_message(embeds=embeds, files=files, view=view)
-        msg = await interaction.original_response()
-
-        ordini_pendenti_macchina[msg.id] = {
-            "autore_id":   self.autore_id,
+        ordini_pendenti_macchina[self.autore_id] = {
             "guadagno":    guadagno,
             "destinazione": dest["nome"],
             "modello":     modello_input,
@@ -662,7 +657,10 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             "consegnato":  False,
         }
         salva_dati()
-        print(f"[ORDINE] Creato ordine msg_id={msg.id} autore={self.autore_id} modello={modello_input}")
+        print(f"[ORDINE] Creato ordine autore={self.autore_id} modello={modello_input}")
+
+        view = VeicoloButtons()
+        await interaction.response.send_message(embeds=embeds, files=files, view=view)
 
         await interaction.followup.send(
             "📸 **Verifica obbligatoria:** invia la foto del veicolo in questo canale, poi clicca **📸 Ho Inviato la Foto** nel messaggio qui sopra.",
@@ -671,13 +669,12 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
 
 
 class ApprovazioneCosegnaView(discord.ui.View):
-    def __init__(self, autore_id, guadagno, modello, destinazione, veicolo_msg_id, messaggio_originale):
+    def __init__(self, autore_id, guadagno, modello, destinazione, messaggio_originale):
         super().__init__(timeout=1800)
         self.autore_id = autore_id
         self.guadagno = guadagno
         self.modello = modello
         self.destinazione = destinazione
-        self.veicolo_msg_id = veicolo_msg_id
         self.messaggio_originale = messaggio_originale
         self.deciso = False
 
@@ -694,7 +691,7 @@ class ApprovazioneCosegnaView(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        ordine = ordini_pendenti_macchina.pop(self.veicolo_msg_id, None)
+        ordine = ordini_pendenti_macchina.pop(self.autore_id, None)
         furto_cooldown.setdefault(self.autore_id, {})["macchina"] = time.time()
         bilancio = get_balance(self.autore_id)
         bilancio["banca"] += self.guadagno
@@ -753,7 +750,7 @@ class ApprovazioneCosegnaView(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        ordine = ordini_pendenti_macchina.pop(self.veicolo_msg_id, None)
+        ordine = ordini_pendenti_macchina.pop(self.autore_id, None)
         salva_dati()
 
         embed_are = discord.Embed(
@@ -803,13 +800,10 @@ class VeicoloButtons(discord.ui.View):
 
     @discord.ui.button(label="📸 Ho Inviato la Foto", style=discord.ButtonStyle.primary, custom_id="vei:foto")
     async def conferma_foto(self, interaction: discord.Interaction, button: discord.ui.Button):
-        mid = interaction.message.id
-        ordine = ordini_pendenti_macchina.get(mid)
+        uid = interaction.user.id
+        ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
             await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
-            return
-        if interaction.user.id != ordine["autore_id"]:
-            await interaction.response.send_message("❌ Non è la tua auto!", ephemeral=True)
             return
         if ordine.get("foto_ok"):
             await interaction.response.send_message("✅ Foto già confermata!", ephemeral=True)
@@ -835,15 +829,15 @@ class VeicoloButtons(discord.ui.View):
             "✅ **Foto confermata!** Ora raggiungi la destinazione e premi **🏁 Consegna Veicolo** quando sei arrivato. Hai **10 minuti**!",
             ephemeral=True
         )
-        asyncio.create_task(self._scadenza_10min(mid, interaction.message))
+        asyncio.create_task(self._scadenza_10min(uid, interaction.message))
 
-    async def _scadenza_10min(self, msg_id: int, msg):
+    async def _scadenza_10min(self, autore_id: int, msg):
         await asyncio.sleep(600)
-        ordine = ordini_pendenti_macchina.get(msg_id)
+        ordine = ordini_pendenti_macchina.get(autore_id)
         if not ordine or ordine.get("consegnato") or ordine.get("in_attesa"):
             return
         modello = ordine.get("modello", "sconosciuto")
-        ordini_pendenti_macchina.pop(msg_id, None)
+        ordini_pendenti_macchina.pop(autore_id, None)
         salva_dati()
         embed_fail = discord.Embed(
             title="❌ TEMPO SCADUTO — AZIONE FALLITA",
@@ -861,13 +855,10 @@ class VeicoloButtons(discord.ui.View):
 
     @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success, custom_id="vei:consegna", disabled=True)
     async def consegna(self, interaction: discord.Interaction, button: discord.ui.Button):
-        mid = interaction.message.id
-        ordine = ordini_pendenti_macchina.get(mid)
+        uid = interaction.user.id
+        ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
             await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
-            return
-        if interaction.user.id != ordine["autore_id"]:
-            await interaction.response.send_message("❌ Questo veicolo non lo stai guidando tu!", ephemeral=True)
             return
         if ordine.get("in_attesa"):
             await interaction.response.send_message("⏳ La tua consegna è già in attesa di approvazione dello staff!", ephemeral=True)
@@ -883,7 +874,7 @@ class VeicoloButtons(discord.ui.View):
         button.disabled = True
         button.label = "⏳ In attesa di approvazione..."
         try:
-            await interaction.edit_original_response(view=self)
+            await interaction.message.edit(view=self)
         except Exception as e:
             print(f"[ERRORE] Aggiornamento bottone consegna fallito: {e}")
 
@@ -901,11 +892,10 @@ class VeicoloButtons(discord.ui.View):
         embed_staff.set_footer(text="Tokyo Horizon RP | Pannello Staff — Furto Veicoli")
 
         view_approvazione = ApprovazioneCosegnaView(
-            autore_id=ordine["autore_id"],
+            autore_id=uid,
             guadagno=ordine["guadagno"],
             modello=ordine["modello"],
             destinazione=ordine["destinazione"],
-            veicolo_msg_id=mid,
             messaggio_originale=interaction.message,
         )
 
