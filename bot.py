@@ -1185,15 +1185,17 @@ async def negozio(interaction: discord.Interaction):
     app_commands.Choice(name="Sistema di Hacking (4000€)", value="Sistema di Hacking"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
+    if not await safe_defer(interaction, ephemeral=True):
+        return
     nome = articolo.value
     info = NEGOZIO.get(nome)
     if not info:
-        await interaction.response.send_message("❌ Articolo non trovato nel negozio.", ephemeral=True)
+        await interaction.followup.send("❌ Articolo non trovato nel negozio.", ephemeral=True)
         return
     prezzo = info["prezzo"]
     bil = get_balance(interaction.user.id)
     if bil["portafoglio"] < prezzo:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"❌ Non hai abbastanza contanti in tasca! Ti servono `{prezzo:,}€` ma ne hai solo `{bil['portafoglio']:,}€`.", ephemeral=True
         )
         return
@@ -1211,7 +1213,7 @@ async def compra(interaction: discord.Interaction, articolo: app_commands.Choice
         color=discord.Color.green()
     )
     embed.set_footer(text="Tokyo Horizon RP | Sistema Negozio")
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="inventario", description="Visualizza il tuo inventario")
