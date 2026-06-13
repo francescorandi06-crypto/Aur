@@ -1477,6 +1477,93 @@ CANALE_POLIZIA_HARDCODED = 1515439682333180015
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 
 
+class AccettaRapinaView(discord.ui.View):
+    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str):
+        super().__init__(timeout=600)
+        self.criminal_uid = criminal_uid
+        self.nome_pg = nome_pg
+        self.posizione = posizione
+        self.partecipanti = partecipanti
+        self.accettata = False
+        self.message: discord.Message = None
+
+    @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
+    async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.accettata:
+            await interaction.response.send_message("❌ Questa rapina è già stata presa in carico!", ephemeral=True)
+            return
+        self.accettata = True
+        self.stop()
+
+        bil = get_balance(self.criminal_uid)
+        bil["banca"] += LOOT_BANCOMAT
+        salva_dati()
+
+        for child in self.children:
+            child.disabled = True
+
+        embed = discord.Embed(
+            title="🚔 RAPINA IN CARICO — BANCOMAT 🏧",
+            description=(
+                f"✅ **Agente in servizio:** {interaction.user.mention}\n\n"
+                f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                f"📍 **Posizione:** `{self.posizione}`\n"
+                f"👥 **Partecipanti criminale:** `{self.partecipanti}`\n\n"
+                f"💰 Bottino di `{LOOT_BANCOMAT:,}€` accreditato in banca al criminale.\n"
+                f"⏱️ Scassinamento: 4 minuti | Fuga immediata (nessun dialogo)"
+            ),
+            color=discord.Color.orange()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina in Corso")
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+
+        try:
+            criminal = await bot.fetch_user(self.criminal_uid)
+            await criminal.send(
+                f"🚔 Un FDO (**{interaction.user.display_name}**) ha accettato il servizio per la tua rapina al bancomat!\n"
+                f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+                f"⚠️ Procedi con il piano — rispetta le regole di equipaggiamento!"
+            )
+        except Exception as e:
+            print(f"[BANCOMAT] DM criminale fallito: {e}")
+
+    async def on_timeout(self):
+        inv = get_inventario(self.criminal_uid)
+        inv["Piede di Porco"] = inv.get("Piede di Porco", 0) + 1
+        furto_cooldown.get(self.criminal_uid, {}).pop("bancomat", None)
+        salva_dati()
+
+        for child in self.children:
+            child.disabled = True
+
+        embed = discord.Embed(
+            title="⌛ RAPINA ANNULLATA — Nessun FDO disponibile",
+            description=(
+                f"La rapina di `{self.nome_pg}` è scaduta dopo **10 minuti** senza risposta FDO.\n\n"
+                f"📍 **Posizione:** `{self.posizione}`\n\n"
+                f"🪓 Il `Piede di Porco` è stato restituito al criminale.\n"
+                f"⏱️ Il cooldown è stato azzerato — può riprovare."
+            ),
+            color=discord.Color.dark_gray()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina Scaduta")
+        if self.message:
+            try:
+                await self.message.edit(embed=embed, view=self, attachments=[])
+            except Exception as e:
+                print(f"[BANCOMAT] Edit timeout fallito: {e}")
+
+        try:
+            criminal = await bot.fetch_user(self.criminal_uid)
+            await criminal.send(
+                "⌛ Nessun FDO ha risposto alla tua rapina al bancomat entro 10 minuti.\n"
+                "🪓 Il tuo **Piede di Porco** è stato restituito e il cooldown azzerato.\n"
+                "Puoi riprovare quando vuoi!"
+            )
+        except Exception as e:
+            print(f"[BANCOMAT] DM timeout criminale fallito: {e}")
+
+
 class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat"):
     nome_pg = discord.ui.TextInput(
         label="Nome del tuo personaggio",
@@ -1490,6 +1577,12 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         min_length=3,
         max_length=100,
     )
+    partecipanti = discord.ui.TextInput(
+        label="Partecipi solo o in coppia?",
+        placeholder="Solo  /  In coppia con [nome personaggio]",
+        min_length=4,
+        max_length=80,
+    )
 
     def __init__(self, uid: int):
         super().__init__()
@@ -1498,62 +1591,62 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
 
-        uid = self.uid
+        uid  = self.uid
         nome = self.nome_pg.value.strip()
         pos  = self.posizione.value.strip()
+        part = self.partecipanti.value.strip()
 
         inv = get_inventario(uid)
         if inv.get("Piede di Porco", 0) <= 0:
-            await interaction.followup.send(
-                "❌ Non hai più il `Piede di Porco` nell'inventario!", ephemeral=True
-            )
+            await interaction.followup.send("❌ Non hai più il `Piede di Porco` nell'inventario!", ephemeral=True)
             return
 
         inv["Piede di Porco"] -= 1
         if inv["Piede di Porco"] == 0:
             del inv["Piede di Porco"]
-
         furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
-
-        bil = get_balance(uid)
-        bil["banca"] += LOOT_BANCOMAT
         salva_dati()
 
         embed_ok = discord.Embed(
-            title="✅ Rapina Bancomat Avviata!",
+            title="✅ Rapina Bancomat Inviata!",
             description=(
                 f"🕵️ **Personaggio:** `{nome}`\n"
-                f"📍 **Posizione:** `{pos}`\n\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
                 f"🪓 Hai usato **1x Piede di Porco**.\n"
-                f"💰 **`{LOOT_BANCOMAT:,}€`** verranno accreditati in banca al completamento (4 minuti in-game).\n\n"
+                f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca non appena un FDO accetta il servizio.\n\n"
+                f"⏳ La rapina si annulla se nessun FDO risponde entro **10 minuti** — "
+                f"il Piede di Porco ti viene restituito.\n"
                 f"⚠️ Solo armi bianche o pistole leggere — vietati giubbotti e caschi!"
             ),
             color=discord.Color.green()
         )
+        embed_ok.set_thumbnail(url="attachment://atm_rules.jpeg")
         embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
-        await interaction.followup.send(embed=embed_ok, ephemeral=True)
+        files_ok = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
+        await interaction.followup.send(embed=embed_ok, files=files_ok, ephemeral=True)
 
         mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
         embed_pol = discord.Embed(
             title="🚨 RAPINA IN CORSO — BANCOMAT 🏧",
             description=(
-                f"{mention}\n\n"
                 f"🦹 **Criminale:** `{nome}`\n"
-                f"📍 **Posizione:** `{pos}`\n\n"
-                f"👥 **Partecipanti:** Max 1 Criminale | Max **2 FDO**\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti criminale:** `{part}`\n\n"
+                f"👮 **FDO richiesti:** Max **2 FDO**\n"
                 f"⚔️ **Equipaggiamento:** Solo armi bianche o pistole leggere\n"
                 f"🚫 Vietati giubbotti e caschi\n"
                 f"⏱️ **Scassinamento:** 4 minuti | Fuga immediata (nessun dialogo)\n"
-                f"💰 **Bottino:** `{LOOT_BANCOMAT:,}€` in contanti puliti"
+                f"💰 **Bottino:** `{LOOT_BANCOMAT:,}€` in contanti puliti\n\n"
+                f"⏳ Clicca **Accetta Servizio** entro 10 minuti o la rapina viene annullata."
             ),
             color=discord.Color.red()
         )
         embed_pol.set_thumbnail(url="attachment://atm_rules.jpeg")
-        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO")
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — 10 minuti per rispondere")
 
-        files_pol = []
-        if os.path.exists(ATM_IMAGE):
-            files_pol.append(discord.File(ATM_IMAGE, filename="atm_rules.jpeg"))
+        view = AccettaRapinaView(uid, nome, pos, part)
+        files_pol = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
 
         try:
             target_channel = bot.get_channel(CANALE_POLIZIA_HARDCODED) or await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
@@ -1563,12 +1656,13 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
 
         try:
             if target_channel:
-                await target_channel.send(embed=embed_pol, files=files_pol)
+                msg = await target_channel.send(content=mention, embed=embed_pol, files=files_pol, view=view)
+                view.message = msg
         except Exception as e:
             print(f"[BANCOMAT] Invio notifica fallito: {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        print(f"[BANCOMAT MODAL] Errore in on_submit: {type(error).__name__}: {error}")
+        print(f"[BANCOMAT MODAL] {type(error).__name__}: {error}")
         try:
             if not interaction.response.is_done():
                 await interaction.response.send_message("❌ Errore interno. Riprova.", ephemeral=True)
