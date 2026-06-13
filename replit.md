@@ -1,36 +1,53 @@
-# [Project name]
+# Tokyo Horizon RP
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A Discord bot and API server for managing the Tokyo Horizon GTA V roleplay community — economy, heists (furti), inventory, and vehicle theft systems.
 
 ## Run & Operate
 
+- **Run button** starts the `Tokyo Horizon Bot` workflow (`python3 bot.py`)
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+
+## Required Secrets
+
+- `DISCORD_TOKEN` — Discord bot token (from Discord Developer Portal → Bot → Token)
+- `DATABASE_URL` — Postgres connection string (auto-provisioned by Replit)
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **Bot:** Python 3.11, discord.py 2.x, Flask (keep-alive server on port 3000)
+- **API:** Node.js 24, Express 5, TypeScript 5.9
+- **DB:** PostgreSQL + Drizzle ORM
+- **Monorepo:** pnpm workspaces
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `bot.py` — Discord bot (main entry point)
+- `dati_bot.json` — local JSON persistence for economy, cooldowns, inventory
+- `artifacts/api-server/` — Express API server
+- `lib/db/` — Drizzle ORM schema and DB client
+- `lib/api-spec/` — OpenAPI spec + Orval codegen config
+- `lib/api-zod/` — generated Zod schemas
+- `lib/api-client-react/` — generated React query hooks
+- `artifacts/mockup-sandbox/` — Vite/React UI component previewer
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Bot data is persisted locally in `dati_bot.json` (economy, cooldowns, inventory, pending vehicle orders)
+- The Flask keep-alive server runs on port 3000 inside the bot process to satisfy Replit's port-binding requirement
+- Discord token is stored in Replit Secrets as `DISCORD_TOKEN` — never hardcoded
+- API server requires `PORT` env var (set to 5000) and `DATABASE_URL` (auto-provisioned)
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- `/furto villa`, `/furto casa`, `/furto macchina` — heist minigames with cooldowns, loot tiers, and staff notifications
+- `/economia`, `/deposita`, `/preleva` — player wallet and bank management
+- `/negozio`, `/compra` — in-game item shop (crowbar, lockpick)
+- `/inventario` — view player inventory
+- `/setcanale` — staff command to configure the heist notification channel
 
 ## User preferences
 
@@ -38,7 +55,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always restart the `Tokyo Horizon Bot` workflow after changing `bot.py`
+- `dati_bot.json` is the source of truth for live economy/inventory data — don't delete it
+- The bot syncs slash commands globally on startup (`await self.tree.sync()`) which can take up to 1 hour to propagate in Discord
 
 ## Pointers
 
