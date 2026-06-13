@@ -1260,8 +1260,9 @@ async def inventario_cmd(interaction: discord.Interaction):
     app_commands.Choice(name="⚡ Tutti",    value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
+    if not await safe_defer(interaction): return
     if not ha_permessi_staff(interaction):
-        await interaction.response.send_message("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
     cd = furto_cooldown.get(utente.id, {})
     if tipo.value == "tutti":
@@ -1272,7 +1273,7 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
         furto_cooldown[utente.id] = cd
         azzerati = tipo.name
     salva_dati()
-    await interaction.response.send_message(
+    await interaction.followup.send(
         f"✅ Azzerato **{azzerati}** per {utente.mention}.", ephemeral=True
     )
 
@@ -1699,7 +1700,12 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             )
             return
 
-        await interaction.response.send_modal(BancomatModal(uid))
+        try:
+            await interaction.response.send_modal(BancomatModal(uid))
+        except discord.NotFound:
+            print(f"[RAPINA] send_modal 10062 — interazione scaduta per uid={uid}")
+        except discord.HTTPException as e:
+            print(f"[RAPINA] send_modal fallito: {e}")
 
 
 
