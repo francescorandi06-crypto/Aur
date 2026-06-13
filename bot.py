@@ -919,16 +919,17 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             return
 
     ora_attuale = time.time()
-    cooldown_sec = 24 * 3600 if tipo_scelto == "villa" else 4 * 3600
-    ultimo = furto_cooldown.get(uid, {}).get(tipo_scelto, 0)
-    if ora_attuale - ultimo < cooldown_sec:
-        rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
-        ore = rimanenti // 3600
-        minuti = (rimanenti % 3600) // 60
-        await interaction.followup.send(
-            f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.", ephemeral=True
-        )
-        return
+    if tipo_scelto != "villa":
+        cooldown_sec = 4 * 3600
+        ultimo = furto_cooldown.get(uid, {}).get(tipo_scelto, 0)
+        if ora_attuale - ultimo < cooldown_sec:
+            rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
+            ore = rimanenti // 3600
+            minuti = (rimanenti % 3600) // 60
+            await interaction.followup.send(
+                f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.", ephemeral=True
+            )
+            return
     if tipo_scelto == "villa":
         location = random.choice(VILLE)
         tier = location.get("loot_tier", "rara")
