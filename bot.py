@@ -6,10 +6,11 @@ import asyncio
 import os
 import json
 import time
+import aiohttp
 from flask import Flask
 from threading import Thread
 
-# Configurazione mini-server finto per Render e UptimeRobot
+# Configurazione mini-server finto per UptimeRobot
 app = Flask('')
 
 @app.route('/')
@@ -17,7 +18,7 @@ def home():
     return "Il bot è vivo!"
 
 def run_flask():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=3000)
 
 def keep_alive():
     t = Thread(target=run_flask)
@@ -25,18 +26,44 @@ def keep_alive():
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
+
+
+class HorizonTree(app_commands.CommandTree):
+    """CommandTree personalizzato che filtra slash command scaduti prima di eseguirli."""
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.type == discord.InteractionType.application_command:
+            age = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+            if age > 2.5:
+                cmd = getattr(interaction.command, 'name', '?')
+                print(f"[SKIP] Slash command scaduto ({age:.1f}s): /{cmd} — ignorato.")
+                return False
+        return True
+
 
 class TokyoHorizonBot(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix="!", intents=intents)
+        super().__init__(command_prefix="!", intents=intents, tree_cls=HorizonTree)
+        self.aiohttp_session: aiohttp.ClientSession = None
 
     async def setup_hook(self):
+        self.aiohttp_session = aiohttp.ClientSession()
+        self.add_view(VeicoloButtons())
         await self.tree.sync()
         print("Tokyo Horizon Bot: Comandi slash sincronizzati con successo!")
+
+    async def close(self):
+        if self.aiohttp_session and not self.aiohttp_session.closed:
+            await self.aiohttp_session.close()
+        await super().close()
 
     async def on_ready(self):
         print(f"✅ {self.user} è online e pronto!")
         print(f"   Connesso a {len(self.guilds)} server/i")
+        for guild in self.guilds:
+            self.tree.clear_commands(guild=guild)
+            await self.tree.sync(guild=guild)
+        print("   Comandi guild-specifici rimossi (pulizia duplicati).")
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
@@ -47,27 +74,65 @@ class TokyoHorizonBot(commands.Bot):
 bot = TokyoHorizonBot()
 
 # =============================================================================
-# POSIZIONI — Elenco completo unito delle Ville e delle Case.
+# POSIZIONI — Ville e Case
 # =============================================================================
 
 VILLE = [
     {
         "nome": "Villa di Lusso #1 — Zona Rockford Hills",
         "mappa": None,
-        "esterno": "villa1_esterno.png",
-        "rarità": "🔴 Leggendaria",
+        "esterno": "attached_assets/IMG_1353_1781292290177.png",
+        "rarità": "🟠 Rara",
+        "loot_tier": "rara",
     },
     {
         "nome": "Villa di Lusso #2 — Zona Tongva Hills",
         "mappa": None,
-        "esterno": "villa2_esterno.png",
-        "rarità": "🔴 Leggendaria",
+        "esterno": "attached_assets/IMG_1349_1781292290177.png",
+        "rarità": "🟠 Rara",
+        "loot_tier": "rara",
     },
     {
         "nome": "Villa di Lusso #3 — Zona Vinewood Hills",
         "mappa": None,
-        "esterno": "villa3_esterno.png",
+        "esterno": "attached_assets/IMG_1346_1781292290177.png",
         "rarità": "🔴 Leggendaria",
+        "loot_tier": "leggendaria",
+    },
+    {
+        "nome": "Villa di Lusso #4 — Zona Richman",
+        "mappa": None,
+        "esterno": "attached_assets/IMG_1339_1781292290178.png",
+        "rarità": "🟠 Rara",
+        "loot_tier": "rara",
+    },
+    {
+        "nome": "Villa di Lusso #5 — Zona Palomino Highlands",
+        "mappa": None,
+        "esterno": "attached_assets/IMG_1334_1781292290178.png",
+        "rarità": "🟣 Epica",
+        "loot_tier": "epica",
+    },
+    {
+        "nome": "Villa di Lusso #6 — Zona Chumash",
+        "mappa": None,
+        "esterno": "attached_assets/IMG_1326_1781294056129.png",
+        "rarità": "🔴 Leggendaria",
+        "loot_tier": "leggendaria_elite",
+    },
+    {
+        "nome": "Villa di Lusso #7 — Zona Morningwood",
+        "mappa": None,
+        "esterno": "attached_assets/IMG_0102_1781294056129.png",
+        "rarità": "🔴 Leggendaria",
+        "loot_tier": "leggendaria_elite",
+    },
+    {
+        "nome": "Villa di Lusso #8 — Zona Great Chaparral",
+        "mappa": None,
+        "esterno": "attached_assets/IMG_1329_1781294056129.png",
+        "rarità": "🔴 Leggendaria",
+        "loot_tier": "leggendaria_elite",
     },
 ]
 
@@ -99,11 +164,56 @@ DESTINAZIONI_MACCHINA = [
 # OGGETTI CON RARITÀ
 # =============================================================================
 
-OGGETTI_VILLA = [
-    {"nome": "💎 Diamante Purissimo",       "valore": 45000, "rarità": 2},
-    {"nome": "👑 Lingotto d'Oro Massiccio", "valore": 40000, "rarità": 4},
-    {"nome": "📿 Collana di Smeraldi",       "valore": 35000, "rarità": 7},
-]
+LOOT_VILLA = {
+    "rara": [
+        {"nome": "💵 Contanti in Cassaforte",    "valore": 20000, "rarità": 10},
+        {"nome": "💍 Orologio di Lusso",          "valore": 25000, "rarità": 6},
+        {"nome": "📿 Bracciale d'Oro",            "valore": 30000, "rarità": 3},
+    ],
+    "epica": [
+        {"nome": "🖼️ Quadro d'Autore",           "valore": 30000, "rarità": 10},
+        {"nome": "📿 Collana di Smeraldi",        "valore": 35000, "rarità": 6},
+        {"nome": "👑 Lingotto d'Oro Massiccio",   "valore": 40000, "rarità": 3},
+    ],
+    "leggendaria": [
+        {"nome": "📿 Collana di Smeraldi",        "valore": 35000, "rarità": 10},
+        {"nome": "👑 Lingotto d'Oro Massiccio",   "valore": 40000, "rarità": 5},
+        {"nome": "💎 Diamante Purissimo",          "valore": 45000, "rarità": 2},
+    ],
+    "leggendaria_elite": [
+        {"nome": "🏺 Anfora Antica di Valore",    "valore": 30000, "rarità": 12},
+        {"nome": "📿 Collana di Smeraldi",        "valore": 35000, "rarità": 7},
+        {"nome": "👑 Lingotto d'Oro Massiccio",   "valore": 40000, "rarità": 4},
+        {"nome": "💎 Diamante Purissimo",          "valore": 45000, "rarità": 2},
+    ],
+}
+
+CONFIGURAZIONE_INGRESSI = {
+    "rara": [
+        {"chiave": "davanti",  "label": "Ingresso principale",        "descr": "dall'ingresso principale",          "emoji": "🚪", "style": discord.ButtonStyle.danger,    "rischio": 30},
+        {"chiave": "dietro",   "label": "Entrata secondaria (retro)", "descr": "dall'entrata secondaria sul retro", "emoji": "🔙", "style": discord.ButtonStyle.secondary, "rischio": 30},
+        {"chiave": "finestra", "label": "Finestra di lato",           "descr": "dalla finestra di lato",            "emoji": "🪟", "style": discord.ButtonStyle.primary,   "rischio": 30},
+        {"chiave": "garage",   "label": "Dal garage",                 "descr": "dal garage",                        "emoji": "🚗", "style": discord.ButtonStyle.secondary, "rischio": 30},
+    ],
+    "epica": [
+        {"chiave": "davanti",  "label": "Ingresso principale",        "descr": "dall'ingresso principale",          "emoji": "🚪", "style": discord.ButtonStyle.danger,    "rischio": 40},
+        {"chiave": "dietro",   "label": "Entrata secondaria (retro)", "descr": "dall'entrata secondaria sul retro", "emoji": "🔙", "style": discord.ButtonStyle.secondary, "rischio": 40},
+        {"chiave": "finestra", "label": "Finestra di lato",           "descr": "dalla finestra di lato",            "emoji": "🪟", "style": discord.ButtonStyle.primary,   "rischio": 40},
+        {"chiave": "garage",   "label": "Dal garage",                 "descr": "dal garage",                        "emoji": "🚗", "style": discord.ButtonStyle.secondary, "rischio": 40},
+    ],
+    "leggendaria": [
+        {"chiave": "davanti", "label": "Ingresso principale",        "descr": "dall'ingresso principale",          "emoji": "🚪", "style": discord.ButtonStyle.danger,    "rischio": 90},
+        {"chiave": "garage",  "label": "Dal garage",                 "descr": "dal garage",                        "emoji": "🚗", "style": discord.ButtonStyle.secondary, "rischio": 55},
+        {"chiave": "dietro",  "label": "Entrata secondaria (retro)", "descr": "dall'entrata secondaria sul retro", "emoji": "🔙", "style": discord.ButtonStyle.secondary, "rischio": 40},
+        {"chiave": "tetto",   "label": "Dal tetto",                  "descr": "dal tetto",                         "emoji": "🏠", "style": discord.ButtonStyle.primary,   "rischio": 25},
+    ],
+    "leggendaria_elite": [
+        {"chiave": "davanti", "label": "Ingresso principale",        "descr": "dall'ingresso principale",          "emoji": "🚪", "style": discord.ButtonStyle.danger,    "rischio": 90},
+        {"chiave": "garage",  "label": "Dal garage",                 "descr": "dal garage",                        "emoji": "🚗", "style": discord.ButtonStyle.secondary, "rischio": 55},
+        {"chiave": "dietro",  "label": "Entrata secondaria (retro)", "descr": "dall'entrata secondaria sul retro", "emoji": "🔙", "style": discord.ButtonStyle.secondary, "rischio": 40},
+        {"chiave": "tetto",   "label": "Dal tetto",                  "descr": "dal tetto",                         "emoji": "🏠", "style": discord.ButtonStyle.primary,   "rischio": 25},
+    ],
+}
 
 OGGETTI_CASA = [
     {"nome": "📿 Scatola di Gioielli d'Argento", "valore": 10000, "rarità": 4},
@@ -187,7 +297,9 @@ def costruisci_pool(oggetti_scelti: list, mostra_perc: bool = True) -> tuple[lis
             desc += f"• {ogg['nome']} {label} — Valore: `{ogg['valore']:,}€`\n"
     return pool, desc
 
-# --- SALVATAGGIO PERSISTENTE ---
+# =============================================================================
+# SALVATAGGIO PERSISTENTE
+# =============================================================================
 DATI_FILE = "dati_bot.json"
 
 def carica_dati():
@@ -199,24 +311,32 @@ def carica_dati():
                 cooldown = {}
                 for uid, val in cooldown_raw.items():
                     cooldown[uid] = val if isinstance(val, dict) else {}
+                ordini_raw = dati.get("ordini_macchina", {})
+                ordini = {int(k): v for k, v in ordini_raw.items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
                     {int(k): v for k, v in dati.get("inventario", {}).items()},
+                    dati.get("canale_furti_id", None),
+                    dati.get("canale_staff_id", None),
+                    ordini,
                 )
         except Exception:
             pass
-    return {}, {}, {}
+    return {}, {}, {}, None, None, {}
 
 def salva_dati():
     with open(DATI_FILE, "w") as f:
         json.dump({
-            "economia":       {str(k): v for k, v in economia.items()},
-            "furto_cooldown": {str(k): v for k, v in furto_cooldown.items()},
-            "inventario":     {str(k): v for k, v in inventario.items()},
+            "economia":        {str(k): v for k, v in economia.items()},
+            "furto_cooldown":  {str(k): v for k, v in furto_cooldown.items()},
+            "inventario":      {str(k): v for k, v in inventario.items()},
+            "canale_furti_id": canale_furti_id,
+            "canale_staff_id": canale_staff_id,
+            "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
         }, f, indent=2)
 
-economia, furto_cooldown, inventario = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, canale_staff_id, ordini_pendenti_macchina = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -232,6 +352,7 @@ NEGOZIO = {
     "Piede di Porco": {"prezzo": 1000, "emoji": "🪓", "descrizione": "Forza porte e finestre. Usato per ville e case."},
     "Grimaldello":    {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di lusso. Usato solo per le ville."},
 }
+
 RUOLI_STAFF = {
     1514817350359060571,  # Founder
     1514817646229717174,  # CEO
@@ -239,8 +360,105 @@ RUOLI_STAFF = {
     1513686043155763280,  # Moderatore
 }
 
+RUOLI_APPROVAZIONE_VEICOLO = {
+    1514817350359060571,  # Founder
+    1514817646229717174,  # CEO
+    1514818027882024960,  # CO CEO
+    1513686043155763280,  # Moderatore
+}
+
+
+def ha_permessi_staff(interaction: discord.Interaction) -> bool:
+    member = interaction.user if hasattr(interaction.user, "roles") else (
+        interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+    )
+    return member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
+
+
+def ha_permessi_approvazione(interaction: discord.Interaction) -> bool:
+    member = interaction.user if hasattr(interaction.user, "roles") else (
+        interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+    )
+    return member is not None and any(r.id in RUOLI_APPROVAZIONE_VEICOLO for r in member.roles)
+
+
+async def safe_defer(interaction: discord.Interaction, ephemeral: bool = True) -> bool:
+    age = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+    if age > 1.5:
+        cmd = getattr(interaction.command, 'name', '?')
+        print(f"[SKIP] /{cmd} scaduto ({age:.1f}s) — ignorato.")
+        return False
+    try:
+        await interaction.response.defer(ephemeral=ephemeral)
+        return True
+    except discord.NotFound:
+        cmd = getattr(interaction.command, 'name', '?')
+        print(f"[SKIP] /{cmd} — defer fallito (10062), interazione non più valida.")
+        return False
+
+
+async def invia_notifica_staff(guild_id, embed, view, canale_diretto=None):
+    # 1. PRIMA PRIORITÀ: canale dove il giocatore ha usato /furto (sempre disponibile)
+    if canale_diretto is not None:
+        try:
+            await canale_diretto.send(embed=embed, view=view)
+            print(f"[STAFF] ✅ Inviato nel canale #{canale_diretto.name}")
+            return "canale"
+        except discord.Forbidden:
+            print(f"[STAFF] Forbidden nel canale #{canale_diretto.name}. Provo canale_staff_id...")
+        except Exception as e:
+            print(f"[STAFF] Errore canale diretto: {type(e).__name__}: {e}. Provo canale_staff_id...")
+
+    print(f"[STAFF] invia_notifica_staff — canale_staff_id={canale_staff_id}")
+
+    # 2. SECONDA PRIORITÀ: canale staff configurato con /setcanalestaff
+    if canale_staff_id:
+        try:
+            canale = await bot.fetch_channel(canale_staff_id)
+            await canale.send(embed=embed, view=view)
+            print(f"[STAFF] ✅ Inviato al canale #{canale.name}")
+            return "canale"
+        except discord.Forbidden:
+            print("[STAFF] 403 Forbidden — bot senza permessi nel canale staff. Provo DM...")
+        except discord.NotFound:
+            print("[STAFF] Canale staff non trovato. Provo DM...")
+        except Exception as e:
+            print(f"[STAFF] Errore canale staff: {type(e).__name__}: {e}. Provo DM...")
+
+    # 2. FALLBACK: DM ai membri staff con i ruoli di approvazione
+    if not guild_id:
+        return "fallito"
+
+    guild = bot.get_guild(guild_id)
+    if guild is None:
+        try:
+            guild = await bot.fetch_guild(guild_id)
+        except Exception as e:
+            print(f"[STAFF] fetch_guild fallito: {e}")
+            return "fallito"
+
+    inviati = set()
+    try:
+        async for member in guild.fetch_members(limit=None):
+            if member.bot or member.id in inviati:
+                continue
+            if any(r.id in RUOLI_APPROVAZIONE_VEICOLO for r in member.roles):
+                try:
+                    await member.send(embed=embed, view=view)
+                    inviati.add(member.id)
+                    print(f"[STAFF] DM inviato a {member} ✅")
+                except discord.Forbidden:
+                    print(f"[STAFF] DM bloccato da {member}")
+                except Exception as e:
+                    print(f"[STAFF] DM a {member} fallito: {e}")
+    except Exception as e:
+        print(f"[STAFF] fetch_members fallito: {type(e).__name__}: {e}")
+
+    return "dm" if inviati else "fallito"
+
+
 # =============================================================================
-# INTERFACCE BOTTONI (PUNTI DI ACCESSO)
+# INTERFACCE BOTTONI
 # =============================================================================
 
 class ScassoButtons(discord.ui.View):
@@ -266,7 +484,7 @@ class ScassoButtons(discord.ui.View):
         salva_dati()
 
         await interaction.response.send_message(
-            f"🛠️ Hai iniziato a `{metodo}`. L'azione richiederà **5 minutes** come da regolamento. Rimani in zona!",
+            f"🛠️ Hai iniziato a `{metodo}`. L'azione richiederà **5 minuti** come da regolamento. Rimani in zona!",
             ephemeral=True
         )
 
@@ -276,8 +494,8 @@ class ScassoButtons(discord.ui.View):
 
         await asyncio.sleep(300)
 
-        scelte = [ogg for ogg in self.pool_oggetti]
-        pesi = [ogg["percentuale"] for ogg in self.pool_oggetti]
+        scelte = list(self.pool_oggetti)
+        pesi = [ogg["percentuale"] for ogg in scelte]
         oggetto_estratto = random.choices(scelte, weights=pesi, k=1)[0]
         valore_finale = oggetto_estratto["valore"]
 
@@ -307,15 +525,29 @@ class ScassoButtons(discord.ui.View):
 
 
 class VillaScassoButtons(discord.ui.View):
-    RISCHI = {"davanti": 10, "sopra": 70, "dietro": 40, "garage": 55}
-
-    def __init__(self, autore_id, pool_oggetti, strumento):
+    def __init__(self, autore_id, pool_oggetti, strumento, tier="rara"):
         super().__init__(timeout=600)
         self.autore_id = autore_id
         self.pool_oggetti = pool_oggetti
         self.strumento = strumento
 
-    async def avvia_ingresso(self, interaction: discord.Interaction, metodo: str, chiave: str):
+        ingressi = CONFIGURAZIONE_INGRESSI.get(tier, CONFIGURAZIONE_INGRESSI["rara"])
+        for ing in ingressi:
+            btn = discord.ui.Button(
+                label=ing["label"],
+                emoji=ing["emoji"],
+                style=ing["style"],
+                custom_id=ing["chiave"],
+            )
+            btn.callback = self._make_callback(ing["descr"], ing["rischio"])
+            self.add_item(btn)
+
+    def _make_callback(self, descr, rischio):
+        async def callback(interaction: discord.Interaction):
+            await self._avvia_ingresso(interaction, descr, rischio)
+        return callback
+
+    async def _avvia_ingresso(self, interaction: discord.Interaction, metodo: str, rischio: int):
         if interaction.user.id != self.autore_id:
             await interaction.response.send_message("❌ Questa non è la tua azione!", ephemeral=True)
             return
@@ -340,7 +572,6 @@ class VillaScassoButtons(discord.ui.View):
 
         await asyncio.sleep(300)
 
-        rischio = self.RISCHI[chiave]
         beccato = random.randint(1, 100) <= rischio
 
         if beccato:
@@ -377,22 +608,6 @@ class VillaScassoButtons(discord.ui.View):
             )
             embed_vittoria.set_footer(text="Tokyo Horizon RP | Sistema Furto")
             await interaction.followup.send(embed=embed_vittoria)
-
-    @discord.ui.button(label="Ingresso principale", style=discord.ButtonStyle.danger, emoji="🚪")
-    async def davanti(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dall'ingresso principale", "davanti")
-
-    @discord.ui.button(label="Dal tetto", style=discord.ButtonStyle.primary, emoji="🏠")
-    async def sopra(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dal tetto", "sopra")
-
-    @discord.ui.button(label="Ingresso sul retro", style=discord.ButtonStyle.secondary, emoji="🔙")
-    async def dietro(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dall'ingresso sul retro", "dietro")
-
-    @discord.ui.button(label="Dal garage", style=discord.ButtonStyle.secondary, emoji="🚗")
-    async def garage(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.avvia_ingresso(interaction, "dal garage", "garage")
 
 
 class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il modello"):
@@ -440,62 +655,277 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             embed_foto.set_image(url=f"attachment://{fname}")
             embeds.append(embed_foto)
 
-        view = VeicoloButtons(self.autore_id, guadagno, dest["nome"])
-        msg = await interaction.followup.send(embeds=embeds, files=files, view=view, wait=True)
+        view = VeicoloButtons()
+        msg = await interaction.followup.send(embeds=embeds, files=files, view=view)
 
-        await asyncio.sleep(600)
-        if not view.consegnato:
-            embed_fail = discord.Embed(
-                title="❌ TEMPO SCADUTO — AZIONE FALLITA",
-                description=f"Il timer di 10 minuti è scaduto. Il veicolo `{modello_input}` non è stato consegnato.",
-                color=discord.Color.red()
-            )
-            embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
-            try:
-                await msg.edit(embeds=[embed_fail], view=None)
-            except Exception:
-                pass
+        ordini_pendenti_macchina[msg.id] = {
+            "autore_id":   self.autore_id,
+            "guadagno":    guadagno,
+            "destinazione": dest["nome"],
+            "modello":     modello_input,
+            "foto_ok":     False,
+            "in_attesa":   False,
+            "consegnato":  False,
+        }
+        salva_dati()
+
+        await interaction.followup.send(
+            "📸 **Verifica obbligatoria:** invia la foto del veicolo in questo canale, poi clicca **📸 Ho Inviato la Foto** nel messaggio qui sopra.",
+            ephemeral=True
+        )
 
 
-class VeicoloButtons(discord.ui.View):
-    def __init__(self, autore_id, guadagno, destinazione):
-        super().__init__(timeout=600)
+class ApprovazioneCosegnaView(discord.ui.View):
+    def __init__(self, autore_id, guadagno, modello, destinazione, veicolo_msg_id, messaggio_originale):
+        super().__init__(timeout=1800)
         self.autore_id = autore_id
         self.guadagno = guadagno
+        self.modello = modello
         self.destinazione = destinazione
-        self.consegnato = False
+        self.veicolo_msg_id = veicolo_msg_id
+        self.messaggio_originale = messaggio_originale
+        self.deciso = False
 
-    @discord.ui.button(label="Consegna Veicolo", style=discord.ButtonStyle.success, emoji="🏁")
-    async def consegna(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.autore_id:
-            await interaction.response.send_message("❌ Questo veicolo non lo stai guidando tu!", ephemeral=True)
+    @discord.ui.button(label="✅ Approva", style=discord.ButtonStyle.success)
+    async def approva(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not ha_permessi_approvazione(interaction):
+            await interaction.response.send_message("❌ Solo lo staff può approvare le consegne.", ephemeral=True)
+            return
+        if self.deciso:
+            await interaction.response.send_message("⚠️ Questa consegna è già stata processata.", ephemeral=True)
             return
 
-        self.consegnato = True
-        self.stop()
+        self.deciso = True
         for child in self.children:
             child.disabled = True
 
+        ordine = ordini_pendenti_macchina.pop(self.veicolo_msg_id, None)
+        furto_cooldown.setdefault(self.autore_id, {})["macchina"] = time.time()
         bilancio = get_balance(self.autore_id)
         bilancio["banca"] += self.guadagno
         salva_dati()
 
-        embed_successo = discord.Embed(
-            title="🚗 VEICOLO CONSEGNATO AL RICETTATORE!",
+        embed_are = discord.Embed(
+            title="✅ CONSEGNA APPROVATA",
             description=(
-                f"Hai completato la consegna a: `{self.destinazione}`.\n\n"
+                f"La consegna del veicolo `{self.modello}` è stata approvata da {interaction.user.mention}.\n\n"
+                f"💰 **Compenso:** `{self.guadagno:,}€` accreditati in banca al giocatore."
+            ),
+            color=discord.Color.green()
+        )
+        embed_are.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+        await interaction.response.edit_message(embed=embed_are, view=self)
+
+        embed_rapine = discord.Embed(
+            title="🚗 VEICOLO CONSEGNATO — APPROVATO!",
+            description=(
+                f"<@{self.autore_id}> Lo staff ha verificato e **approvato** la tua consegna!\n\n"
+                f"🚘 **Veicolo:** `{self.modello}`\n"
+                f"📍 **Destinazione:** `{self.destinazione}`\n"
                 f"💰 **Compenso:** `{self.guadagno:,}€` accreditati in **Banca**."
             ),
             color=discord.Color.green()
         )
-        embed_successo.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-        await interaction.message.edit(view=self)
-        await interaction.response.send_message(embed=embed_successo)
+        embed_rapine.set_footer(text="Tokyo Horizon RP | Sistema Economia")
+
+        embed_originale_finale = discord.Embed(
+            title="✅ Consegna Approvata",
+            description=f"Veicolo `{self.modello}` — approvato da {interaction.user.mention}.",
+            color=discord.Color.green()
+        )
+        embed_originale_finale.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
+
+        try:
+            canale_rapine = self.messaggio_originale.channel
+            await canale_rapine.send(f"<@{self.autore_id}>", embed=embed_rapine)
+        except Exception as e:
+            print(f"[ERRORE] Notifica approvazione in rapine fallita: {e}")
+        try:
+            await self.messaggio_originale.edit(embed=embed_originale_finale, view=None)
+        except Exception as e:
+            print(f"[ERRORE] Aggiornamento messaggio originale fallito: {e}")
+
+    @discord.ui.button(label="❌ Rifiuta", style=discord.ButtonStyle.danger)
+    async def rifiuta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not ha_permessi_approvazione(interaction):
+            await interaction.response.send_message("❌ Solo lo staff può rifiutare le consegne.", ephemeral=True)
+            return
+        if self.deciso:
+            await interaction.response.send_message("⚠️ Questa consegna è già stata processata.", ephemeral=True)
+            return
+
+        self.deciso = True
+        for child in self.children:
+            child.disabled = True
+
+        ordine = ordini_pendenti_macchina.pop(self.veicolo_msg_id, None)
+        salva_dati()
+
+        embed_are = discord.Embed(
+            title="❌ CONSEGNA RIFIUTATA",
+            description=(
+                f"La consegna del veicolo `{self.modello}` è stata **rifiutata** da {interaction.user.mention}.\n\n"
+                f"Il compenso **non** è stato accreditato al giocatore."
+            ),
+            color=discord.Color.red()
+        )
+        embed_are.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+        await interaction.response.edit_message(embed=embed_are, view=self)
+
+        embed_rapine = discord.Embed(
+            title="🚗 CONSEGNA RIFIUTATA",
+            description=(
+                f"<@{self.autore_id}> Lo staff ha verificato e **rifiutato** la tua consegna.\n\n"
+                f"🚘 **Veicolo:** `{self.modello}`\n"
+                f"💰 Il compenso di `{self.guadagno:,}€` **non** è stato accreditato.\n\n"
+                f"Contatta lo staff per maggiori informazioni."
+            ),
+            color=discord.Color.red()
+        )
+        embed_rapine.set_footer(text="Tokyo Horizon RP | Sistema Economia")
+
+        embed_originale_finale = discord.Embed(
+            title="❌ Consegna Rifiutata",
+            description=f"Veicolo `{self.modello}` — rifiutato da {interaction.user.mention}.",
+            color=discord.Color.red()
+        )
+        embed_originale_finale.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
+
+        try:
+            canale_rapine = self.messaggio_originale.channel
+            await canale_rapine.send(f"<@{self.autore_id}>", embed=embed_rapine)
+        except Exception as e:
+            print(f"[ERRORE] Notifica rifiuto in rapine fallita: {e}")
+        try:
+            await self.messaggio_originale.edit(embed=embed_originale_finale, view=None)
+        except Exception as e:
+            print(f"[ERRORE] Aggiornamento messaggio originale fallito: {e}")
 
 
-# --- GESTORE ERRORI GLOBALE ---
+class VeicoloButtons(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="📸 Ho Inviato la Foto", style=discord.ButtonStyle.primary, custom_id="vei:foto")
+    async def conferma_foto(self, interaction: discord.Interaction, button: discord.ui.Button):
+        mid = interaction.message.id
+        ordine = ordini_pendenti_macchina.get(mid)
+        if not ordine:
+            await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
+            return
+        if interaction.user.id != ordine["autore_id"]:
+            await interaction.response.send_message("❌ Non è la tua auto!", ephemeral=True)
+            return
+        if ordine.get("foto_ok"):
+            await interaction.response.send_message("✅ Foto già confermata!", ephemeral=True)
+            return
+        if ordine.get("consegnato") or ordine.get("in_attesa"):
+            await interaction.response.send_message("⚠️ Questo furto è già stato processato.", ephemeral=True)
+            return
+
+        ordine["foto_ok"] = True
+        salva_dati()
+        button.disabled = True
+        button.label = "✅ Foto Inviata"
+        for child in self.children:
+            if isinstance(child, discord.ui.Button) and child.custom_id == "vei:consegna":
+                child.disabled = False
+
+        await interaction.response.edit_message(view=self)
+        await interaction.followup.send(
+            "✅ **Foto confermata!** Ora raggiungi la destinazione e premi **🏁 Consegna Veicolo** quando sei arrivato. Hai **10 minuti**!",
+            ephemeral=True
+        )
+        asyncio.create_task(self._scadenza_10min(mid, interaction.message))
+
+    async def _scadenza_10min(self, msg_id: int, msg):
+        await asyncio.sleep(600)
+        ordine = ordini_pendenti_macchina.get(msg_id)
+        if not ordine or ordine.get("consegnato") or ordine.get("in_attesa"):
+            return
+        modello = ordine.get("modello", "sconosciuto")
+        ordini_pendenti_macchina.pop(msg_id, None)
+        salva_dati()
+        embed_fail = discord.Embed(
+            title="❌ TEMPO SCADUTO — AZIONE FALLITA",
+            description=f"Il timer di 10 minuti è scaduto. Il veicolo `{modello}` non è stato consegnato.",
+            color=discord.Color.red()
+        )
+        embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
+        for child in self.children:
+            child.disabled = True
+        self.stop()
+        try:
+            await msg.edit(embeds=[embed_fail], view=None)
+        except Exception as e:
+            print(f"[ERRORE] Scadenza 10min: {e}")
+
+    @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success, custom_id="vei:consegna", disabled=True)
+    async def consegna(self, interaction: discord.Interaction, button: discord.ui.Button):
+        mid = interaction.message.id
+        ordine = ordini_pendenti_macchina.get(mid)
+        if not ordine:
+            await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
+            return
+        if interaction.user.id != ordine["autore_id"]:
+            await interaction.response.send_message("❌ Questo veicolo non lo stai guidando tu!", ephemeral=True)
+            return
+        if ordine.get("in_attesa"):
+            await interaction.response.send_message("⏳ La tua consegna è già in attesa di approvazione dello staff!", ephemeral=True)
+            return
+        if ordine.get("consegnato"):
+            await interaction.response.send_message("✅ Questa consegna è già stata processata.", ephemeral=True)
+            return
+
+        await interaction.response.defer()
+        ordine["in_attesa"] = True
+        salva_dati()
+
+        button.disabled = True
+        button.label = "⏳ In attesa di approvazione..."
+        try:
+            await interaction.edit_original_response(view=self)
+        except Exception as e:
+            print(f"[ERRORE] Aggiornamento bottone consegna fallito: {e}")
+
+        embed_staff = discord.Embed(
+            title="🚗 RICHIESTA APPROVAZIONE CONSEGNA",
+            description=(
+                f"**{interaction.user.mention}** ha completato un furto veicolo e richiede il compenso.\n\n"
+                f"🚘 **Veicolo:** `{ordine['modello']}`\n"
+                f"📍 **Destinazione:** `{ordine['destinazione']}`\n"
+                f"💰 **Compenso richiesto:** `{ordine['guadagno']:,}€`\n\n"
+                f"Verificate se la consegna è stata effettuata correttamente, poi approvate o rifiutate."
+            ),
+            color=discord.Color.orange()
+        )
+        embed_staff.set_footer(text="Tokyo Horizon RP | Pannello Staff — Furto Veicoli")
+
+        view_approvazione = ApprovazioneCosegnaView(
+            autore_id=ordine["autore_id"],
+            guadagno=ordine["guadagno"],
+            modello=ordine["modello"],
+            destinazione=ordine["destinazione"],
+            veicolo_msg_id=mid,
+            messaggio_originale=interaction.message,
+        )
+
+        await interaction.followup.send(
+            "📋 **Richiesta inviata allo staff!** Attendi che verifichino la tua consegna.",
+            ephemeral=True
+        )
+        await interaction.followup.send(embed=embed_staff, view=view_approvazione)
+
+
+# =============================================================================
+# GESTORE ERRORI GLOBALE
+# =============================================================================
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.CheckFailure):
+        age = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+        if age > 2.5:
+            return
     print(f"[ERRORE COMANDO] {type(error).__name__}: {error}")
     if isinstance(error, app_commands.CommandSignatureMismatch):
         print("[INFO] Firma comando non aggiornata — risincronizzazione in corso...")
@@ -512,21 +942,28 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         print(f"[ERRORE] Impossibile inviare messaggio di errore: {e}")
 
 
-# --- COMANDO UNICO /FURTO ---
+# =============================================================================
+# COMANDO /FURTO
+# =============================================================================
 @bot.tree.command(name="furto", description="Seleziona il tipo di furto da effettuare nel server")
 @app_commands.describe(tipo="Seleziona il tipo di furto (Villa, Casa o Macchina)")
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="Villa", value="villa"),
-    app_commands.Choice(name="Casa", value="casa"),
-    app_commands.Choice(name="Macchina", value="macchina")
+    app_commands.Choice(name="Villa",    value="villa"),
+    app_commands.Choice(name="Casa",     value="casa"),
+    app_commands.Choice(name="Macchina", value="macchina"),
 ])
 async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
     uid = interaction.user.id
     tipo_scelto = tipo.value
 
     if tipo_scelto == "macchina":
+        if canale_furti_id and interaction.channel_id != canale_furti_id:
+            await interaction.response.send_message(
+                f"❌ I furti veicolo si effettuano solo nel canale <#{canale_furti_id}>!", ephemeral=True
+            )
+            return
         ora_attuale = time.time()
-        cooldown_sec = 2 * 3600  
+        cooldown_sec = 2 * 3600
         ultimo = furto_cooldown.get(uid, {}).get("macchina", 0)
         if ora_attuale - ultimo < cooldown_sec:
             rimanenti = int(cooldown_sec - (ora_attuale - ultimo))
@@ -536,8 +973,6 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
                 f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter rubare un'altra macchina.", ephemeral=True
             )
             return
-        furto_cooldown.setdefault(uid, {})["macchina"] = ora_attuale
-        salva_dati()
         await interaction.response.send_modal(MacchinaModal(uid))
         return
 
@@ -578,20 +1013,21 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
 
     if tipo_scelto == "villa":
         location = random.choice(VILLE)
-        oggetti_scelti = campiona_con_rarità(OGGETTI_VILLA, k=3)
+        tier = location.get("loot_tier", "rara")
+        pool_per_tier = LOOT_VILLA[tier]
+        oggetti_scelti = campiona_con_rarità(pool_per_tier, k=len(pool_per_tier))
         pool_finale, descrizione_oggetti = costruisci_pool(oggetti_scelti, mostra_perc=False)
         valore_max = max(o["valore"] for o in oggetti_scelti)
+
+        ingressi_tier = CONFIGURAZIONE_INGRESSI.get(tier, CONFIGURAZIONE_INGRESSI["rara"])
+        lista_ingressi = "\n".join(f"• {i['emoji']} {i['label']}" for i in ingressi_tier)
 
         embed = discord.Embed(
             title=f"🏰 Furto Selezionato: {location['nome']}",
             description=(
                 f"⭐ **Rarità Obiettivo:** {location.get('rarità', '—')}\n\n"
                 "**INFORMAZIONI SUL COLPO OTTENUTE DAI SATELLITI**\n\n"
-                "**Scegli il punto di ingresso:**\n"
-                "• 🚪 Ingresso principale\n"
-                "• 🏠 Dal tetto\n"
-                "• 🔙 Ingresso sul retro\n"
-                "• 🚗 Dal garage\n\n"
+                f"**Scegli il punto di ingresso:**\n{lista_ingressi}\n\n"
                 f"📦 **Merci preziose rilevate all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
                 "🔑 **Oggetto richiesto:** 🪓 `Piede di Porco o Grimaldello`"
             ),
@@ -599,7 +1035,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         )
         embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
 
-        view = VillaScassoButtons(interaction.user.id, pool_finale, strumento_usato)
+        view = VillaScassoButtons(interaction.user.id, pool_finale, strumento_usato, tier=tier)
         files = []
         embeds = [embed]
 
@@ -672,11 +1108,14 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         await interaction.followup.send(embeds=embeds, files=files, view=view)
 
 
-# --- COMANDO /CLASSIFICA ---
+# =============================================================================
+# COMANDO /CLASSIFICA
+# =============================================================================
 @bot.tree.command(name="classifica", description="Mostra i giocatori più ricchi del server")
 async def classifica(interaction: discord.Interaction):
+    await interaction.response.defer()
     if not economia:
-        await interaction.response.send_message("📊 Nessun dato disponibile. Nessuno ha ancora usato il sistema economia!", ephemeral=True)
+        await interaction.followup.send("📊 Nessun dato disponibile. Nessuno ha ancora usato il sistema economia!", ephemeral=True)
         return
 
     classifica_list = []
@@ -704,12 +1143,15 @@ async def classifica(interaction: discord.Interaction):
         color=discord.Color.gold()
     )
     embed.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed)
 
 
-# --- COMANDO /BILANCIO ---
+# =============================================================================
+# COMANDO /BILANCIO
+# =============================================================================
 @bot.tree.command(name="bilancio", description="Verifica il tuo conto corrente e il contante in tasca")
 async def bilancio(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
     bil = get_balance(interaction.user.id)
     embed = discord.Embed(
         title=f"💳 Conto Corrente: {interaction.user.display_name}",
@@ -720,7 +1162,8 @@ async def bilancio(interaction: discord.Interaction):
     totale = bil["portafoglio"] + bil["banca"]
     embed.add_field(name="💼 Patrimonio Totale:", value=f"`{totale:,}€`", inline=False)
     embed.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-    await interaction.response.send_message(embed=embed)
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
 
 cooldown_banca = {}
 
@@ -734,63 +1177,71 @@ def controlla_cooldown(user_id: int, azione: str, secondi: int = 60):
     cooldown_banca[chiave] = ora
     return 0
 
+
 @bot.tree.command(name="deposita", description="Deposita contanti dal portafoglio alla banca")
 @app_commands.describe(importo="Importo in euro da depositare")
 async def deposita(interaction: discord.Interaction, importo: int):
+    await interaction.response.defer(ephemeral=True)
     attesa = controlla_cooldown(interaction.user.id, "deposita")
     if attesa > 0:
-        await interaction.response.send_message(f"⏳ Devi aspettare ancora **{attesa} secondi**.", ephemeral=True)
+        await interaction.followup.send(f"⏳ Devi aspettare ancora **{attesa} secondi**.", ephemeral=True)
         return
     if importo <= 0:
-        await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
+        await interaction.followup.send("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
         return
     bil = get_balance(interaction.user.id)
     if importo > bil["portafoglio"]:
-        await interaction.response.send_message("❌ Non hai abbastanza contanti in tasca.", ephemeral=True)
+        await interaction.followup.send("❌ Non hai abbastanza contanti in tasca.", ephemeral=True)
         return
     bil["portafoglio"] -= importo
     bil["banca"] += importo
     salva_dati()
-    await interaction.response.send_message(f"🏛️ Depositati con successo **`{importo:,}€`**.")
+    await interaction.followup.send(f"🏛️ Depositati con successo **`{importo:,}€`**.")
+
 
 @bot.tree.command(name="preleva", description="Preleva contanti dalla banca al portafoglio")
 @app_commands.describe(importo="Importo in euro da prelevare")
 async def preleva(interaction: discord.Interaction, importo: int):
+    await interaction.response.defer(ephemeral=True)
     attesa = controlla_cooldown(interaction.user.id, "preleva")
     if attesa > 0:
-        await interaction.response.send_message(f"⏳ Devi aspettare ancora **{attesa} secondi**.", ephemeral=True)
+        await interaction.followup.send(f"⏳ Devi aspettare ancora **{attesa} secondi**.", ephemeral=True)
         return
     if importo <= 0:
-        await interaction.response.send_message("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
+        await interaction.followup.send("❌ L'importo deve essere maggiore di 0€.", ephemeral=True)
         return
     bil = get_balance(interaction.user.id)
     if importo > bil["banca"]:
-        await interaction.response.send_message("❌ Non hai abbastanza soldi in banca.", ephemeral=True)
+        await interaction.followup.send("❌ Non hai abbastanza soldi in banca.", ephemeral=True)
         return
     bil["banca"] -= importo
     bil["portafoglio"] += importo
     salva_dati()
-    await interaction.response.send_message(f"💵 Prelevati con successo **`{importo:,}€`**.")
+    await interaction.followup.send(f"💵 Prelevati con successo **`{importo:,}€`**.")
+
 
 @bot.tree.command(name="paga", description="Paga un altro giocatore con i contanti in tasca")
 @app_commands.describe(utente="Il giocatore a cui vuoi pagare", importo="Importo in euro da pagare")
 async def paga(interaction: discord.Interaction, utente: discord.Member, importo: int):
+    await interaction.response.defer()
     mittente = interaction.user
     if utente.id == mittente.id or utente.bot or importo <= 0:
-        await interaction.response.send_message("❌ Transazione non valida.", ephemeral=True)
+        await interaction.followup.send("❌ Transazione non valida.", ephemeral=True)
         return
     bil_mittente = get_balance(mittente.id)
     if importo > bil_mittente["portafoglio"]:
-        await interaction.response.send_message("❌ Contanti insufficienti in tasca.", ephemeral=True)
+        await interaction.followup.send("❌ Contanti insufficienti in tasca.", ephemeral=True)
         return
     bil_mittente["portafoglio"] -= importo
     bil_destinatario = get_balance(utente.id)
     bil_destinatario["portafoglio"] += importo
     salva_dati()
-    await interaction.response.send_message(f"💸 Hai pagato a {utente.mention} l'importo di `{importo:,}€`.")
+    await interaction.followup.send(f"💸 Hai pagato a {utente.mention} l'importo di `{importo:,}€`.")
 
 
-# --- NEGOZIO, INVENTARIO, RESET COOLDOWN ---
+# =============================================================================
+# NEGOZIO, INVENTARIO
+# =============================================================================
 
 @bot.tree.command(name="negozio", description="Visualizza gli articoli disponibili nel negozio")
 async def negozio(interaction: discord.Interaction):
@@ -810,7 +1261,7 @@ async def negozio(interaction: discord.Interaction):
 @app_commands.describe(articolo="L'articolo che vuoi acquistare")
 @app_commands.choices(articolo=[
     app_commands.Choice(name="Piede di Porco (1000€)", value="Piede di Porco"),
-    app_commands.Choice(name="Grimaldello (1500€)",   value="Grimaldello"),
+    app_commands.Choice(name="Grimaldello (1500€)",    value="Grimaldello"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
     await interaction.response.defer(ephemeral=True)
@@ -865,28 +1316,28 @@ async def inventario_cmd(interaction: discord.Interaction):
         await interaction.followup.send("❌ Errore nel caricare l'inventario. Riprova.", ephemeral=True)
 
 
+# =============================================================================
+# COMANDI MOD
+# =============================================================================
+
 @bot.tree.command(name="resetcooldown", description="[MOD] Azzera il cooldown furto di un giocatore")
 @app_commands.describe(utente="Il giocatore di cui resettare il cooldown", tipo="Quale cooldown azzerare")
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="🏰 Villa",       value="villa"),
-    app_commands.Choice(name="🏠 Casa",        value="casa"),
-    app_commands.Choice(name="🚗 Macchina",    value="macchina"),
-    app_commands.Choice(name="🔄 Tutti",       value="tutti"),
+    app_commands.Choice(name="🏰 Villa",    value="villa"),
+    app_commands.Choice(name="🏠 Casa",     value="casa"),
+    app_commands.Choice(name="🚗 Macchina", value="macchina"),
+    app_commands.Choice(name="🔄 Tutti",    value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
-    await interaction.response.defer(ephemeral=True)
-    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
-    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
-    if not ha_permesso:
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
-    cd = furto_cooldown.get(utente.id, {})
     if tipo.value == "tutti":
-        furto_cooldown[utente.id] = {}
+        furto_cooldown[utente.id] = {"villa": 0, "casa": 0, "macchina": 0}
         msg = "tutti i cooldown (villa, casa, macchina)"
     else:
-        cd.pop(tipo.value, None)
-        furto_cooldown[utente.id] = cd
+        furto_cooldown.setdefault(utente.id, {})[tipo.value] = 0
         nomi = {"villa": "🏰 Villa", "casa": "🏠 Casa", "macchina": "🚗 Macchina"}
         msg = f"il cooldown **{nomi[tipo.value]}**"
     salva_dati()
@@ -900,16 +1351,14 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     quantita="Importo in € (per contanti) o quantità (per oggetti)"
 )
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="Contanti in tasca",    value="portafoglio"),
-    app_commands.Choice(name="Contanti in banca",    value="banca"),
-    app_commands.Choice(name="Grimaldello",          value="Grimaldello"),
-    app_commands.Choice(name="Piede di Porco",       value="Piede di Porco"),
+    app_commands.Choice(name="Contanti in tasca", value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca", value="banca"),
+    app_commands.Choice(name="Grimaldello",       value="Grimaldello"),
+    app_commands.Choice(name="Piede di Porco",    value="Piede di Porco"),
 ])
 async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
-    await interaction.response.defer(ephemeral=True)
-    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
-    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
-    if not ha_permesso:
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
     if utente.bot or quantita <= 0:
@@ -955,16 +1404,14 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
     quantita="Importo in € (per contanti) o quantità (per oggetti)"
 )
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="Contanti in tasca",    value="portafoglio"),
-    app_commands.Choice(name="Contanti in banca",    value="banca"),
-    app_commands.Choice(name="Grimaldello",          value="Grimaldello"),
-    app_commands.Choice(name="Piede di Porco",       value="Piede di Porco"),
+    app_commands.Choice(name="Contanti in tasca", value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca", value="banca"),
+    app_commands.Choice(name="Grimaldello",       value="Grimaldello"),
+    app_commands.Choice(name="Piede di Porco",    value="Piede di Porco"),
 ])
 async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
-    await interaction.response.defer(ephemeral=True)
-    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
-    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
-    if not ha_permesso:
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
     if utente.bot or quantita <= 0:
@@ -1012,41 +1459,86 @@ async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: 
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-@bot.tree.command(name="backup", description="[MOD] Scarica il file di salvataggio completo del bot")
-async def backup(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    member = interaction.user if hasattr(interaction.user, "roles") else (interaction.guild.get_member(interaction.user.id) if interaction.guild else None)
-    ha_permesso = member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
-    if not ha_permesso:
+@bot.tree.command(name="setcanale", description="[MOD] Imposta questo canale come canale dedicato ai furti veicolo")
+async def setcanale(interaction: discord.Interaction):
+    global canale_furti_id
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
+    canale_furti_id = interaction.channel_id
     salva_dati()
-    if not os.path.exists(DATI_FILE):
-        await interaction.followup.send("❌ Nessun file di salvataggio trovato.", ephemeral=True)
-        return
-    file = discord.File(DATI_FILE, filename="tokyo_horizon_backup.json")
     embed = discord.Embed(
-        title="💾 Backup Dati — Tokyo Horizon RP",
+        title="✅ Canale Furti Veicolo Impostato",
         description=(
-            "Ecco il file di salvataggio completo del bot.\n\n"
-            "**Per trasferirlo su un altro Replit:**\n"
-            "1. Scarica questo file\n"
-            "2. Caricalo nella root del nuovo progetto\n"
-            f"3. Rinominalo `{DATI_FILE}`\n"
-            "4. Riavvia il bot\n\n"
-            "Tutti i dati (economia, inventari, cooldown) verranno ripristinati."
+            f"D'ora in poi i furti veicolo potranno essere effettuati **solo** in <#{interaction.channel_id}>.\n\n"
+            f"Gli utenti che useranno `/furto macchina` in altri canali riceveranno un errore."
         ),
-        color=discord.Color.gold()
+        color=discord.Color.green()
     )
-    embed.set_footer(text="Tokyo Horizon RP | Sistema Backup")
-    await interaction.followup.send(embed=embed, file=file, ephemeral=True)
+    embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-# --- AVVIO BOT ---
+
+@bot.tree.command(name="cooldown", description="Controlla i tuoi tempi di attesa per i furti")
+@app_commands.describe(utente="[MOD] Controlla il cooldown di un altro giocatore (opzionale)")
+async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member = None):
+    await interaction.response.defer(ephemeral=True)
+
+    if utente is not None and not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Solo lo staff può controllare il cooldown di altri giocatori.", ephemeral=True)
+        return
+
+    target = utente if utente is not None else interaction.user
+    uid = target.id
+    ora = time.time()
+
+    furti = {
+        "villa":    {"label": "🏰 Villa",    "cooldown": 4 * 3600},
+        "casa":     {"label": "🏠 Casa",     "cooldown": 4 * 3600},
+        "macchina": {"label": "🚗 Macchina", "cooldown": 2 * 3600},
+    }
+
+    righe = []
+    cd_utente = furto_cooldown.get(uid, {})
+
+    for tipo, info in furti.items():
+        ultimo = cd_utente.get(tipo, 0)
+        trascorso = ora - ultimo
+        rimanente = info["cooldown"] - trascorso
+
+        if rimanente <= 0:
+            righe.append(f"{info['label']} — ✅ **Disponibile**")
+        else:
+            ore = int(rimanente // 3600)
+            minuti = int((rimanente % 3600) // 60)
+            secondi = int(rimanente % 60)
+            if ore > 0:
+                tempo_str = f"{ore}h {minuti}m"
+            else:
+                tempo_str = f"{minuti}m {secondi}s"
+            righe.append(f"{info['label']} — ⏳ `{tempo_str}`")
+
+    nome = target.display_name
+    embed = discord.Embed(
+        title=f"⏱️ Cooldown Furti — {nome}",
+        description="\n".join(righe),
+        color=discord.Color.orange()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+
+
+
+# =============================================================================
+# AVVIO BOT
+# =============================================================================
 token = os.environ.get("DISCORD_TOKEN")
 if not token:
     print("❌ ERRORE: Il token Discord non è stato trovato. Imposta la variabile DISCORD_TOKEN.")
 else:
     keep_alive()
     bot.run(token)
-
