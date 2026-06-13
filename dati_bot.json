@@ -23,6 +23,15 @@
       "foto_ok": true,
       "in_attesa": false,
       "consegnato": false
+    },
+    "1515304955874115676": {
+      "autore_id": 1083459553892499476,
+      "guadagno": 5000,
+      "destinazione": "Pontile di Contrabbando a Chumash",
+      "modello": "Dilettante",
+      "foto_ok": true,
+      "in_attesa": false,
+      "consegnato": false
     }
   }
 }
