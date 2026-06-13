@@ -48,7 +48,6 @@ class TokyoHorizonBot(commands.Bot):
 
     async def setup_hook(self):
         self.aiohttp_session = aiohttp.ClientSession()
-        self.add_view(VeicoloButtons())
         await self.tree.sync()
         print("Tokyo Horizon Bot: Comandi slash sincronizzati con successo!")
 
@@ -311,19 +310,16 @@ def carica_dati():
                 cooldown = {}
                 for uid, val in cooldown_raw.items():
                     cooldown[uid] = val if isinstance(val, dict) else {}
-                ordini_raw = dati.get("ordini_macchina", {})
-                ordini = {int(k): v for k, v in ordini_raw.items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
                     {int(k): v for k, v in dati.get("inventario", {}).items()},
                     dati.get("canale_furti_id", None),
                     dati.get("canale_staff_id", None),
-                    ordini,
                 )
         except Exception:
             pass
-    return {}, {}, {}, None, None, {}
+    return {}, {}, {}, None, None
 
 def salva_dati():
     with open(DATI_FILE, "w") as f:
@@ -333,10 +329,9 @@ def salva_dati():
             "inventario":      {str(k): v for k, v in inventario.items()},
             "canale_furti_id": canale_furti_id,
             "canale_staff_id": canale_staff_id,
-            "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
         }, f, indent=2)
 
-economia, furto_cooldown, inventario, canale_furti_id, canale_staff_id, ordini_pendenti_macchina = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, canale_staff_id = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -369,16 +364,22 @@ RUOLI_APPROVAZIONE_VEICOLO = {
 
 
 def ha_permessi_staff(interaction: discord.Interaction) -> bool:
-    raw = getattr(interaction.user, '_roles', None)
-    if raw is not None:
-        return any(r_id in RUOLI_STAFF for r_id in raw)
+    gp = interaction.permissions
+    if gp.administrator or gp.manage_guild:
+        return True
+    raw_roles = getattr(interaction.user, '_roles', None)
+    if raw_roles:
+        return any(r_id in RUOLI_STAFF for r_id in raw_roles)
     return False
 
 
 def ha_permessi_approvazione(interaction: discord.Interaction) -> bool:
-    raw = getattr(interaction.user, '_roles', None)
-    if raw is not None:
-        return any(r_id in RUOLI_APPROVAZIONE_VEICOLO for r_id in raw)
+    gp = interaction.permissions
+    if gp.administrator or gp.manage_guild:
+        return True
+    raw_roles = getattr(interaction.user, '_roles', None)
+    if raw_roles:
+        return any(r_id in RUOLI_APPROVAZIONE_VEICOLO for r_id in raw_roles)
     return False
 
 
@@ -655,19 +656,8 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             embed_foto.set_image(url=f"attachment://{fname}")
             embeds.append(embed_foto)
 
-        view = VeicoloButtons()
-        msg = await interaction.followup.send(embeds=embeds, files=files, view=view)
-
-        ordini_pendenti_macchina[msg.id] = {
-            "autore_id":   self.autore_id,
-            "guadagno":    guadagno,
-            "destinazione": dest["nome"],
-            "modello":     modello_input,
-            "foto_ok":     False,
-            "in_attesa":   False,
-            "consegnato":  False,
-        }
-        salva_dati()
+        view = VeicoloButtons(self.autore_id, guadagno, dest["nome"], modello_input)
+        await interaction.followup.send(embeds=embeds, files=files, view=view)
 
         await interaction.followup.send(
             "📸 **Verifica obbligatoria:** invia la foto del veicolo in questo canale, poi clicca **📸 Ho Inviato la Foto** nel messaggio qui sopra.",
@@ -676,13 +666,13 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
 
 
 class ApprovazioneCosegnaView(discord.ui.View):
-    def __init__(self, autore_id, guadagno, modello, destinazione, veicolo_msg_id, messaggio_originale):
+    def __init__(self, autore_id, guadagno, modello, destinazione, veicolo_view, messaggio_originale):
         super().__init__(timeout=1800)
         self.autore_id = autore_id
         self.guadagno = guadagno
         self.modello = modello
         self.destinazione = destinazione
-        self.veicolo_msg_id = veicolo_msg_id
+        self.veicolo_view = veicolo_view
         self.messaggio_originale = messaggio_originale
         self.deciso = False
 
@@ -696,10 +686,12 @@ class ApprovazioneCosegnaView(discord.ui.View):
             return
 
         self.deciso = True
+        self.veicolo_view.consegnato = True
+        self.veicolo_view.in_attesa = False
+        self.veicolo_view.stop()
         for child in self.children:
             child.disabled = True
 
-        ordine = ordini_pendenti_macchina.pop(self.veicolo_msg_id, None)
         furto_cooldown.setdefault(self.autore_id, {})["macchina"] = time.time()
         bilancio = get_balance(self.autore_id)
         bilancio["banca"] += self.guadagno
@@ -755,11 +747,11 @@ class ApprovazioneCosegnaView(discord.ui.View):
             return
 
         self.deciso = True
+        self.veicolo_view.consegnato = True
+        self.veicolo_view.in_attesa = False
+        self.veicolo_view.stop()
         for child in self.children:
             child.disabled = True
-
-        ordine = ordini_pendenti_macchina.pop(self.veicolo_msg_id, None)
-        salva_dati()
 
         embed_are = discord.Embed(
             title="❌ CONSEGNA RIFIUTATA",
@@ -803,32 +795,38 @@ class ApprovazioneCosegnaView(discord.ui.View):
 
 
 class VeicoloButtons(discord.ui.View):
-    def __init__(self):
+    def __init__(self, autore_id, guadagno, destinazione, modello):
         super().__init__(timeout=None)
+        self.autore_id = autore_id
+        self.guadagno = guadagno
+        self.destinazione = destinazione
+        self.modello = modello
+        self.consegnato = False
+        self.in_attesa = False
+        self.foto_ok = False
+        self.msg = None
+        for child in self.children:
+            if isinstance(child, discord.ui.Button) and "Consegna" in (child.label or ""):
+                child.disabled = True
 
-    @discord.ui.button(label="📸 Ho Inviato la Foto", style=discord.ButtonStyle.primary, custom_id="vei:foto")
+    @discord.ui.button(label="📸 Ho Inviato la Foto", style=discord.ButtonStyle.primary)
     async def conferma_foto(self, interaction: discord.Interaction, button: discord.ui.Button):
-        mid = interaction.message.id
-        ordine = ordini_pendenti_macchina.get(mid)
-        if not ordine:
-            await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
-            return
-        if interaction.user.id != ordine["autore_id"]:
+        if interaction.user.id != self.autore_id:
             await interaction.response.send_message("❌ Non è la tua auto!", ephemeral=True)
             return
-        if ordine.get("foto_ok"):
+        if self.foto_ok:
             await interaction.response.send_message("✅ Foto già confermata!", ephemeral=True)
             return
-        if ordine.get("consegnato") or ordine.get("in_attesa"):
+        if self.consegnato or self.in_attesa:
             await interaction.response.send_message("⚠️ Questo furto è già stato processato.", ephemeral=True)
             return
 
-        ordine["foto_ok"] = True
-        salva_dati()
+        self.foto_ok = True
+        self.msg = interaction.message
         button.disabled = True
         button.label = "✅ Foto Inviata"
         for child in self.children:
-            if isinstance(child, discord.ui.Button) and child.custom_id == "vei:consegna":
+            if isinstance(child, discord.ui.Button) and "Consegna" in (child.label or ""):
                 child.disabled = False
 
         await interaction.response.edit_message(view=self)
@@ -836,53 +834,45 @@ class VeicoloButtons(discord.ui.View):
             "✅ **Foto confermata!** Ora raggiungi la destinazione e premi **🏁 Consegna Veicolo** quando sei arrivato. Hai **10 minuti**!",
             ephemeral=True
         )
-        asyncio.create_task(self._scadenza_10min(mid, interaction.message))
+        asyncio.create_task(self._scadenza_10min())
 
-    async def _scadenza_10min(self, msg_id: int, msg):
+    async def _scadenza_10min(self):
         await asyncio.sleep(600)
-        ordine = ordini_pendenti_macchina.get(msg_id)
-        if not ordine or ordine.get("consegnato") or ordine.get("in_attesa"):
-            return
-        modello = ordine.get("modello", "sconosciuto")
-        ordini_pendenti_macchina.pop(msg_id, None)
-        salva_dati()
-        embed_fail = discord.Embed(
-            title="❌ TEMPO SCADUTO — AZIONE FALLITA",
-            description=f"Il timer di 10 minuti è scaduto. Il veicolo `{modello}` non è stato consegnato.",
-            color=discord.Color.red()
-        )
-        embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
-        for child in self.children:
-            child.disabled = True
-        self.stop()
-        try:
-            await msg.edit(embeds=[embed_fail], view=None)
-        except Exception as e:
-            print(f"[ERRORE] Scadenza 10min: {e}")
+        if not self.consegnato and not self.in_attesa:
+            embed_fail = discord.Embed(
+                title="❌ TEMPO SCADUTO — AZIONE FALLITA",
+                description=f"Il timer di 10 minuti è scaduto. Il veicolo `{self.modello}` non è stato consegnato.",
+                color=discord.Color.red()
+            )
+            embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
+            for child in self.children:
+                child.disabled = True
+            self.stop()
+            try:
+                if self.msg:
+                    await self.msg.edit(embeds=[embed_fail], view=None)
+            except Exception as e:
+                print(f"[ERRORE] Scadenza 10min: {e}")
 
-    @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success, custom_id="vei:consegna", disabled=True)
+    @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success)
     async def consegna(self, interaction: discord.Interaction, button: discord.ui.Button):
-        mid = interaction.message.id
-        ordine = ordini_pendenti_macchina.get(mid)
-        if not ordine:
-            await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
-            return
-        if interaction.user.id != ordine["autore_id"]:
+        if interaction.user.id != self.autore_id:
             await interaction.response.send_message("❌ Questo veicolo non lo stai guidando tu!", ephemeral=True)
             return
-        if ordine.get("in_attesa"):
+        if self.in_attesa:
             await interaction.response.send_message("⏳ La tua consegna è già in attesa di approvazione dello staff!", ephemeral=True)
             return
-        if ordine.get("consegnato"):
+        if self.consegnato:
             await interaction.response.send_message("✅ Questa consegna è già stata processata.", ephemeral=True)
             return
 
         await interaction.response.defer()
-        ordine["in_attesa"] = True
-        salva_dati()
 
+        self.in_attesa = True
         button.disabled = True
         button.label = "⏳ In attesa di approvazione..."
+        msg_originale = interaction.message
+
         try:
             await interaction.edit_original_response(view=self)
         except Exception as e:
@@ -892,9 +882,9 @@ class VeicoloButtons(discord.ui.View):
             title="🚗 RICHIESTA APPROVAZIONE CONSEGNA",
             description=(
                 f"**{interaction.user.mention}** ha completato un furto veicolo e richiede il compenso.\n\n"
-                f"🚘 **Veicolo:** `{ordine['modello']}`\n"
-                f"📍 **Destinazione:** `{ordine['destinazione']}`\n"
-                f"💰 **Compenso richiesto:** `{ordine['guadagno']:,}€`\n\n"
+                f"🚘 **Veicolo:** `{self.modello}`\n"
+                f"📍 **Destinazione:** `{self.destinazione}`\n"
+                f"💰 **Compenso richiesto:** `{self.guadagno:,}€`\n\n"
                 f"Verificate se la consegna è stata effettuata correttamente, poi approvate o rifiutate."
             ),
             color=discord.Color.orange()
@@ -902,18 +892,19 @@ class VeicoloButtons(discord.ui.View):
         embed_staff.set_footer(text="Tokyo Horizon RP | Pannello Staff — Furto Veicoli")
 
         view_approvazione = ApprovazioneCosegnaView(
-            autore_id=ordine["autore_id"],
-            guadagno=ordine["guadagno"],
-            modello=ordine["modello"],
-            destinazione=ordine["destinazione"],
-            veicolo_msg_id=mid,
-            messaggio_originale=interaction.message,
+            autore_id=self.autore_id,
+            guadagno=self.guadagno,
+            modello=self.modello,
+            destinazione=self.destinazione,
+            veicolo_view=self,
+            messaggio_originale=msg_originale,
         )
 
         await interaction.followup.send(
             "📋 **Richiesta inviata allo staff!** Attendi che verifichino la tua consegna.",
             ephemeral=True
         )
+
         await interaction.followup.send(embed=embed_staff, view=view_approvazione)
 
 
@@ -1329,17 +1320,15 @@ async def inventario_cmd(interaction: discord.Interaction):
     app_commands.Choice(name="🔄 Tutti",    value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
-    await interaction.response.defer(ephemeral=True)
+    if not await safe_defer(interaction): return
     if not ha_permessi_staff(interaction):
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
-    cd = furto_cooldown.get(utente.id, {})
     if tipo.value == "tutti":
-        furto_cooldown[utente.id] = {}
+        furto_cooldown[utente.id] = {"villa": 0, "casa": 0, "macchina": 0}
         msg = "tutti i cooldown (villa, casa, macchina)"
     else:
-        cd.pop(tipo.value, None)
-        furto_cooldown[utente.id] = cd
+        furto_cooldown.setdefault(utente.id, {})[tipo.value] = 0
         nomi = {"villa": "🏰 Villa", "casa": "🏠 Casa", "macchina": "🚗 Macchina"}
         msg = f"il cooldown **{nomi[tipo.value]}**"
     salva_dati()
