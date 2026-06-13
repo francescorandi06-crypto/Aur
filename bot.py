@@ -6,6 +6,8 @@ import asyncio
 import os
 import json
 import time
+import signal
+import sys
 import aiohttp
 from flask import Flask
 from threading import Thread
@@ -22,7 +24,15 @@ def run_flask():
 
 def keep_alive():
     t = Thread(target=run_flask)
+    t.daemon = True  # il thread muore con il processo principale — niente istanze zombie
     t.start()
+
+# Shutdown pulito su SIGTERM (Replit invia SIGTERM per riavviare il workflow)
+def _handle_sigterm(signum, frame):
+    print("[BOT] SIGTERM ricevuto — uscita pulita.")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, _handle_sigterm)
 
 intents = discord.Intents.default()
 intents.message_content = True
