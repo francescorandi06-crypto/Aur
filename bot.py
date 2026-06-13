@@ -1256,7 +1256,8 @@ async def inventario_cmd(interaction: discord.Interaction):
     app_commands.Choice(name="🏰 Villa",    value="villa"),
     app_commands.Choice(name="🏠 Casa",     value="casa"),
     app_commands.Choice(name="🚗 Macchina", value="macchina"),
-    app_commands.Choice(name="🔄 Tutti",    value="tutti"),
+    app_commands.Choice(name="🏧 Bancomat", value="bancomat"),
+    app_commands.Choice(name="⚡ Tutti",    value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
     if not ha_permessi_staff(interaction):
@@ -1265,14 +1266,15 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     cd = furto_cooldown.get(utente.id, {})
     if tipo.value == "tutti":
         furto_cooldown[utente.id] = {}
-        msg = "tutti i cooldown (villa, casa, macchina)"
+        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat"
     else:
         cd.pop(tipo.value, None)
         furto_cooldown[utente.id] = cd
-        nomi = {"villa": "🏰 Villa", "casa": "🏠 Casa", "macchina": "🚗 Macchina"}
-        msg = f"il cooldown **{nomi[tipo.value]}**"
+        azzerati = tipo.name
     salva_dati()
-    await interaction.response.send_message(f"✅ Azzerato {msg} per {utente.mention}.", ephemeral=True)
+    await interaction.response.send_message(
+        f"✅ Azzerato **{azzerati}** per {utente.mention}.", ephemeral=True
+    )
 
 
 @bot.tree.command(name="dai", description="[MOD] Dai contanti o oggetti a un giocatore")
@@ -1461,48 +1463,6 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
         color=discord.Color.orange()
     )
     embed.set_footer(text="Tokyo Horizon RP | Sistema Furto")
-    await interaction.followup.send(embed=embed, ephemeral=True)
-
-
-@bot.tree.command(name="resetcooldown", description="[MOD] Azzera il cooldown di un giocatore")
-@app_commands.describe(
-    utente="Il giocatore di cui azzerare il cooldown",
-    tipo="Quale cooldown azzerare"
-)
-@app_commands.choices(tipo=[
-    app_commands.Choice(name="🏰 Villa",    value="villa"),
-    app_commands.Choice(name="🏠 Casa",     value="casa"),
-    app_commands.Choice(name="🚗 Macchina", value="macchina"),
-    app_commands.Choice(name="🏧 Bancomat", value="bancomat"),
-    app_commands.Choice(name="⚡ Tutti",    value="tutti"),
-])
-async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
-    if not await safe_defer(interaction): return
-    if not ha_permessi_staff(interaction):
-        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
-        return
-
-    uid = utente.id
-    cd = furto_cooldown.get(uid, {})
-
-    if tipo.value == "tutti":
-        furto_cooldown.pop(uid, None)
-        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat"
-    else:
-        cd.pop(tipo.value, None)
-        azzerati = tipo.name
-
-    salva_dati()
-
-    embed = discord.Embed(
-        title="✅ Cooldown Azzerato",
-        description=(
-            f"Il cooldown di {utente.mention} è stato azzerato per: **{azzerati}**.\n"
-            f"Può usare subito il comando corrispondente."
-        ),
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
