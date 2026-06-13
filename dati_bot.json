@@ -14,6 +14,15 @@
     }
   },
   "canale_furti_id": 1515093746671292547,
-  "canale_staff_id": null,
-  "ordini_macchina": {}
+  "ordini_macchina": {
+    "1515304142598312056": {
+      "autore_id": 1083459553892499476,
+      "guadagno": 25000,
+      "destinazione": "Molo di Carico dei Container (Porto di LS)",
+      "modello": "Zentorno",
+      "foto_ok": true,
+      "in_attesa": false,
+      "consegnato": false
+    }
+  }
 }
