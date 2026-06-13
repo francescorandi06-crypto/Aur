@@ -1185,13 +1185,15 @@ async def negozio(interaction: discord.Interaction):
     app_commands.Choice(name="Sistema di Hacking (4000€)", value="Sistema di Hacking"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
-    await interaction.response.defer(ephemeral=True)
     nome = articolo.value
-    info = NEGOZIO[nome]
+    info = NEGOZIO.get(nome)
+    if not info:
+        await interaction.response.send_message("❌ Articolo non trovato nel negozio.", ephemeral=True)
+        return
     prezzo = info["prezzo"]
     bil = get_balance(interaction.user.id)
     if bil["portafoglio"] < prezzo:
-        await interaction.followup.send(
+        await interaction.response.send_message(
             f"❌ Non hai abbastanza contanti in tasca! Ti servono `{prezzo:,}€` ma ne hai solo `{bil['portafoglio']:,}€`.", ephemeral=True
         )
         return
@@ -1209,7 +1211,7 @@ async def compra(interaction: discord.Interaction, articolo: app_commands.Choice
         color=discord.Color.green()
     )
     embed.set_footer(text="Tokyo Horizon RP | Sistema Negozio")
-    await interaction.followup.send(embed=embed)
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="inventario", description="Visualizza il tuo inventario")
@@ -1273,10 +1275,11 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     quantita="Importo in € (per contanti) o quantità (per oggetti)"
 )
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="Contanti in tasca", value="portafoglio"),
-    app_commands.Choice(name="Contanti in banca", value="banca"),
-    app_commands.Choice(name="Grimaldello",       value="Grimaldello"),
-    app_commands.Choice(name="Piede di Porco",    value="Piede di Porco"),
+    app_commands.Choice(name="Contanti in tasca",  value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca",  value="banca"),
+    app_commands.Choice(name="Grimaldello",        value="Grimaldello"),
+    app_commands.Choice(name="Piede di Porco",     value="Piede di Porco"),
+    app_commands.Choice(name="Sistema di Hacking", value="Sistema di Hacking"),
 ])
 async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     if not await safe_defer(interaction): return
@@ -1326,10 +1329,11 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
     quantita="Importo in € (per contanti) o quantità (per oggetti)"
 )
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="Contanti in tasca", value="portafoglio"),
-    app_commands.Choice(name="Contanti in banca", value="banca"),
-    app_commands.Choice(name="Grimaldello",       value="Grimaldello"),
-    app_commands.Choice(name="Piede di Porco",    value="Piede di Porco"),
+    app_commands.Choice(name="Contanti in tasca",  value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca",  value="banca"),
+    app_commands.Choice(name="Grimaldello",        value="Grimaldello"),
+    app_commands.Choice(name="Piede di Porco",     value="Piede di Porco"),
+    app_commands.Choice(name="Sistema di Hacking", value="Sistema di Hacking"),
 ])
 async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     if not await safe_defer(interaction): return
