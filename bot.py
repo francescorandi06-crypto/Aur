@@ -369,17 +369,17 @@ RUOLI_APPROVAZIONE_VEICOLO = {
 
 
 def ha_permessi_staff(interaction: discord.Interaction) -> bool:
-    member = interaction.user if hasattr(interaction.user, "roles") else (
-        interaction.guild.get_member(interaction.user.id) if interaction.guild else None
-    )
-    return member is not None and any(r.id in RUOLI_STAFF for r in member.roles)
+    raw = getattr(interaction.user, '_roles', None)
+    if raw is not None:
+        return any(r_id in RUOLI_STAFF for r_id in raw)
+    return False
 
 
 def ha_permessi_approvazione(interaction: discord.Interaction) -> bool:
-    member = interaction.user if hasattr(interaction.user, "roles") else (
-        interaction.guild.get_member(interaction.user.id) if interaction.guild else None
-    )
-    return member is not None and any(r.id in RUOLI_APPROVAZIONE_VEICOLO for r in member.roles)
+    raw = getattr(interaction.user, '_roles', None)
+    if raw is not None:
+        return any(r_id in RUOLI_APPROVAZIONE_VEICOLO for r_id in raw)
+    return False
 
 
 async def safe_defer(interaction: discord.Interaction, ephemeral: bool = True) -> bool:
