@@ -77,7 +77,7 @@ bot = TokyoHorizonBot()
 # POSIZIONI — Ville e Case
 # =============================================================================
 
-VILLE = [
+_VILLE_ALL = [
     {"nome": "Villa #1",  "esterno": "attached_assets/IMG_1326_1781366502000.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
     {"nome": "Villa #2",  "esterno": "attached_assets/IMG_1329_1781366502000.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
     {"nome": "Villa #3",  "esterno": "attached_assets/IMG_1320_1781366502000.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
@@ -97,6 +97,8 @@ VILLE = [
     {"nome": "Villa #17", "esterno": "attached_assets/IMG_1398_1781366590844.png",  "rarità": "🟣 Epica",       "loot_tier": "epica"},
     {"nome": "Villa #18", "esterno": "attached_assets/IMG_1346_1781366641199.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
 ]
+VILLE = [v for v in _VILLE_ALL if v.get("esterno") and os.path.exists(v["esterno"])]
+print(f"[VILLE] {len(VILLE)}/{len(_VILLE_ALL)} ville caricate (con immagine).")
 
 CASE = [
     {
@@ -333,7 +335,7 @@ def ha_permessi_approvazione(interaction: discord.Interaction) -> bool:
 
 async def safe_defer(interaction: discord.Interaction, ephemeral: bool = True) -> bool:
     age = (discord.utils.utcnow() - interaction.created_at).total_seconds()
-    if age > 1.5:
+    if age > 2.8:
         cmd = getattr(interaction.command, 'name', '?')
         print(f"[SKIP] /{cmd} scaduto ({age:.1f}s) — ignorato.")
         return False
