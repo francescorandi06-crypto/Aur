@@ -1444,10 +1444,13 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
     app_commands.Choice(name="Grimaldello",        value="Grimaldello"),
     app_commands.Choice(name="Piede di Porco",     value="Piede di Porco"),
     app_commands.Choice(name="Sistema di Hacking", value="Sistema di Hacking"),
+    app_commands.Choice(name="Pistola",            value="Pistola"),
 ])
 async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     if not await safe_defer(interaction): return
-    if not ha_permessi_staff(interaction):
+    raw = getattr(interaction.user, '_roles', None)
+    ha_perm = ha_permessi_staff(interaction) or (raw is not None and RUOLO_POLIZIA_HARDCODED in raw)
+    if not ha_perm:
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
     if utente.bot or quantita <= 0:
@@ -1480,7 +1483,8 @@ async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: 
         rimosso = min(quantita, attuale)
         inv[valore] = attuale - rimosso
         salva_dati()
-        info = NEGOZIO.get(valore, {})
+        TUTTI_ITEMS = {**NEGOZIO, **MERCATO_NERO}
+        info = TUTTI_ITEMS.get(valore, {})
         emoji = info.get("emoji", "📦")
         avviso = f"\n⚠️ Ne aveva solo `{attuale}` — rimossi tutti." if rimosso < quantita else ""
         embed = discord.Embed(
