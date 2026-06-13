@@ -271,22 +271,26 @@ def carica_dati():
                     {int(k): v for k, v in dati.get("inventario", {}).items()},
                     dati.get("canale_furti_id", None),
                     ordini,
+                    dati.get("canale_polizia_id", None),
+                    dati.get("ruolo_polizia_id", None),
                 )
         except Exception:
             pass
-    return {}, {}, {}, None, {}
+    return {}, {}, {}, None, {}, None, None
 
 def salva_dati():
     with open(DATI_FILE, "w") as f:
         json.dump({
-            "economia":        {str(k): v for k, v in economia.items()},
-            "furto_cooldown":  {str(k): v for k, v in furto_cooldown.items()},
-            "inventario":      {str(k): v for k, v in inventario.items()},
-            "canale_furti_id": canale_furti_id,
-            "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
+            "economia":          {str(k): v for k, v in economia.items()},
+            "furto_cooldown":    {str(k): v for k, v in furto_cooldown.items()},
+            "inventario":        {str(k): v for k, v in inventario.items()},
+            "canale_furti_id":   canale_furti_id,
+            "ordini_macchina":   {str(k): v for k, v in ordini_pendenti_macchina.items()},
+            "canale_polizia_id": canale_polizia_id,
+            "ruolo_polizia_id":  ruolo_polizia_id,
         }, f, indent=2)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, canale_polizia_id, ruolo_polizia_id = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -1428,9 +1432,10 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
     ora = time.time()
 
     furti = {
-        "villa":    {"label": "🏰 Villa",    "cooldown": 4 * 3600},
-        "casa":     {"label": "🏠 Casa",     "cooldown": 4 * 3600},
-        "macchina": {"label": "🚗 Macchina", "cooldown": 2 * 3600},
+        "villa":    {"label": "🏰 Villa",       "cooldown": 4 * 3600},
+        "casa":     {"label": "🏠 Casa",        "cooldown": 4 * 3600},
+        "macchina": {"label": "🚗 Macchina",    "cooldown": 2 * 3600},
+        "bancomat": {"label": "🏧 Bancomat",    "cooldown": 12 * 3600},
     }
 
     righe = []
@@ -1464,6 +1469,177 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
 
 
 
+
+
+# =============================================================================
+# RAPINA — BANCOMAT
+# =============================================================================
+
+LOOT_BANCOMAT = 7000
+ATM_IMAGE = "attached_assets/IMG_1429_1781378756942.jpeg"
+
+
+class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat"):
+    nome_pg = discord.ui.TextInput(
+        label="Nome del tuo personaggio",
+        placeholder="Es: Marco Rossi",
+        min_length=2,
+        max_length=50,
+    )
+    posizione = discord.ui.TextInput(
+        label="Posizione del bancomat",
+        placeholder="Es: Via del Mare 14, Downtown Los Santos",
+        min_length=3,
+        max_length=100,
+    )
+
+    def __init__(self, uid: int):
+        super().__init__()
+        self.uid = uid
+
+    async def on_submit(self, interaction: discord.Interaction):
+        uid = self.uid
+        nome = self.nome_pg.value.strip()
+        pos  = self.posizione.value.strip()
+
+        inv = get_inventario(uid)
+        if inv.get("Piede di Porco", 0) <= 0:
+            await interaction.response.send_message(
+                "❌ Non hai più il `Piede di Porco` nell'inventario!", ephemeral=True
+            )
+            return
+
+        inv["Piede di Porco"] -= 1
+        if inv["Piede di Porco"] == 0:
+            del inv["Piede di Porco"]
+
+        furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
+
+        bil = get_balance(uid)
+        bil["banca"] += LOOT_BANCOMAT
+        salva_dati()
+
+        embed_ok = discord.Embed(
+            title="✅ Rapina Bancomat Avviata!",
+            description=(
+                f"🕵️ **Personaggio:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
+                f"🪓 Hai usato **1x Piede di Porco**.\n"
+                f"💰 **`{LOOT_BANCOMAT:,}€`** verranno accreditati in banca al completamento (4 minuti in-game).\n\n"
+                f"⚠️ Solo armi bianche o pistole leggere — vietati giubbotti e caschi!"
+            ),
+            color=discord.Color.green()
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
+        await interaction.response.send_message(embed=embed_ok, ephemeral=True)
+
+        mention = f"<@&{ruolo_polizia_id}>" if ruolo_polizia_id else "🚔 **FDO**"
+        embed_pol = discord.Embed(
+            title="🚨 RAPINA IN CORSO — BANCOMAT 🏧",
+            description=(
+                f"{mention}\n\n"
+                f"🦹 **Criminale:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
+                f"👥 **Partecipanti:** Max 1 Criminale | Max **2 FDO**\n"
+                f"⚔️ **Equipaggiamento:** Solo armi bianche o pistole leggere\n"
+                f"🚫 Vietati giubbotti e caschi\n"
+                f"⏱️ **Scassinamento:** 4 minuti | Fuga immediata (nessun dialogo)\n"
+                f"💰 **Bottino:** `{LOOT_BANCOMAT:,}€` in contanti puliti"
+            ),
+            color=discord.Color.red()
+        )
+        embed_pol.set_thumbnail(url="attachment://atm_rules.jpeg")
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO")
+
+        files_pol = []
+        if os.path.exists(ATM_IMAGE):
+            files_pol.append(discord.File(ATM_IMAGE, filename="atm_rules.jpeg"))
+
+        target_channel = None
+        if canale_polizia_id:
+            try:
+                target_channel = bot.get_channel(canale_polizia_id) or await bot.fetch_channel(canale_polizia_id)
+            except Exception as e:
+                print(f"[BANCOMAT] Canale polizia non trovato: {e}")
+        if target_channel is None:
+            target_channel = interaction.channel
+
+        try:
+            await target_channel.send(embed=embed_pol, files=files_pol)
+        except Exception as e:
+            print(f"[BANCOMAT] Invio notifica fallito: {e}")
+
+
+@bot.tree.command(name="rapina", description="Esegui una rapina — bancomat e altro")
+@app_commands.describe(tipo="Tipo di rapina da effettuare")
+@app_commands.choices(tipo=[
+    app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco | Cooldown 12h", value="bancomat"),
+])
+async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
+    uid = interaction.user.id
+
+    if tipo.value == "bancomat":
+        ora = time.time()
+        ultimo = furto_cooldown.get(uid, {}).get("bancomat", 0)
+        if ora - ultimo < 12 * 3600:
+            rimanenti = int(12 * 3600 - (ora - ultimo))
+            ore_r = rimanenti // 3600
+            min_r = (rimanenti % 3600) // 60
+            await interaction.response.send_message(
+                f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di poter rapinare un altro bancomat.",
+                ephemeral=True
+            )
+            return
+
+        inv = get_inventario(uid)
+        if inv.get("Piede di Porco", 0) <= 0:
+            await interaction.response.send_message(
+                "🔒 Per scassinare un bancomat serve **`1x Piede di Porco`**. Acquistalo con `/negozio`.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.send_modal(BancomatModal(uid))
+
+
+@bot.tree.command(name="setcanalepolizia", description="[MOD] Imposta il canale notifiche FDO per le rapine")
+async def setcanalepolizia(interaction: discord.Interaction):
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+    global canale_polizia_id
+    canale_polizia_id = interaction.channel_id
+    salva_dati()
+    embed = discord.Embed(
+        title="✅ Canale Polizia Impostato",
+        description=(
+            f"Le notifiche di rapina verranno inviate in <#{interaction.channel_id}>.\n"
+            f"Usa `/setruolopolizia` per impostare il ruolo FDO da menzionare."
+        ),
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="setruolopolizia", description="[MOD] Imposta il ruolo FDO da menzionare nelle rapine")
+@app_commands.describe(ruolo="Il ruolo da menzionare nelle notifiche di rapina")
+async def setruolopolizia(interaction: discord.Interaction, ruolo: discord.Role):
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+    global ruolo_polizia_id
+    ruolo_polizia_id = ruolo.id
+    salva_dati()
+    embed = discord.Embed(
+        title="✅ Ruolo Polizia Impostato",
+        description=f"D'ora in poi le notifiche di rapina menzioneranno {ruolo.mention}.",
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 # =============================================================================
