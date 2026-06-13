@@ -812,7 +812,6 @@ class VeicoloButtons(discord.ui.View):
             await interaction.response.send_message("⚠️ Questo furto è già stato processato.", ephemeral=True)
             return
 
-        await interaction.response.defer(ephemeral=True)
         ordine["foto_ok"] = True
         salva_dati()
         button.disabled = True
@@ -821,10 +820,7 @@ class VeicoloButtons(discord.ui.View):
             if isinstance(child, discord.ui.Button) and child.custom_id == "vei:consegna":
                 child.disabled = False
 
-        try:
-            await interaction.message.edit(view=self)
-        except Exception as e:
-            print(f"[ERRORE] edit messaggio foto: {e}")
+        await interaction.response.edit_message(view=self)
         await interaction.followup.send(
             "✅ **Foto confermata!** Ora raggiungi la destinazione e premi **🏁 Consegna Veicolo** quando sei arrivato. Hai **10 minuti**!",
             ephemeral=True
@@ -874,7 +870,7 @@ class VeicoloButtons(discord.ui.View):
         button.disabled = True
         button.label = "⏳ In attesa di approvazione..."
         try:
-            await interaction.message.edit(view=self)
+            await interaction.edit_original_response(view=self)
         except Exception as e:
             print(f"[ERRORE] Aggiornamento bottone consegna fallito: {e}")
 
