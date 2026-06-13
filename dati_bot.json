@@ -6,13 +6,14 @@
     }
   },
   "furto_cooldown": {
-    "1083459553892499476": {
-      "macchina": 1781343761.4527254
-    }
+    "1083459553892499476": {}
   },
   "inventario": {
     "1083459553892499476": {
       "Piede di Porco": 1
     }
-  }
+  },
+  "canale_furti_id": 1515093746671292547,
+  "canale_staff_id": null,
+  "ordini_macchina": {}
 }

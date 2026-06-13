@@ -318,12 +318,11 @@ def carica_dati():
                     cooldown,
                     {int(k): v for k, v in dati.get("inventario", {}).items()},
                     dati.get("canale_furti_id", None),
-                    dati.get("canale_staff_id", None),
                     ordini,
                 )
         except Exception:
             pass
-    return {}, {}, {}, None, None, {}
+    return {}, {}, {}, None, {}
 
 def salva_dati():
     with open(DATI_FILE, "w") as f:
@@ -332,11 +331,10 @@ def salva_dati():
             "furto_cooldown":  {str(k): v for k, v in furto_cooldown.items()},
             "inventario":      {str(k): v for k, v in inventario.items()},
             "canale_furti_id": canale_furti_id,
-            "canale_staff_id": canale_staff_id,
             "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
         }, f, indent=2)
 
-economia, furto_cooldown, inventario, canale_furti_id, canale_staff_id, ordini_pendenti_macchina = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -398,34 +396,30 @@ async def safe_defer(interaction: discord.Interaction, ephemeral: bool = True) -
 
 
 async def invia_notifica_staff(guild_id, embed, view, canale_diretto=None):
-    # 1. PRIMA PRIORITÀ: canale dove il giocatore ha usato /furto (sempre disponibile)
+    # PRIORITÀ: canale rapine configurato con /setcanale
+    if canale_furti_id:
+        try:
+            canale = bot.get_channel(canale_furti_id) or await bot.fetch_channel(canale_furti_id)
+            await canale.send(embed=embed, view=view)
+            print(f"[STAFF] ✅ Inviato nel canale rapine #{canale.name}")
+            return "canale"
+        except discord.Forbidden:
+            print("[STAFF] Forbidden nel canale rapine. Provo DM...")
+        except discord.NotFound:
+            print("[STAFF] Canale rapine non trovato. Provo DM...")
+        except Exception as e:
+            print(f"[STAFF] Errore canale rapine: {type(e).__name__}: {e}. Provo DM...")
+
+    # FALLBACK: canale dove è stato usato /furto
     if canale_diretto is not None:
         try:
             await canale_diretto.send(embed=embed, view=view)
-            print(f"[STAFF] ✅ Inviato nel canale #{canale_diretto.name}")
+            print(f"[STAFF] ✅ Inviato nel canale diretto #{canale_diretto.name}")
             return "canale"
-        except discord.Forbidden:
-            print(f"[STAFF] Forbidden nel canale #{canale_diretto.name}. Provo canale_staff_id...")
         except Exception as e:
-            print(f"[STAFF] Errore canale diretto: {type(e).__name__}: {e}. Provo canale_staff_id...")
+            print(f"[STAFF] Errore canale diretto: {type(e).__name__}: {e}. Provo DM...")
 
-    print(f"[STAFF] invia_notifica_staff — canale_staff_id={canale_staff_id}")
-
-    # 2. SECONDA PRIORITÀ: canale staff configurato con /setcanalestaff
-    if canale_staff_id:
-        try:
-            canale = await bot.fetch_channel(canale_staff_id)
-            await canale.send(embed=embed, view=view)
-            print(f"[STAFF] ✅ Inviato al canale #{canale.name}")
-            return "canale"
-        except discord.Forbidden:
-            print("[STAFF] 403 Forbidden — bot senza permessi nel canale staff. Provo DM...")
-        except discord.NotFound:
-            print("[STAFF] Canale staff non trovato. Provo DM...")
-        except Exception as e:
-            print(f"[STAFF] Errore canale staff: {type(e).__name__}: {e}. Provo DM...")
-
-    # 2. FALLBACK: DM ai membri staff con i ruoli di approvazione
+    # ULTIMO FALLBACK: DM ai membri staff
     if not guild_id:
         return "fallito"
 
@@ -976,6 +970,12 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         await interaction.response.send_modal(MacchinaModal(uid))
         return
 
+    if canale_furti_id and interaction.channel_id != canale_furti_id:
+        await interaction.response.send_message(
+            f"❌ I furti si effettuano solo nel canale <#{canale_furti_id}>!", ephemeral=True
+        )
+        return
+
     await interaction.response.defer()
 
     if tipo_scelto == "villa":
@@ -1329,9 +1329,8 @@ async def inventario_cmd(interaction: discord.Interaction):
     app_commands.Choice(name="🔄 Tutti",    value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
-    await interaction.response.defer(ephemeral=True)
     if not ha_permessi_staff(interaction):
-        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        await interaction.response.send_message("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
     cd = furto_cooldown.get(utente.id, {})
     if tipo.value == "tutti":
@@ -1343,7 +1342,7 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
         nomi = {"villa": "🏰 Villa", "casa": "🏠 Casa", "macchina": "🚗 Macchina"}
         msg = f"il cooldown **{nomi[tipo.value]}**"
     salva_dati()
-    await interaction.followup.send(f"✅ Azzerato {msg} per {utente.mention}.", ephemeral=True)
+    await interaction.response.send_message(f"✅ Azzerato {msg} per {utente.mention}.", ephemeral=True)
 
 
 @bot.tree.command(name="dai", description="[MOD] Dai contanti o oggetti a un giocatore")
