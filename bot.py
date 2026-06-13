@@ -116,7 +116,7 @@ VILLE = [
     {
         "nome": "Villa di Lusso #6 — Zona Chumash",
         "mappa": None,
-        "esterno": "attached_assets/IMG_1326_1781294056129.png",
+        "esterno": "attached_assets/IMG_1326_1781271755457.png",
         "rarità": "🔴 Leggendaria",
         "loot_tier": "leggendaria_elite",
     },
@@ -130,7 +130,7 @@ VILLE = [
     {
         "nome": "Villa di Lusso #8 — Zona Great Chaparral",
         "mappa": None,
-        "esterno": "attached_assets/IMG_1329_1781294056129.png",
+        "esterno": "attached_assets/IMG_1329_1781268979063.png",
         "rarità": "🔴 Leggendaria",
         "loot_tier": "leggendaria_elite",
     },
