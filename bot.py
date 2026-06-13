@@ -1131,7 +1131,7 @@ cooldown_banca = {}
 
 def controlla_cooldown(user_id: int, azione: str, secondi: int = 60):
     chiave = f"{user_id}_{azione}"
-    ora = asyncio.get_event_loop().time()
+    ora = time.time()
     if chiave in cooldown_banca:
         trascorso = ora - cooldown_banca[chiave]
         if trascorso < secondi:
