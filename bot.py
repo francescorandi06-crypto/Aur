@@ -931,7 +931,9 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             )
             return
     if tipo_scelto == "villa":
-        location = random.choice(VILLE)
+        _PESI_TIER = {"rara": 60, "epica": 30, "leggendaria": 10}
+        _pesi_ville = [_PESI_TIER.get(v.get("loot_tier", "rara"), 60) for v in VILLE]
+        location = random.choices(VILLE, weights=_pesi_ville, k=1)[0]
         tier = location.get("loot_tier", "rara")
         pool_per_tier = LOOT_VILLA[tier]
         oggetti_scelti = campiona_con_rarità(pool_per_tier, k=len(pool_per_tier))
