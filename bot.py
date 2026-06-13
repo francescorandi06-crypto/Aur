@@ -298,9 +298,9 @@ def get_inventario(user_id):
     return inventario[user_id]
 
 NEGOZIO = {
-    "Piede di Porco":      {"prezzo": 1000, "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usato per ville e case."},
-    "Grimaldello":         {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di lusso. Usato per le ville."},
-    "Sistema di Hacking":  {"prezzo": 4000, "emoji": "💻",  "descrizione": "Disabilita l'allarme della villa. Obbligatorio per il furto in villa insieme al Piede di Porco o Grimaldello."},
+    "Piede di Porco":      {"prezzo": 1000, "emoji": "🪓",  "descrizione": "Forza porte e finestre. Indispensabile per colpi in case, ville e operazioni ad alto rischio."},
+    "Grimaldello":         {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
+    "Sistema di Hacking":  {"prezzo": 4000, "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
 }
 
 RUOLI_STAFF = {
