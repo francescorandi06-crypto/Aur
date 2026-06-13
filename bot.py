@@ -660,7 +660,8 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
         print(f"[ORDINE] Creato ordine autore={self.autore_id} modello={modello_input}")
 
         view = VeicoloButtons()
-        await interaction.response.send_message(embeds=embeds, files=files, view=view)
+        await interaction.response.defer()
+        await interaction.channel.send(embeds=embeds, files=files, view=view)
 
 
 class ApprovazioneCosegnaView(discord.ui.View):
@@ -793,7 +794,36 @@ class VeicoloButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success, custom_id="vei:consegna")
+    @discord.ui.button(label="📸 Ho Inviato la Foto", style=discord.ButtonStyle.primary, custom_id="vei:foto")
+    async def conferma_foto(self, interaction: discord.Interaction, button: discord.ui.Button):
+        uid = interaction.user.id
+        ordine = ordini_pendenti_macchina.get(uid)
+        if not ordine:
+            await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
+            return
+        if ordine.get("foto_ok"):
+            await interaction.response.send_message("✅ Foto già confermata! Premi il pulsante verde per consegnare.", ephemeral=True)
+            return
+        if ordine.get("in_attesa") or ordine.get("consegnato"):
+            await interaction.response.send_message("⚠️ Questo furto è già stato processato.", ephemeral=True)
+            return
+
+        ordine["foto_ok"] = True
+        salva_dati()
+
+        button.disabled = True
+        button.label = "✅ Foto Inviata"
+        for child in self.children:
+            if isinstance(child, discord.ui.Button) and child.custom_id == "vei:consegna":
+                child.disabled = False
+
+        await interaction.response.edit_message(view=self)
+        await interaction.followup.send(
+            "✅ **Foto confermata!** Ora raggiungi la destinazione e premi **🏁 Consegna Veicolo** quando sei arrivato.",
+            ephemeral=True
+        )
+
+    @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success, custom_id="vei:consegna", disabled=True)
     async def consegna(self, interaction: discord.Interaction, button: discord.ui.Button):
         uid = interaction.user.id
         ordine = ordini_pendenti_macchina.get(uid)
@@ -809,6 +839,10 @@ class VeicoloButtons(discord.ui.View):
 
         ordine["in_attesa"] = True
         salva_dati()
+
+        button.disabled = True
+        button.label = "⏳ In attesa di approvazione..."
+        await interaction.response.edit_message(view=self)
 
         embed_staff = discord.Embed(
             title="🚗 RICHIESTA APPROVAZIONE CONSEGNA",
@@ -831,7 +865,7 @@ class VeicoloButtons(discord.ui.View):
             messaggio_originale=interaction.message,
         )
 
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "📋 **Richiesta inviata allo staff!** Attendi che verifichino la tua consegna.",
             ephemeral=True
         )
