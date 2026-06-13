@@ -17,9 +17,9 @@
   "ordini_macchina": {
     "1083459553892499476": {
       "guadagno": 5000,
-      "destinazione": "Rimessa Industriale di Cypress Flats",
-      "modello": "Aaaaae",
-      "foto_ok": false,
+      "destinazione": "Discarica Centrale di South Los Santos",
+      "modello": "Aura",
+      "foto_ok": true,
       "in_attesa": false,
       "consegnato": false
     }
