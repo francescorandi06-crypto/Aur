@@ -1293,11 +1293,11 @@ async def inventario_cmd(interaction: discord.Interaction):
     app_commands.Choice(name="⚡ Tutti",    value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
+    if not await safe_defer(interaction, ephemeral=True):
+        return
+
     if not ha_permessi_staff(interaction):
-        try:
-            await interaction.response.send_message("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
-        except Exception:
-            pass
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return
 
     # Esegui il reset PRIMA di qualsiasi chiamata Discord (non può fallire)
@@ -1314,20 +1314,7 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     except Exception as e:
         print(f"[RESETCD] salva_dati fallito: {e}")
 
-    # Poi prova a rispondere (se l'interazione è scaduta pazienza — il reset è già fatto)
-    msg = f"✅ Azzerato **{azzerati}** per {utente.mention}."
-    try:
-        await interaction.response.send_message(msg, ephemeral=True)
-    except discord.InteractionResponded:
-        try:
-            await interaction.followup.send(msg, ephemeral=True)
-        except Exception:
-            pass
-    except Exception:
-        try:
-            await interaction.followup.send(msg, ephemeral=True)
-        except Exception:
-            pass
+    await interaction.followup.send(f"✅ Azzerato **{azzerati}** per {utente.mention}.", ephemeral=True)
 
 
 @bot.tree.command(name="dai", description="[MOD] Dai contanti o oggetti a un giocatore")
@@ -1642,7 +1629,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         self.uid = uid
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
 
         uid  = self.uid
         nome = self.nome_pg.value.strip()
