@@ -807,16 +807,8 @@ class VeicoloButtons(discord.ui.View):
             await interaction.response.send_message("✅ Questa consegna è già stata processata.", ephemeral=True)
             return
 
-        await interaction.response.defer()
         ordine["in_attesa"] = True
         salva_dati()
-
-        button.disabled = True
-        button.label = "⏳ In attesa di approvazione..."
-        try:
-            await interaction.edit_original_response(view=self)
-        except Exception as e:
-            print(f"[ERRORE] Aggiornamento bottone consegna fallito: {e}")
 
         embed_staff = discord.Embed(
             title="🚗 RICHIESTA APPROVAZIONE CONSEGNA",
@@ -839,7 +831,7 @@ class VeicoloButtons(discord.ui.View):
             messaggio_originale=interaction.message,
         )
 
-        await interaction.followup.send(
+        await interaction.response.send_message(
             "📋 **Richiesta inviata allo staff!** Attendi che verifichino la tua consegna.",
             ephemeral=True
         )
