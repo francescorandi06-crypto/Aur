@@ -35,15 +35,18 @@ class HorizonTree(app_commands.CommandTree):
         if interaction.type == discord.InteractionType.application_command:
             now = discord.utils.utcnow()
             age = (now - interaction.created_at).total_seconds()
-            if age > 2.5:
+            stale = age > 2.5 or (bot.ready_time and interaction.created_at < bot.ready_time)
+            if stale:
                 cmd = getattr(interaction.command, 'name', '?')
                 print(f"[SKIP] Slash command scaduto ({age:.1f}s): /{cmd} — ignorato.")
-                return False
-            # Scarta le interazioni create prima che il bot fosse pronto
-            # (quelle riproiettate da Discord al riavvio del bot)
-            if bot.ready_time and interaction.created_at < bot.ready_time:
-                cmd = getattr(interaction.command, 'name', '?')
-                print(f"[SKIP] Interazione pre-ready /{cmd} — ignorata.")
+                # Prova a rispondere con messaggio amichevole prima di rifiutare
+                try:
+                    await interaction.response.send_message(
+                        "⚡ Connessione lenta — riprova il comando!",
+                        ephemeral=True
+                    )
+                except Exception:
+                    pass  # Interazione già scaduta, niente da fare
                 return False
         return True
 
@@ -1639,7 +1642,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             await interaction.followup.send("❌ Non hai il `Piede di Porco` nell'inventario!", ephemeral=True)
             return
 
-        # Prepara tutto PRIMA di cambiare lo stato di gioco
+        # Prepara embed conferma criminale (senza immagine ATM)
         embed_ok = discord.Embed(
             title="✅ Rapina Bancomat Inviata!",
             description=(
@@ -1656,13 +1659,14 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         )
         embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
 
+        # Prepara embed notifica FDO (senza immagine ATM)
         mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
         embed_pol = discord.Embed(
             title="🚨 RAPINA IN CORSO — BANCOMAT 🏧",
             description=(
                 f"🦹 **Criminale:** `{nome}`\n"
-                f"📍 **Posizione:** `{pos}`\n"
-                f"👥 **Partecipanti criminale:** `{part}`\n\n"
+                f"📍 **Posizione dichiarata:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
                 f"👮 **FDO richiesti:** Max **2 FDO**\n"
                 f"⚔️ **Equipaggiamento:** Solo armi bianche o pistole leggere\n"
                 f"🚫 Vietati giubbotti e caschi\n"
@@ -1672,35 +1676,20 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             ),
             color=discord.Color.red()
         )
-        embed_pol.set_thumbnail(url="attachment://atm_rules.jpeg")
         embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — 10 minuti per rispondere")
 
         view = AccettaRapinaView(uid, nome, pos, part)
 
-        # Ottieni il canale FDO
-        try:
-            target_channel = bot.get_channel(CANALE_POLIZIA_HARDCODED) or await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
-        except Exception as e:
-            print(f"[BANCOMAT] Canale polizia non trovato: {e}")
-            target_channel = interaction.channel
-
-        # Solo ora consuma item e setta cooldown (non può fallire)
+        # Consuma item e setta cooldown
         inv["Piede di Porco"] -= 1
         if inv["Piede di Porco"] == 0:
             del inv["Piede di Porco"]
         furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
         salva_dati()
 
-        # Invia conferma al criminale — prova pubblica, fallback ephemeral
+        # 1) Conferma al criminale (pubblica via followup — non richiede Send Messages)
         try:
-            files_ok = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
-            await interaction.followup.send(embed=embed_ok, files=files_ok, ephemeral=False)
-        except discord.Forbidden:
-            print("[BANCOMAT] Forbidden su followup pubblico — ritento ephemeral")
-            try:
-                await interaction.followup.send(embed=embed_ok, ephemeral=True)
-            except Exception as fe:
-                print(f"[BANCOMAT] Anche followup ephemeral fallito: {fe}")
+            await interaction.followup.send(embed=embed_ok, ephemeral=False)
         except Exception as e:
             print(f"[BANCOMAT] Followup criminale fallito: {e}")
             try:
@@ -1708,20 +1697,28 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             except Exception:
                 pass
 
-        # Invia notifica canale FDO
+        # 2) Chiedi screenshot radar — il criminale deve mandare la posizione sulla mappa
         try:
-            files_pol = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
-            if target_channel:
-                msg = await target_channel.send(
-                    content=mention,
-                    embed=embed_pol,
-                    files=files_pol,
-                    view=view,
-                    allowed_mentions=discord.AllowedMentions(roles=True),
-                )
-                view.message = msg
+            await interaction.followup.send(
+                "📍 **Manda subito uno screenshot del radar** (apri la mappa in-game) "
+                "per far vedere la tua posizione esatta agli FDO!",
+                ephemeral=False
+            )
         except Exception as e:
-            print(f"[BANCOMAT] Invio notifica FDO fallito: {e}")
+            print(f"[BANCOMAT] Messaggio radar fallito: {e}")
+
+        # 3) Notifica FDO tramite followup (non richiede Send Messages nel canale)
+        try:
+            msg = await interaction.followup.send(
+                content=mention,
+                embed=embed_pol,
+                view=view,
+                allowed_mentions=discord.AllowedMentions(roles=True),
+                ephemeral=False,
+            )
+            view.message = msg
+        except Exception as e:
+            print(f"[BANCOMAT] Notifica FDO fallita: {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         code = getattr(getattr(error, "original", error), "code", None)
