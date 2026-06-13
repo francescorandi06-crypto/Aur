@@ -1630,7 +1630,7 @@ class AccettaRapinaView(discord.ui.View):
 
     async def on_timeout(self):
         inv = get_inventario(self.criminal_uid)
-        inv["Pistola"] = inv.get("Pistola", 0) + 1
+        inv["Piede di Porco"] = inv.get("Piede di Porco", 0) + 1
         furto_cooldown.get(self.criminal_uid, {}).pop("bancomat", None)
         salva_dati()
 
@@ -1698,6 +1698,9 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         part = self.partecipanti.value.strip()
 
         inv = get_inventario(uid)
+        if inv.get("Piede di Porco", 0) <= 0:
+            await interaction.followup.send("❌ Non hai il `Piede di Porco` nell'inventario! Acquistalo con `/negozio`.", ephemeral=True)
+            return
         if inv.get("Pistola", 0) <= 0:
             await interaction.followup.send("❌ Non hai la `Pistola` nell'inventario! Acquistala con `/compranero`.", ephemeral=True)
             return
@@ -1709,11 +1712,11 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
                 f"🕵️ **Personaggio:** `{nome}`\n"
                 f"📍 **Posizione:** `{pos}`\n"
                 f"👥 **Partecipanti:** `{part}`\n\n"
-                f"🔫 Hai usato **1x Pistola**.\n"
+                f"🪓 Hai usato **1x Piede di Porco** (consumato) + 🔫 **Pistola** (mantenuta).\n"
                 f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca non appena un FDO accetta il servizio.\n\n"
                 f"⏳ La rapina si annulla se nessun FDO risponde entro **10 minuti** — "
-                f"la Pistola ti viene restituita.\n"
-                f"⚠️ Equipaggiamento consentito: solo **Pistola**"
+                f"il Piede di Porco ti viene restituito.\n"
+                f"⚠️ Equipaggiamento consentito: **Piede di Porco + Pistola**"
             ),
             color=discord.Color.green()
         )
@@ -1728,7 +1731,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
                 f"📍 **Posizione dichiarata:** `{pos}`\n"
                 f"👥 **Partecipanti:** `{part}`\n\n"
                 f"👮 **FDO richiesti:** Max **1 FDO**\n"
-                f"⚔️ **Equipaggiamento criminale:** Solo Pistola\n"
+                f"⚔️ **Equipaggiamento criminale:** Piede di Porco + Pistola\n"
                 f"⏱️ **Scassinamento:** 4 minuti | Fuga immediata (nessun dialogo)\n"
                 f"💰 **Bottino:** `{LOOT_BANCOMAT:,}€` in contanti puliti\n\n"
                 f"⏳ Clicca **Accetta Servizio** entro 10 minuti o la rapina viene annullata."
@@ -1739,10 +1742,10 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
 
         view = AccettaRapinaView(uid, nome, pos, part)
 
-        # Consuma item e setta cooldown
-        inv["Pistola"] -= 1
-        if inv["Pistola"] == 0:
-            del inv["Pistola"]
+        # Consuma solo il Piede di Porco — la Pistola rimane in inventario
+        inv["Piede di Porco"] -= 1
+        if inv["Piede di Porco"] == 0:
+            del inv["Piede di Porco"]
         furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
         salva_dati()
 
@@ -1796,7 +1799,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
 @bot.tree.command(name="rapina", description="Esegui una rapina — bancomat e altro")
 @app_commands.describe(tipo="Tipo di rapina da effettuare")
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="🏧 Bancomat — 7.000€ | Pistola | Cooldown 12h", value="bancomat"),
+    app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h", value="bancomat"),
 ])
 async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
     uid = interaction.user.id
@@ -1818,10 +1821,19 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             return
 
         inv = get_inventario(uid)
+        if inv.get("Piede di Porco", 0) <= 0:
+            try:
+                await interaction.response.send_message(
+                    "🔒 Per rapinare un bancomat servono **`1x Piede di Porco`** e **`1x Pistola`**. Acquistali con `/negozio` e `/compranero`.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+            return
         if inv.get("Pistola", 0) <= 0:
             try:
                 await interaction.response.send_message(
-                    "🔒 Per rapinare un bancomat serve **`1x Pistola`**. Acquistala con `/compranero`.",
+                    "🔒 Per rapinare un bancomat serve anche **`1x Pistola`**. Acquistala con `/compranero`.",
                     ephemeral=True
                 )
             except Exception:

@@ -1,7 +1,7 @@
 {
   "economia": {
     "1083459553892499476": {
-      "portafoglio": 82000,
+      "portafoglio": 72000,
       "banca": 6000
     }
   },
@@ -14,7 +14,8 @@
   "inventario": {
     "1083459553892499476": {
       "Sistema di Hacking": 100,
-      "Piede di Porco": 95
+      "Piede di Porco": 95,
+      "Pistola": 1
     }
   },
   "canale_furti_id": 1515093746671292547,
