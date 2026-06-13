@@ -928,9 +928,6 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter fare un altro furto in {tipo_scelto}.", ephemeral=True
         )
         return
-    furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
-    salva_dati()
-
     if tipo_scelto == "villa":
         location = random.choice(VILLE)
         tier = location.get("loot_tier", "rara")
@@ -969,7 +966,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             except FileNotFoundError:
                 pass
 
-        if location["mappa"]:
+        if location.get("mappa"):
             try:
                 ext_m = location["mappa"].rsplit(".", 1)[-1]
                 fname_m = f"villa_mappa.{ext_m}"
@@ -981,6 +978,8 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             except FileNotFoundError:
                 pass
 
+        furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
+        salva_dati()
         await interaction.followup.send(embeds=embeds, files=files, view=view)
 
     elif tipo_scelto == "casa":
@@ -1015,7 +1014,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             except FileNotFoundError:
                 pass
 
-        if location["mappa"]:
+        if location.get("mappa"):
             try:
                 file_mappa = discord.File(location["mappa"], filename="casa_mappa.jpeg")
                 files.append(file_mappa)
@@ -1025,6 +1024,8 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             except FileNotFoundError:
                 pass
 
+        furto_cooldown.setdefault(uid, {})[tipo_scelto] = ora_attuale
+        salva_dati()
         await interaction.followup.send(embeds=embeds, files=files, view=view)
 
 
