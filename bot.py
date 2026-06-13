@@ -661,7 +661,7 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
 
         view = VeicoloButtons()
         await interaction.response.defer()
-        await interaction.channel.send(embeds=embeds, files=files, view=view)
+        await interaction.followup.send(embeds=embeds, files=files, view=view)
 
 
 class ApprovazioneCosegnaView(discord.ui.View):
