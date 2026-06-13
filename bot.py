@@ -1265,22 +1265,38 @@ async def inventario_cmd(interaction: discord.Interaction):
     app_commands.Choice(name="⚡ Tutti",    value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
-    if not await safe_defer(interaction): return
     if not ha_permessi_staff(interaction):
-        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        try:
+            await interaction.response.send_message("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        except Exception:
+            pass
         return
-    cd = furto_cooldown.get(utente.id, {})
+
+    # Esegui il reset PRIMA di qualsiasi chiamata Discord (non può fallire)
     if tipo.value == "tutti":
         furto_cooldown[utente.id] = {}
         azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat"
     else:
+        cd = furto_cooldown.get(utente.id, {})
         cd.pop(tipo.value, None)
         furto_cooldown[utente.id] = cd
         azzerati = tipo.name
     salva_dati()
-    await interaction.followup.send(
-        f"✅ Azzerato **{azzerati}** per {utente.mention}.", ephemeral=True
-    )
+
+    # Poi prova a rispondere (se l'interazione è scaduta pazienza — il reset è già fatto)
+    msg = f"✅ Azzerato **{azzerati}** per {utente.mention}."
+    try:
+        await interaction.response.send_message(msg, ephemeral=True)
+    except discord.InteractionResponded:
+        try:
+            await interaction.followup.send(msg, ephemeral=True)
+        except Exception:
+            pass
+    except Exception:
+        try:
+            await interaction.followup.send(msg, ephemeral=True)
+        except Exception:
+            pass
 
 
 @bot.tree.command(name="dai", description="[MOD] Dai contanti o oggetti a un giocatore")
@@ -1607,12 +1623,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             await interaction.followup.send("❌ Non hai il `Piede di Porco` nell'inventario!", ephemeral=True)
             return
 
-        inv["Piede di Porco"] -= 1
-        if inv["Piede di Porco"] == 0:
-            del inv["Piede di Porco"]
-        furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
-        salva_dati()
-
+        # Prepara tutto PRIMA di cambiare lo stato di gioco
         embed_ok = discord.Embed(
             title="✅ Rapina Bancomat Inviata!",
             description=(
@@ -1627,10 +1638,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             ),
             color=discord.Color.green()
         )
-        embed_ok.set_thumbnail(url="attachment://atm_rules.jpeg")
         embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
-        files_ok = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
-        await interaction.followup.send(embed=embed_ok, files=files_ok, ephemeral=False)
 
         mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
         embed_pol = discord.Embed(
@@ -1652,15 +1660,41 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — 10 minuti per rispondere")
 
         view = AccettaRapinaView(uid, nome, pos, part)
-        files_pol = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
 
+        # Ottieni il canale FDO
         try:
             target_channel = bot.get_channel(CANALE_POLIZIA_HARDCODED) or await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
         except Exception as e:
             print(f"[BANCOMAT] Canale polizia non trovato: {e}")
             target_channel = interaction.channel
 
+        # Solo ora consuma item e setta cooldown (non può fallire)
+        inv["Piede di Porco"] -= 1
+        if inv["Piede di Porco"] == 0:
+            del inv["Piede di Porco"]
+        furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
+        salva_dati()
+
+        # Invia conferma al criminale — prova pubblica, fallback ephemeral
         try:
+            files_ok = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
+            await interaction.followup.send(embed=embed_ok, files=files_ok, ephemeral=False)
+        except discord.Forbidden:
+            print("[BANCOMAT] Forbidden su followup pubblico — ritento ephemeral")
+            try:
+                await interaction.followup.send(embed=embed_ok, ephemeral=True)
+            except Exception as fe:
+                print(f"[BANCOMAT] Anche followup ephemeral fallito: {fe}")
+        except Exception as e:
+            print(f"[BANCOMAT] Followup criminale fallito: {e}")
+            try:
+                await interaction.followup.send(embed=embed_ok, ephemeral=True)
+            except Exception:
+                pass
+
+        # Invia notifica canale FDO
+        try:
+            files_pol = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
             if target_channel:
                 msg = await target_channel.send(
                     content=mention,
@@ -1671,13 +1705,18 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
                 )
                 view.message = msg
         except Exception as e:
-            print(f"[BANCOMAT] Invio notifica fallito: {e}")
+            print(f"[BANCOMAT] Invio notifica FDO fallito: {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        print(f"[BANCOMAT MODAL] {type(error).__name__}: {error}")
+        code = getattr(getattr(error, "original", error), "code", None)
+        print(f"[BANCOMAT MODAL] {type(error).__name__} (code={code}): {error}")
+        if code in (10062, 40060):
+            return  # Errore transiente — non mostrare niente
         try:
-            if not interaction.response.is_done():
-                await interaction.response.send_message("❌ Errore interno. Riprova.", ephemeral=True)
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
         except Exception:
             pass
 
