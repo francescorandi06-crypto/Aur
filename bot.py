@@ -1496,13 +1496,15 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         self.uid = uid
 
     async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
         uid = self.uid
         nome = self.nome_pg.value.strip()
         pos  = self.posizione.value.strip()
 
         inv = get_inventario(uid)
         if inv.get("Piede di Porco", 0) <= 0:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "❌ Non hai più il `Piede di Porco` nell'inventario!", ephemeral=True
             )
             return
@@ -1529,7 +1531,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             color=discord.Color.green()
         )
         embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
-        await interaction.response.send_message(embed=embed_ok, ephemeral=True)
+        await interaction.followup.send(embed=embed_ok, ephemeral=True)
 
         mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
         embed_pol = discord.Embed(
@@ -1560,9 +1562,18 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             target_channel = interaction.channel
 
         try:
-            await target_channel.send(embed=embed_pol, files=files_pol)
+            if target_channel:
+                await target_channel.send(embed=embed_pol, files=files_pol)
         except Exception as e:
             print(f"[BANCOMAT] Invio notifica fallito: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        print(f"[BANCOMAT MODAL] Errore in on_submit: {type(error).__name__}: {error}")
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.send_message("❌ Errore interno. Riprova.", ephemeral=True)
+        except Exception:
+            pass
 
 
 @bot.tree.command(name="rapina", description="Esegui una rapina — bancomat e altro")
