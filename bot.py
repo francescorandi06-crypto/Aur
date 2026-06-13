@@ -33,10 +33,17 @@ class HorizonTree(app_commands.CommandTree):
     """CommandTree personalizzato che filtra slash command scaduti prima di eseguirli."""
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.type == discord.InteractionType.application_command:
-            age = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+            now = discord.utils.utcnow()
+            age = (now - interaction.created_at).total_seconds()
             if age > 2.5:
                 cmd = getattr(interaction.command, 'name', '?')
                 print(f"[SKIP] Slash command scaduto ({age:.1f}s): /{cmd} — ignorato.")
+                return False
+            # Scarta le interazioni create prima che il bot fosse pronto
+            # (quelle riproiettate da Discord al riavvio del bot)
+            if bot.ready_time and interaction.created_at < bot.ready_time:
+                cmd = getattr(interaction.command, 'name', '?')
+                print(f"[SKIP] Interazione pre-ready /{cmd} — ignorata.")
                 return False
         return True
 
@@ -45,6 +52,7 @@ class TokyoHorizonBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents, tree_cls=HorizonTree)
         self.aiohttp_session: aiohttp.ClientSession = None
+        self.ready_time: "discord.utils.datetime" = None  # Impostato in on_ready
 
     async def setup_hook(self):
         self.aiohttp_session = aiohttp.ClientSession()
@@ -58,6 +66,7 @@ class TokyoHorizonBot(commands.Bot):
         await super().close()
 
     async def on_ready(self):
+        bot.ready_time = discord.utils.utcnow()  # Timestamp da cui accettare interazioni
         print(f"✅ {self.user} è online e pronto!")
         print(f"   Connesso a {len(self.guilds)} server/i")
         for guild in self.guilds:
@@ -830,6 +839,10 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
         return
     orig = getattr(error, "original", None)
     if orig is not None:
+        # InteractionResponded: interazione già risposta (non è HTTPException, non ha .code)
+        if isinstance(orig, discord.InteractionResponded):
+            print(f"[SKIP] InteractionResponded ignorato: {orig}")
+            return
         code = getattr(orig, "code", None)
         if code in (10062, 40060):
             print(f"[SKIP] Errore transiente ignorato ({code}): {orig}")
@@ -1281,7 +1294,10 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
         cd.pop(tipo.value, None)
         furto_cooldown[utente.id] = cd
         azzerati = tipo.name
-    salva_dati()
+    try:
+        salva_dati()
+    except Exception as e:
+        print(f"[RESETCD] salva_dati fallito: {e}")
 
     # Poi prova a rispondere (se l'interazione è scaduta pazienza — il reset è già fatto)
     msg = f"✅ Azzerato **{azzerati}** per {utente.mention}."
@@ -1736,26 +1752,36 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             rimanenti = int(12 * 3600 - (ora - ultimo))
             ore_r = rimanenti // 3600
             min_r = (rimanenti % 3600) // 60
-            await interaction.response.send_message(
-                f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di poter rapinare un altro bancomat.",
-                ephemeral=True
-            )
+            try:
+                await interaction.response.send_message(
+                    f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di poter rapinare un altro bancomat.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
             return
 
         inv = get_inventario(uid)
         if inv.get("Piede di Porco", 0) <= 0:
-            await interaction.response.send_message(
-                "🔒 Per scassinare un bancomat serve **`1x Piede di Porco`**. Acquistalo con `/negozio`.",
-                ephemeral=True
-            )
+            try:
+                await interaction.response.send_message(
+                    "🔒 Per scassinare un bancomat serve **`1x Piede di Porco`**. Acquistalo con `/negozio`.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
             return
 
         try:
             await interaction.response.send_modal(BancomatModal(uid))
+        except discord.InteractionResponded:
+            print(f"[RAPINA] send_modal ignorato — interazione già risposta per uid={uid}")
         except discord.NotFound:
             print(f"[RAPINA] send_modal 10062 — interazione scaduta per uid={uid}")
         except discord.HTTPException as e:
             print(f"[RAPINA] send_modal fallito: {e}")
+        except Exception as e:
+            print(f"[RAPINA] send_modal errore inatteso: {e}")
 
 
 
