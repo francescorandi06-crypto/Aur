@@ -96,7 +96,6 @@ VILLE = [
     {"nome": "Villa #16", "esterno": "attached_assets/IMG_1395_1781366551705.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
     {"nome": "Villa #17", "esterno": "attached_assets/IMG_1398_1781366590844.png",  "rarità": "🟣 Epica",       "loot_tier": "epica"},
     {"nome": "Villa #18", "esterno": "attached_assets/IMG_1346_1781366641199.png",  "rarità": "🔴 Leggendaria", "loot_tier": "leggendaria"},
-    {"nome": "Villa #19", "esterno": "attached_assets/IMG_1347_1781366688414.png",  "rarità": "🟠 Rara",        "loot_tier": "rara"},
 ]
 
 CASE = [
