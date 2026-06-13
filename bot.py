@@ -1288,8 +1288,13 @@ async def compranero(interaction: discord.Interaction, articolo: app_commands.Ch
     prezzo = info["prezzo"]
     bil = get_balance(interaction.user.id)
     if bil["portafoglio"] < prezzo:
+        mancanti = prezzo - bil["portafoglio"]
         await interaction.followup.send(
-            f"❌ Non hai abbastanza contanti! Ti servono `{prezzo:,}€` ma ne hai solo `{bil['portafoglio']:,}€`.", ephemeral=True
+            f"❌ Non hai abbastanza contanti in tasca!\n\n"
+            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`\n"
+            f"💸 **Ti mancano:** `{mancanti:,}€` in tasca\n\n"
+            f"👉 Preleva dalla banca con `/preleva {mancanti:,}` e riprova.",
+            ephemeral=True
         )
         return
     bil["portafoglio"] -= prezzo
