@@ -853,17 +853,19 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
     print(f"[ERRORE COMANDO] {type(error).__name__}: {error}")
     if isinstance(error, app_commands.CommandSignatureMismatch):
         print("[INFO] Firma comando non aggiornata — risincronizzazione in corso...")
-        await bot.tree.sync()
-        msg = "⚠️ Il comando è stato appena aggiornato. **Riprova tra 10 secondi** — Discord deve ricaricare la nuova versione."
-    else:
-        msg = "❌ Si è verificato un errore interno. Riprova tra qualche secondo."
-    try:
-        if interaction.response.is_done():
-            await interaction.followup.send(msg, ephemeral=True)
-        else:
-            await interaction.response.send_message(msg, ephemeral=True)
-    except Exception as e:
-        print(f"[ERRORE] Impossibile inviare messaggio di errore: {e}")
+        try:
+            await bot.tree.sync()
+        except Exception:
+            pass
+        try:
+            msg = "⚠️ Il comando è stato aggiornato — riprova tra qualche secondo."
+            if interaction.response.is_done():
+                await interaction.followup.send(msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(msg, ephemeral=True)
+        except Exception:
+            pass
+    # Tutti gli altri errori: solo log, nessun messaggio all'utente
 
 
 # =============================================================================
@@ -1630,7 +1632,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         self.uid = uid
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=False)
+        await interaction.response.defer(ephemeral=True)
 
         uid  = self.uid
         nome = self.nome_pg.value.strip()
