@@ -1808,6 +1808,16 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
 async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
     uid = interaction.user.id
 
+    if interaction.channel_id != CANALE_POLIZIA_HARDCODED:
+        try:
+            await interaction.response.send_message(
+                f"❌ Le rapine si possono avviare solo nel canale <#{CANALE_POLIZIA_HARDCODED}>.",
+                ephemeral=True
+            )
+        except Exception:
+            pass
+        return
+
     if tipo.value == "bancomat":
         ora = time.time()
         ultimo = furto_cooldown.get(uid, {}).get("bancomat", 0)
