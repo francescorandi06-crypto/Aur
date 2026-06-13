@@ -326,6 +326,10 @@ NEGOZIO = {
     "Sistema di Hacking":  {"prezzo": 4000, "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
 }
 
+MERCATO_NERO = {
+    "Pistola": {"prezzo": 10000, "emoji": "🔫", "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Consumata ad ogni colpo."},
+}
+
 RUOLI_STAFF = {
     1514817350359060571,  # Founder
     1514817646229717174,  # CEO
@@ -1254,6 +1258,57 @@ async def compra(interaction: discord.Interaction, articolo: app_commands.Choice
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
+@bot.tree.command(name="mercatonero", description="Visualizza gli articoli del mercato nero illegale")
+async def mercatonero(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    embed = discord.Embed(
+        title="🖤 MERCATO NERO — Tokyo Horizon RP",
+        description="Articoli illegali acquistabili con `/compranero <articolo>`.\n⚠️ Acquistare armi è contro la legge — usale a tuo rischio.",
+        color=discord.Color.dark_red()
+    )
+    for nome, info in MERCATO_NERO.items():
+        embed.add_field(name=f"{info['emoji']} {nome} — `{info['prezzo']:,}€`", value=info["descrizione"], inline=False)
+    embed.set_footer(text="Tokyo Horizon RP | Mercato Nero")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="compranero", description="Acquista un articolo dal mercato nero")
+@app_commands.describe(articolo="L'articolo illegale che vuoi acquistare")
+@app_commands.choices(articolo=[
+    app_commands.Choice(name="Pistola (10.000€)", value="Pistola"),
+])
+async def compranero(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
+    if not await safe_defer(interaction, ephemeral=True):
+        return
+    nome = articolo.value
+    info = MERCATO_NERO.get(nome)
+    if not info:
+        await interaction.followup.send("❌ Articolo non trovato nel mercato nero.", ephemeral=True)
+        return
+    prezzo = info["prezzo"]
+    bil = get_balance(interaction.user.id)
+    if bil["portafoglio"] < prezzo:
+        await interaction.followup.send(
+            f"❌ Non hai abbastanza contanti! Ti servono `{prezzo:,}€` ma ne hai solo `{bil['portafoglio']:,}€`.", ephemeral=True
+        )
+        return
+    bil["portafoglio"] -= prezzo
+    inv = get_inventario(interaction.user.id)
+    inv[nome] = inv.get(nome, 0) + 1
+    salva_dati()
+    embed = discord.Embed(
+        title="✅ Acquisto Completato!",
+        description=(
+            f"Hai acquistato **{info['emoji']} {nome}** per `{prezzo:,}€`.\n\n"
+            f"💵 **Contanti rimasti:** `{bil['portafoglio']:,}€`\n"
+            f"🎒 **In inventario:** `{inv[nome]}x {nome}`"
+        ),
+        color=discord.Color.dark_red()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Mercato Nero")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
 @bot.tree.command(name="inventario", description="Visualizza il tuo inventario")
 async def inventario_cmd(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -1261,10 +1316,11 @@ async def inventario_cmd(interaction: discord.Interaction):
         inv = get_inventario(interaction.user.id)
         inv_filtrato = {n: q for n, q in inv.items() if isinstance(q, int) and q > 0}
         if not inv_filtrato:
-            await interaction.followup.send("🎒 Il tuo inventario è vuoto. Acquista qualcosa con `/negozio`!", ephemeral=True)
+            await interaction.followup.send("🎒 Il tuo inventario è vuoto. Acquista qualcosa con `/negozio` o `/mercatonero`!", ephemeral=True)
             return
+        TUTTI_ITEMS = {**NEGOZIO, **MERCATO_NERO}
         righe = "\n".join(
-            f"• {NEGOZIO[n]['emoji'] if n in NEGOZIO else '📦'} **{n}** — `{q}x`"
+            f"• {TUTTI_ITEMS[n]['emoji'] if n in TUTTI_ITEMS else '📦'} **{n}** — `{q}x`"
             for n, q in inv_filtrato.items()
         )
         embed = discord.Embed(
@@ -1569,7 +1625,7 @@ class AccettaRapinaView(discord.ui.View):
 
     async def on_timeout(self):
         inv = get_inventario(self.criminal_uid)
-        inv["Piede di Porco"] = inv.get("Piede di Porco", 0) + 1
+        inv["Pistola"] = inv.get("Pistola", 0) + 1
         furto_cooldown.get(self.criminal_uid, {}).pop("bancomat", None)
         salva_dati()
 
@@ -1637,28 +1693,28 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         part = self.partecipanti.value.strip()
 
         inv = get_inventario(uid)
-        if inv.get("Piede di Porco", 0) <= 0:
-            await interaction.followup.send("❌ Non hai il `Piede di Porco` nell'inventario!", ephemeral=True)
+        if inv.get("Pistola", 0) <= 0:
+            await interaction.followup.send("❌ Non hai la `Pistola` nell'inventario! Acquistala con `/compranero`.", ephemeral=True)
             return
 
-        # Prepara embed conferma criminale (senza immagine ATM)
+        # Prepara embed conferma criminale
         embed_ok = discord.Embed(
             title="✅ Rapina Bancomat Inviata!",
             description=(
                 f"🕵️ **Personaggio:** `{nome}`\n"
                 f"📍 **Posizione:** `{pos}`\n"
                 f"👥 **Partecipanti:** `{part}`\n\n"
-                f"🪓 Hai usato **1x Piede di Porco**.\n"
+                f"🔫 Hai usato **1x Pistola**.\n"
                 f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca non appena un FDO accetta il servizio.\n\n"
                 f"⏳ La rapina si annulla se nessun FDO risponde entro **10 minuti** — "
-                f"il Piede di Porco ti viene restituito.\n"
-                f"⚠️ Solo armi bianche o pistole leggere — vietati giubbotti e caschi!"
+                f"la Pistola ti viene restituita.\n"
+                f"⚠️ Equipaggiamento consentito: solo **Pistola**"
             ),
             color=discord.Color.green()
         )
         embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
 
-        # Prepara embed notifica FDO (senza immagine ATM)
+        # Prepara embed notifica FDO
         mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
         embed_pol = discord.Embed(
             title="🚨 RAPINA IN CORSO — BANCOMAT 🏧",
@@ -1666,9 +1722,8 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
                 f"🦹 **Criminale:** `{nome}`\n"
                 f"📍 **Posizione dichiarata:** `{pos}`\n"
                 f"👥 **Partecipanti:** `{part}`\n\n"
-                f"👮 **FDO richiesti:** Max **2 FDO**\n"
-                f"⚔️ **Equipaggiamento:** Solo armi bianche o pistole leggere\n"
-                f"🚫 Vietati giubbotti e caschi\n"
+                f"👮 **FDO richiesti:** Max **1 FDO**\n"
+                f"⚔️ **Equipaggiamento criminale:** Solo Pistola\n"
                 f"⏱️ **Scassinamento:** 4 minuti | Fuga immediata (nessun dialogo)\n"
                 f"💰 **Bottino:** `{LOOT_BANCOMAT:,}€` in contanti puliti\n\n"
                 f"⏳ Clicca **Accetta Servizio** entro 10 minuti o la rapina viene annullata."
@@ -1680,9 +1735,9 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         view = AccettaRapinaView(uid, nome, pos, part)
 
         # Consuma item e setta cooldown
-        inv["Piede di Porco"] -= 1
-        if inv["Piede di Porco"] == 0:
-            del inv["Piede di Porco"]
+        inv["Pistola"] -= 1
+        if inv["Pistola"] == 0:
+            del inv["Pistola"]
         furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
         salva_dati()
 
@@ -1736,7 +1791,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
 @bot.tree.command(name="rapina", description="Esegui una rapina — bancomat e altro")
 @app_commands.describe(tipo="Tipo di rapina da effettuare")
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco | Cooldown 12h", value="bancomat"),
+    app_commands.Choice(name="🏧 Bancomat — 7.000€ | Pistola | Cooldown 12h", value="bancomat"),
 ])
 async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
     uid = interaction.user.id
@@ -1758,10 +1813,10 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             return
 
         inv = get_inventario(uid)
-        if inv.get("Piede di Porco", 0) <= 0:
+        if inv.get("Pistola", 0) <= 0:
             try:
                 await interaction.response.send_message(
-                    "🔒 Per scassinare un bancomat serve **`1x Piede di Porco`**. Acquistalo con `/negozio`.",
+                    "🔒 Per rapinare un bancomat serve **`1x Pistola`**. Acquistala con `/compranero`.",
                     ephemeral=True
                 )
             except Exception:
