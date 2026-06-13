@@ -825,9 +825,14 @@ class VeicoloButtons(discord.ui.View):
 # =============================================================================
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    # Interazioni scadute o già gestite — ignora silenziosamente
     if isinstance(error, app_commands.CheckFailure):
-        age = (discord.utils.utcnow() - interaction.created_at).total_seconds()
-        if age > 2.5:
+        return
+    orig = getattr(error, "original", None)
+    if orig is not None:
+        code = getattr(orig, "code", None)
+        if code in (10062, 40060):
+            print(f"[SKIP] Errore transiente ignorato ({code}): {orig}")
             return
     print(f"[ERRORE COMANDO] {type(error).__name__}: {error}")
     if isinstance(error, app_commands.CommandSignatureMismatch):
@@ -1590,7 +1595,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         self.uid = uid
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
 
         uid  = self.uid
         nome = self.nome_pg.value.strip()
@@ -1599,7 +1604,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
 
         inv = get_inventario(uid)
         if inv.get("Piede di Porco", 0) <= 0:
-            await interaction.followup.send("❌ Non hai più il `Piede di Porco` nell'inventario!", ephemeral=True)
+            await interaction.followup.send("❌ Non hai il `Piede di Porco` nell'inventario!", ephemeral=True)
             return
 
         inv["Piede di Porco"] -= 1
@@ -1625,7 +1630,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         embed_ok.set_thumbnail(url="attachment://atm_rules.jpeg")
         embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
         files_ok = [discord.File(ATM_IMAGE, filename="atm_rules.jpeg")] if os.path.exists(ATM_IMAGE) else []
-        await interaction.followup.send(embed=embed_ok, files=files_ok, ephemeral=True)
+        await interaction.followup.send(embed=embed_ok, files=files_ok, ephemeral=False)
 
         mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
         embed_pol = discord.Embed(
@@ -1657,7 +1662,13 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
 
         try:
             if target_channel:
-                msg = await target_channel.send(content=mention, embed=embed_pol, files=files_pol, view=view)
+                msg = await target_channel.send(
+                    content=mention,
+                    embed=embed_pol,
+                    files=files_pol,
+                    view=view,
+                    allowed_mentions=discord.AllowedMentions(roles=True),
+                )
                 view.message = msg
         except Exception as e:
             print(f"[BANCOMAT] Invio notifica fallito: {e}")
