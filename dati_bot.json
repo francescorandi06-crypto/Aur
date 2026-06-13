@@ -14,23 +14,5 @@
     }
   },
   "canale_furti_id": 1515093746671292547,
-  "ordini_macchina": {
-    "1515309097585479710": {
-      "autore_id": 1083459553892499476,
-      "guadagno": 5000,
-      "destinazione": "Sfasciacarrozze di Sandy Shores (Desert)",
-      "modello": "Aura",
-      "foto_ok": true,
-      "in_attesa": false,
-      "consegnato": false
-    },
-    "1083459553892499476": {
-      "guadagno": 5000,
-      "destinazione": "Discarica Centrale di South Los Santos",
-      "modello": "Azzizi",
-      "foto_ok": true,
-      "in_attesa": false,
-      "consegnato": false
-    }
-  }
+  "ordini_macchina": {}
 }

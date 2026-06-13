@@ -662,11 +662,6 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
         view = VeicoloButtons()
         await interaction.response.send_message(embeds=embeds, files=files, view=view)
 
-        await interaction.followup.send(
-            "📸 **Verifica obbligatoria:** invia la foto del veicolo in questo canale, poi clicca **📸 Ho Inviato la Foto** nel messaggio qui sopra.",
-            ephemeral=True
-        )
-
 
 class ApprovazioneCosegnaView(discord.ui.View):
     def __init__(self, autore_id, guadagno, modello, destinazione, messaggio_originale):
@@ -798,58 +793,7 @@ class VeicoloButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="📸 Ho Inviato la Foto", style=discord.ButtonStyle.primary, custom_id="vei:foto")
-    async def conferma_foto(self, interaction: discord.Interaction, button: discord.ui.Button):
-        uid = interaction.user.id
-        ordine = ordini_pendenti_macchina.get(uid)
-        if not ordine:
-            await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
-            return
-        if ordine.get("foto_ok"):
-            await interaction.response.send_message("✅ Foto già confermata!", ephemeral=True)
-            return
-        if ordine.get("consegnato") or ordine.get("in_attesa"):
-            await interaction.response.send_message("⚠️ Questo furto è già stato processato.", ephemeral=True)
-            return
-
-        ordine["foto_ok"] = True
-        salva_dati()
-        button.disabled = True
-        button.label = "✅ Foto Inviata"
-        for child in self.children:
-            if isinstance(child, discord.ui.Button) and child.custom_id == "vei:consegna":
-                child.disabled = False
-
-        await interaction.response.edit_message(view=self)
-        await interaction.followup.send(
-            "✅ **Foto confermata!** Ora raggiungi la destinazione e premi **🏁 Consegna Veicolo** quando sei arrivato. Hai **10 minuti**!",
-            ephemeral=True
-        )
-        asyncio.create_task(self._scadenza_10min(uid, interaction.message))
-
-    async def _scadenza_10min(self, autore_id: int, msg):
-        await asyncio.sleep(600)
-        ordine = ordini_pendenti_macchina.get(autore_id)
-        if not ordine or ordine.get("consegnato") or ordine.get("in_attesa"):
-            return
-        modello = ordine.get("modello", "sconosciuto")
-        ordini_pendenti_macchina.pop(autore_id, None)
-        salva_dati()
-        embed_fail = discord.Embed(
-            title="❌ TEMPO SCADUTO — AZIONE FALLITA",
-            description=f"Il timer di 10 minuti è scaduto. Il veicolo `{modello}` non è stato consegnato.",
-            color=discord.Color.red()
-        )
-        embed_fail.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
-        for child in self.children:
-            child.disabled = True
-        self.stop()
-        try:
-            await msg.edit(embeds=[embed_fail], view=None)
-        except Exception as e:
-            print(f"[ERRORE] Scadenza 10min: {e}")
-
-    @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success, custom_id="vei:consegna", disabled=True)
+    @discord.ui.button(label="🏁 Consegna Veicolo", style=discord.ButtonStyle.success, custom_id="vei:consegna")
     async def consegna(self, interaction: discord.Interaction, button: discord.ui.Button):
         uid = interaction.user.id
         ordine = ordini_pendenti_macchina.get(uid)
