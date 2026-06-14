@@ -2529,7 +2529,7 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
 # =============================================================================
 # AVVIO BOT
 # =============================================================================
-token = os.environ.get("DISCORD_TOKEN")
+token = os.environ.get("DISCORD_TOKEN", "").strip()
 if not token:
     print("❌ ERRORE: Il token Discord non è stato trovato. Imposta la variabile DISCORD_TOKEN.")
 else:
