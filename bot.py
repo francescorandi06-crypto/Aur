@@ -1639,6 +1639,7 @@ class AccettaRapinaView(discord.ui.View):
             await asyncio.sleep(240)
             bil = get_balance(criminal_uid)
             bil["banca"] += LOOT_BANCOMAT
+            furto_cooldown.setdefault(criminal_uid, {})["bancomat"] = time.time()
             salva_dati()
             print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid} dopo 4 minuti.")
             try:
@@ -1656,7 +1657,6 @@ class AccettaRapinaView(discord.ui.View):
     async def on_timeout(self):
         inv = get_inventario(self.criminal_uid)
         inv["Piede di Porco"] = inv.get("Piede di Porco", 0) + 1
-        furto_cooldown.get(self.criminal_uid, {}).pop("bancomat", None)
         salva_dati()
 
         for child in self.children:
@@ -1773,7 +1773,6 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         inv["Piede di Porco"] -= 1
         if inv["Piede di Porco"] == 0:
             del inv["Piede di Porco"]
-        furto_cooldown.setdefault(uid, {})["bancomat"] = time.time()
         salva_dati()
 
         # 1) Conferma al criminale (pubblica via followup — non richiede Send Messages)
