@@ -338,7 +338,7 @@ NEGOZIO = {
 }
 
 MERCATO_NERO = {
-    "Pistola": {"prezzo": 10000, "emoji": "🔫", "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Consumata ad ogni colpo."},
+    "Pistola": {"prezzo": 10000, "emoji": "🔫", "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Non viene consumata — resta in inventario."},
 }
 
 RUOLI_STAFF = {
