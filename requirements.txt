@@ -5,3 +5,6 @@ flask
 aiohttp
 discord.py
 flask
+aiohttp
+discord.py
+flask
