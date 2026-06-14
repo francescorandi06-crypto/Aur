@@ -83,9 +83,9 @@ class TokyoHorizonBot(commands.Bot):
         print(f"✅ {self.user} è online e pronto!")
         print(f"   Connesso a {len(self.guilds)} server/i")
         for guild in self.guilds:
-            self.tree.clear_commands(guild=guild)
+            self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
-        print("   Comandi guild-specifici rimossi (pulizia duplicati).")
+        print("   Comandi sincronizzati su tutti i server.")
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
