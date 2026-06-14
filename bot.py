@@ -797,6 +797,11 @@ class VeicoloButtons(discord.ui.View):
         uid = interaction.user.id
         ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
+            # Ricarica dal file: potrebbe essere stato scritto da un'altra istanza
+            _, _, _, _, ordini_freschi, _ = carica_dati()
+            ordini_pendenti_macchina.update(ordini_freschi)
+            ordine = ordini_pendenti_macchina.get(uid)
+        if not ordine:
             await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
             return
         if ordine.get("in_attesa") or ordine.get("consegnato"):
@@ -817,6 +822,11 @@ class VeicoloButtons(discord.ui.View):
     async def consegna(self, interaction: discord.Interaction, button: discord.ui.Button):
         uid = interaction.user.id
         ordine = ordini_pendenti_macchina.get(uid)
+        if not ordine:
+            # Ricarica dal file: potrebbe essere stato scritto da un'altra istanza
+            _, _, _, _, ordini_freschi, _ = carica_dati()
+            ordini_pendenti_macchina.update(ordini_freschi)
+            ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
             await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
             return

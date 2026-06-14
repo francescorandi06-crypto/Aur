@@ -7,18 +7,21 @@
   },
   "furto_cooldown": {
     "1083459553892499476": {
-      "villa": 1781428892.6714447,
-      "bancomat": 1781435341.4417052
+      "villa": 1781428892.6714447
     }
   },
   "inventario": {
     "1083459553892499476": {
       "Sistema di Hacking": 99,
-      "Piede di Porco": 86,
+      "Piede di Porco": 85,
       "Pistola": 2
     }
   },
   "canale_furti_id": 1515093746671292547,
   "ordini_macchina": {},
-  "rapine_pendenti": {}
+  "rapine_pendenti": {
+    "1083459553892499476": {
+      "accepted_at": 1781435426.6617029
+    }
+  }
 }
