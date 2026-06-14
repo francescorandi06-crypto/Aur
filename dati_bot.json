@@ -13,7 +13,7 @@
   "inventario": {
     "1083459553892499476": {
       "Sistema di Hacking": 99,
-      "Piede di Porco": 87,
+      "Piede di Porco": 86,
       "Pistola": 2
     }
   },
@@ -28,5 +28,9 @@
       "consegnato": false
     }
   },
-  "rapine_pendenti": {}
+  "rapine_pendenti": {
+    "1083459553892499476": {
+      "accepted_at": 1781435100.9807117
+    }
+  }
 }

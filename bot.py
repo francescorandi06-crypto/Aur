@@ -644,6 +644,8 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             embed_foto.set_image(url=f"attachment://{fname}")
             embeds.append(embed_foto)
 
+        # Pulisce qualsiasi ordine precedente (anche se in_attesa=True per bug/restart)
+        ordini_pendenti_macchina.pop(self.autore_id, None)
         ordini_pendenti_macchina[self.autore_id] = {
             "guadagno":    guadagno,
             "destinazione": dest["nome"],
@@ -924,6 +926,16 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             minuti = (rimanenti % 3600) // 60
             await interaction.response.send_message(
                 f"⏳ Devi aspettare ancora **{ore}h {minuti}m** prima di poter rubare un'altra macchina.", ephemeral=True
+            )
+            return
+        # Blocca se c'è già un ordine in attesa di approvazione staff
+        ordine_attivo = ordini_pendenti_macchina.get(uid)
+        if ordine_attivo and ordine_attivo.get("in_attesa"):
+            await interaction.response.send_message(
+                f"⏳ Hai già una consegna del veicolo `{ordine_attivo.get('modello', '?')}` **in attesa di approvazione dello staff**.\n"
+                f"Attendi che lo staff approvi o rifiuti prima di iniziare un nuovo furto.\n"
+                f"Se pensi ci sia un errore, contatta lo staff per usare `/resetordine`.",
+                ephemeral=True
             )
             return
         await interaction.response.send_modal(MacchinaModal(uid))
@@ -1408,6 +1420,31 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
         print(f"[RESETCD] salva_dati fallito: {e}")
 
     await interaction.followup.send(f"✅ Azzerato **{azzerati}** per {utente.mention}.", ephemeral=True)
+
+
+@bot.tree.command(name="resetordine", description="[MOD] Cancella l'ordine veicolo bloccato di un giocatore")
+@app_commands.describe(utente="Il giocatore con l'ordine bloccato")
+async def resetordine(interaction: discord.Interaction, utente: discord.Member):
+    if not await safe_defer(interaction, ephemeral=True):
+        return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+    ordine = ordini_pendenti_macchina.pop(utente.id, None)
+    salva_dati()
+    if ordine:
+        modello = ordine.get("modello", "?")
+        stato = "in attesa" if ordine.get("in_attesa") else ("foto ok" if ordine.get("foto_ok") else "aperto")
+        await interaction.followup.send(
+            f"🗑️ Ordine veicolo di {utente.mention} cancellato.\n"
+            f"Modello: `{modello}` | Stato: `{stato}`",
+            ephemeral=True
+        )
+        print(f"[RESETORDINE] Ordine di uid={utente.id} ({modello}) cancellato da {interaction.user}")
+    else:
+        await interaction.followup.send(
+            f"ℹ️ {utente.mention} non ha nessun ordine veicolo attivo.", ephemeral=True
+        )
 
 
 @bot.tree.command(name="dai", description="[MOD] Dai contanti o oggetti a un giocatore")
