@@ -1127,7 +1127,22 @@ async def classifica(interaction: discord.Interaction):
 @bot.tree.command(name="bilancio", description="Verifica il tuo conto corrente e il contante in tasca")
 async def bilancio(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    bil = get_balance(interaction.user.id)
+    uid = interaction.user.id
+    # Leggi sempre dal file per evitare dati obsoleti in caso di riavvii del bot
+    bil = None
+    try:
+        if os.path.exists(DATI_FILE):
+            with open(DATI_FILE, "r") as f:
+                dati_file = json.load(f)
+            eco_file = {int(k): v for k, v in dati_file.get("economia", {}).items()}
+            # Aggiorna la memoria con i dati del file (fonte unica di verità)
+            for k, v in eco_file.items():
+                economia[k] = v
+            bil = economia.get(uid)
+    except Exception as e:
+        print(f"[BILANCIO] Errore lettura file: {e} — uso dati in memoria")
+    if bil is None:
+        bil = get_balance(uid)
     embed = discord.Embed(
         title=f"💳 Conto Corrente: {interaction.user.display_name}",
         color=discord.Color.blue()
@@ -1598,20 +1613,31 @@ ATM_IMAGE = "attached_assets/IMG_1429_1781378756942.jpeg"
 CANALE_POLIZIA_HARDCODED = 1515439682333180015
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 
+# Tiene traccia di quali uid hanno già un task accredita_bancomat in esecuzione
+# per evitare doppi accrediti in caso di istanze multiple o on_ready duplicati
+_bancomat_in_corso: set = set()
+
 
 async def accredita_bancomat(criminal_uid: int, delay: float):
     """Aspetta `delay` secondi, poi accredita il bottino e notifica nel canale."""
-    if delay > 0:
-        await asyncio.sleep(delay)
-    # Se il cooldown è stato resettato dallo staff durante l'attesa, non impostarlo di nuovo
-    if criminal_uid not in rapine_pendenti_bancomat:
-        print(f"[BANCOMAT] Rapina uid={criminal_uid} annullata dal reset — nessun cooldown impostato.")
+    if criminal_uid in _bancomat_in_corso:
+        print(f"[BANCOMAT] uid={criminal_uid} già in elaborazione — task duplicato ignorato.")
         return
-    bil = get_balance(criminal_uid)
-    bil["banca"] += LOOT_BANCOMAT
-    furto_cooldown.setdefault(criminal_uid, {})["bancomat"] = time.time()
-    rapine_pendenti_bancomat.pop(criminal_uid, None)
-    salva_dati()
+    _bancomat_in_corso.add(criminal_uid)
+    try:
+        if delay > 0:
+            await asyncio.sleep(delay)
+        # Se il cooldown è stato resettato dallo staff durante l'attesa, non procedere
+        if criminal_uid not in rapine_pendenti_bancomat:
+            print(f"[BANCOMAT] uid={criminal_uid} rimosso dal reset — nessun accredito.")
+            return
+        bil = get_balance(criminal_uid)
+        bil["banca"] += LOOT_BANCOMAT
+        furto_cooldown.setdefault(criminal_uid, {})["bancomat"] = time.time()
+        rapine_pendenti_bancomat.pop(criminal_uid, None)
+        salva_dati()
+    finally:
+        _bancomat_in_corso.discard(criminal_uid)
     print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid}.")
     testo = (
         f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
