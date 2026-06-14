@@ -92,6 +92,13 @@ class TokyoHorizonBot(commands.Bot):
                 name="Tokyo Horizon RP 🗼"
             )
         )
+        # Riprendi rapine pendenti sopravvissute al riavvio
+        for uid, info in list(rapine_pendenti_bancomat.items()):
+            accepted_at = info.get("accepted_at", 0)
+            elapsed = time.time() - accepted_at
+            remaining = max(0.0, 240.0 - elapsed)
+            print(f"[BANCOMAT] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
+            asyncio.create_task(accredita_bancomat(uid, remaining))
 
 bot = TokyoHorizonBot()
 
@@ -287,16 +294,19 @@ def carica_dati():
                     cooldown[uid] = val if isinstance(val, dict) else {}
                 ordini_raw = dati.get("ordini_macchina", {})
                 ordini = {int(k): v for k, v in ordini_raw.items()}
+                rapine_raw = dati.get("rapine_pendenti", {})
+                rapine = {int(k): v for k, v in rapine_raw.items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
                     {int(k): v for k, v in dati.get("inventario", {}).items()},
                     dati.get("canale_furti_id", None),
                     ordini,
+                    rapine,
                 )
         except Exception:
             pass
-    return {}, {}, {}, None, {}
+    return {}, {}, {}, None, {}, {}
 
 def salva_dati():
     with open(DATI_FILE, "w") as f:
@@ -306,9 +316,10 @@ def salva_dati():
             "inventario":      {str(k): v for k, v in inventario.items()},
             "canale_furti_id": canale_furti_id,
             "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
+            "rapine_pendenti": {str(k): v for k, v in rapine_pendenti_bancomat.items()},
         }, f, indent=2)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -1582,6 +1593,27 @@ CANALE_POLIZIA_HARDCODED = 1515439682333180015
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 
 
+async def accredita_bancomat(criminal_uid: int, delay: float):
+    """Aspetta `delay` secondi, poi accredita il bottino e notifica nel canale."""
+    if delay > 0:
+        await asyncio.sleep(delay)
+    bil = get_balance(criminal_uid)
+    bil["banca"] += LOOT_BANCOMAT
+    furto_cooldown.setdefault(criminal_uid, {})["bancomat"] = time.time()
+    rapine_pendenti_bancomat.pop(criminal_uid, None)
+    salva_dati()
+    print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid}.")
+    try:
+        canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+        await canale.send(
+            f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
+            f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+            f"🏃 Puoi scappare adesso — buona fuga!"
+        )
+    except Exception as e:
+        print(f"[BANCOMAT] Messaggio bottino finale fallito: {e}")
+
+
 class AccettaRapinaView(discord.ui.View):
     def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str):
         super().__init__(timeout=600)
@@ -1622,6 +1654,10 @@ class AccettaRapinaView(discord.ui.View):
         embed.set_footer(text="Tokyo Horizon RP | Rapina in Corso")
         await interaction.response.edit_message(embed=embed, view=self, attachments=[])
 
+        # Salva la rapina nel JSON così sopravvive ai riavvii
+        rapine_pendenti_bancomat[criminal_uid] = {"accepted_at": time.time()}
+        salva_dati()
+
         # Messaggio nel canale rapine: scassinamento iniziato
         try:
             canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
@@ -1634,25 +1670,8 @@ class AccettaRapinaView(discord.ui.View):
         except Exception as e:
             print(f"[BANCOMAT] Messaggio avvio scassinamento fallito: {e}")
 
-        # Task asincrono: aspetta 4 minuti, poi accredita e avvisa
-        async def accredita_dopo_4min():
-            await asyncio.sleep(240)
-            bil = get_balance(criminal_uid)
-            bil["banca"] += LOOT_BANCOMAT
-            furto_cooldown.setdefault(criminal_uid, {})["bancomat"] = time.time()
-            salva_dati()
-            print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid} dopo 4 minuti.")
-            try:
-                canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
-                await canale.send(
-                    f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
-                    f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
-                    f"🏃 Puoi scappare adesso — buona fuga!"
-                )
-            except Exception as e:
-                print(f"[BANCOMAT] Messaggio bottino finale fallito: {e}")
-
-        asyncio.create_task(accredita_dopo_4min())
+        # Task persistente: usa la funzione condivisa (sopravvive ai restart via on_ready)
+        asyncio.create_task(accredita_bancomat(criminal_uid, 240))
 
     async def on_timeout(self):
         inv = get_inventario(self.criminal_uid)
