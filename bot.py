@@ -1624,14 +1624,13 @@ class AccettaRapinaView(discord.ui.View):
 
         # Messaggio nel canale rapine: scassinamento iniziato
         try:
-            canale = bot.get_channel(CANALE_POLIZIA_HARDCODED)
-            if canale:
-                await canale.send(
-                    f"🚔 <@{criminal_uid}> Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento iniziato!**\n"
-                    f"⏳ Aspetta **4 minuti** mentre scarti il bancomat.\n"
-                    f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca allo scadere del tempo.\n"
-                    f"⚠️ Non scappare prima dei 4 minuti!"
-                )
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(
+                f"🚔 <@{criminal_uid}> Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento iniziato!**\n"
+                f"⏳ Aspetta **4 minuti** mentre scarti il bancomat.\n"
+                f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca allo scadere del tempo.\n"
+                f"⚠️ Non scappare prima dei 4 minuti!"
+            )
         except Exception as e:
             print(f"[BANCOMAT] Messaggio avvio scassinamento fallito: {e}")
 
@@ -1643,13 +1642,12 @@ class AccettaRapinaView(discord.ui.View):
             salva_dati()
             print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid} dopo 4 minuti.")
             try:
-                canale = bot.get_channel(CANALE_POLIZIA_HARDCODED)
-                if canale:
-                    await canale.send(
-                        f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
-                        f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
-                        f"🏃 Puoi scappare adesso — buona fuga!"
-                    )
+                canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+                await canale.send(
+                    f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
+                    f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+                    f"🏃 Puoi scappare adesso — buona fuga!"
+                )
             except Exception as e:
                 print(f"[BANCOMAT] Messaggio bottino finale fallito: {e}")
 
@@ -1682,15 +1680,14 @@ class AccettaRapinaView(discord.ui.View):
                 print(f"[BANCOMAT] Edit timeout fallito: {e}")
 
         try:
-            canale = bot.get_channel(CANALE_POLIZIA_HARDCODED)
-            if canale:
-                await canale.send(
-                    f"⌛ <@{self.criminal_uid}> Nessun FDO ha risposto alla tua rapina al bancomat entro 10 minuti.\n"
-                    f"🪓 Il tuo **Piede di Porco** è stato restituito e il cooldown azzerato.\n"
-                    f"Puoi riprovare quando vuoi!"
-                )
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(
+                f"⌛ <@{self.criminal_uid}> Nessun FDO ha risposto alla tua rapina al bancomat entro 10 minuti.\n"
+                f"🪓 Il tuo **Piede di Porco** è stato restituito e il cooldown azzerato.\n"
+                f"Puoi riprovare quando vuoi!"
+            )
         except Exception as e:
-            print(f"[BANCOMAT] DM timeout criminale fallito: {e}")
+            print(f"[BANCOMAT] Messaggio timeout fallito: {e}")
 
 
 class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat"):
