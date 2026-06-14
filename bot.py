@@ -842,6 +842,7 @@ class VeicoloButtons(discord.ui.View):
 
         ordine["in_attesa"] = True
         salva_dati()
+        print(f"[VEICOLO] Consegna uid={uid} modello={ordine['modello']} → in_attesa=True salvato")
 
         embed_staff = discord.Embed(
             title="🚗 RICHIESTA APPROVAZIONE CONSEGNA",
@@ -868,7 +869,19 @@ class VeicoloButtons(discord.ui.View):
             "📋 **Richiesta inviata allo staff!** Attendi che verifichino la tua consegna.",
             ephemeral=True
         )
-        await interaction.followup.send(embed=embed_staff, view=view_approvazione)
+        try:
+            canale_staff = await bot.fetch_channel(CANALE_STAFF_VEICOLI)
+            await canale_staff.send(embed=embed_staff, view=view_approvazione)
+            print(f"[VEICOLO] Embed staff inviato in #{canale_staff.name} ✅")
+        except discord.Forbidden:
+            print(f"[VEICOLO] ❌ Permessi mancanti in CANALE_STAFF_VEICOLI ({CANALE_STAFF_VEICOLI})")
+            await interaction.followup.send(embed=embed_staff, view=view_approvazione)
+        except discord.NotFound:
+            print(f"[VEICOLO] ❌ Canale staff non trovato ({CANALE_STAFF_VEICOLI})")
+            await interaction.followup.send(embed=embed_staff, view=view_approvazione)
+        except Exception as e:
+            print(f"[VEICOLO] ❌ Errore invio staff: {e}")
+            await interaction.followup.send(embed=embed_staff, view=view_approvazione)
 
 
 # =============================================================================
@@ -1659,6 +1672,7 @@ LOOT_BANCOMAT = 7000
 ATM_IMAGE = "attached_assets/IMG_1429_1781378756942.jpeg"
 CANALE_POLIZIA_HARDCODED = 1515439682333180015   # canale #RAPINE (criminale)
 CANALE_FDO               = 1513574802156425267   # canale allerta FDO
+CANALE_STAFF_VEICOLI     = 1515676328622428310   # canale revisione consegna veicoli (staff)
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 
 # Tiene traccia di quali uid hanno già un task accredita_bancomat in esecuzione
@@ -1675,9 +1689,17 @@ async def accredita_bancomat(criminal_uid: int, delay: float):
     try:
         if delay > 0:
             await asyncio.sleep(delay)
-        # Se il cooldown è stato resettato dallo staff durante l'attesa, non procedere
-        if criminal_uid not in rapine_pendenti_bancomat:
-            print(f"[BANCOMAT] uid={criminal_uid} rimosso dal reset — nessun accredito.")
+        # Rilegge il file per stato fresco (prevenzione doppio accredito multi-istanza)
+        try:
+            with open(DATI_FILE, "r") as _f:
+                _dati_freschi = json.load(_f)
+            _rapine_nel_file = {int(k): v for k, v in _dati_freschi.get("rapine_pendenti", {}).items()}
+        except Exception as _e:
+            print(f"[BANCOMAT] Errore lettura JSON fresco: {_e} — uso memoria")
+            _rapine_nel_file = rapine_pendenti_bancomat
+        if criminal_uid not in _rapine_nel_file:
+            print(f"[BANCOMAT] uid={criminal_uid} non più presente nel file — già accreditato o resettato, skip.")
+            rapine_pendenti_bancomat.pop(criminal_uid, None)
             return
         bil = get_balance(criminal_uid)
         bil["banca"] += LOOT_BANCOMAT

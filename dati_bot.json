@@ -2,12 +2,13 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 52000,
-      "banca": 71000
+      "banca": 78000
     }
   },
   "furto_cooldown": {
     "1083459553892499476": {
-      "villa": 1781428892.6714447
+      "villa": 1781428892.6714447,
+      "bancomat": 1781435666.6718783
     }
   },
   "inventario": {
@@ -18,10 +19,15 @@
     }
   },
   "canale_furti_id": 1515093746671292547,
-  "ordini_macchina": {},
-  "rapine_pendenti": {
+  "ordini_macchina": {
     "1083459553892499476": {
-      "accepted_at": 1781435426.6617029
+      "guadagno": 15000,
+      "destinazione": "Officina Meccanica di Harmony (Route 68)",
+      "modello": "Kuruma",
+      "foto_ok": true,
+      "in_attesa": true,
+      "consegnato": false
     }
-  }
+  },
+  "rapine_pendenti": {}
 }
