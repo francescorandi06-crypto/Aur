@@ -1610,7 +1610,8 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
 
 LOOT_BANCOMAT = 7000
 ATM_IMAGE = "attached_assets/IMG_1429_1781378756942.jpeg"
-CANALE_POLIZIA_HARDCODED = 1515439682333180015
+CANALE_POLIZIA_HARDCODED = 1515439682333180015   # canale #RAPINE (criminale)
+CANALE_FDO               = 1513574802156425267   # canale allerta FDO
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 
 # Tiene traccia di quali uid hanno già un task accredita_bancomat in esecuzione
@@ -1877,14 +1878,14 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         except Exception as e:
             print(f"[BANCOMAT] Messaggio radar fallito: {e}")
 
-        # 3) Notifica FDO tramite followup (non richiede Send Messages nel canale)
+        # 3) Notifica FDO nel canale allerta FDO dedicato
         try:
-            msg = await interaction.followup.send(
+            canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            msg = await canale_fdo.send(
                 content=mention,
                 embed=embed_pol,
                 view=view,
                 allowed_mentions=discord.AllowedMentions(roles=True),
-                ephemeral=False,
             )
             view.message = msg
         except Exception as e:
