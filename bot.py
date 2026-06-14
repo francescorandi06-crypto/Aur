@@ -93,7 +93,11 @@ class TokyoHorizonBot(commands.Bot):
             )
         )
         # Riprendi rapine pendenti sopravvissute al riavvio
+        # (on_ready può essere chiamato più volte su riconnessione — salta se già in corso)
         for uid, info in list(rapine_pendenti_bancomat.items()):
+            if uid in _bancomat_in_corso:
+                print(f"[BANCOMAT] uid={uid} già in elaborazione — skip duplicato on_ready.")
+                continue
             accepted_at = info.get("accepted_at", 0)
             elapsed = time.time() - accepted_at
             remaining = max(0.0, 240.0 - elapsed)
@@ -1706,31 +1710,31 @@ async def accredita_bancomat(criminal_uid: int, delay: float):
         furto_cooldown.setdefault(criminal_uid, {})["bancomat"] = time.time()
         rapine_pendenti_bancomat.pop(criminal_uid, None)
         salva_dati()
+        print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid}.")
+        testo = (
+            f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
+            f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+            f"🏃 Puoi scappare adesso — buona fuga!"
+        )
+        inviato = False
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(testo)
+            inviato = True
+        except Exception as e:
+            print(f"[BANCOMAT] Messaggio canale fallito: {e}")
+        if not inviato:
+            try:
+                utente = await bot.fetch_user(criminal_uid)
+                await utente.send(
+                    f"✅ **Scassinamento completato!**\n"
+                    f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+                    f"🏃 Puoi scappare adesso — buona fuga!"
+                )
+            except Exception as e:
+                print(f"[BANCOMAT] DM fallback bottino fallito: {e}")
     finally:
         _bancomat_in_corso.discard(criminal_uid)
-    print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid}.")
-    testo = (
-        f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
-        f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
-        f"🏃 Puoi scappare adesso — buona fuga!"
-    )
-    inviato = False
-    try:
-        canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
-        await canale.send(testo)
-        inviato = True
-    except Exception as e:
-        print(f"[BANCOMAT] Messaggio canale fallito: {e}")
-    if not inviato:
-        try:
-            utente = await bot.fetch_user(criminal_uid)
-            await utente.send(
-                f"✅ **Scassinamento completato!**\n"
-                f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
-                f"🏃 Puoi scappare adesso — buona fuga!"
-            )
-        except Exception as e:
-            print(f"[BANCOMAT] DM fallback bottino fallito: {e}")
 
 
 class AccettaRapinaView(discord.ui.View):
