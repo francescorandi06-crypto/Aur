@@ -1881,6 +1881,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
         # 3) Notifica FDO nel canale allerta FDO dedicato
         try:
             canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            print(f"[BANCOMAT] Canale FDO trovato: #{canale_fdo.name} (id={canale_fdo.id})")
             msg = await canale_fdo.send(
                 content=mention,
                 embed=embed_pol,
@@ -1888,8 +1889,28 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
                 allowed_mentions=discord.AllowedMentions(roles=True),
             )
             view.message = msg
+            print(f"[BANCOMAT] Notifica FDO inviata in #{canale_fdo.name} ✅")
+        except discord.Forbidden as e:
+            print(f"[BANCOMAT] ❌ Permessi mancanti nel canale FDO (id={CANALE_FDO}): {e}")
+            try:
+                await interaction.followup.send(
+                    f"⚠️ **Errore:** Il bot non ha i permessi per scrivere nel canale FDO (`{CANALE_FDO}`). "
+                    f"Aggiungi il permesso **Invia Messaggi** al bot in quel canale.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+        except discord.NotFound as e:
+            print(f"[BANCOMAT] ❌ Canale FDO non trovato (id={CANALE_FDO}): {e}")
+            try:
+                await interaction.followup.send(
+                    f"⚠️ **Errore:** Canale FDO non trovato (id `{CANALE_FDO}`). Controlla l'ID.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
         except Exception as e:
-            print(f"[BANCOMAT] Notifica FDO fallita: {e}")
+            print(f"[BANCOMAT] ❌ Notifica FDO fallita ({type(e).__name__}): {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception) -> None:
         code = getattr(getattr(error, "original", error), "code", None)
