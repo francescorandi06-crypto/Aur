@@ -104,6 +104,16 @@ class TokyoHorizonBot(commands.Bot):
             print(f"[BANCOMAT] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
             task = asyncio.create_task(accredita_bancomat(uid, remaining))
             _bancomat_tasks[uid] = task
+        for uid, info in list(rapine_pendenti_minimarket.items()):
+            if uid in _minimarket_in_corso:
+                print(f"[MINIMARKET] uid={uid} già in elaborazione — skip duplicato on_ready.")
+                continue
+            accepted_at = info.get("accepted_at", 0)
+            elapsed = time.time() - accepted_at
+            remaining = max(0.0, 240.0 - elapsed)
+            print(f"[MINIMARKET] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
+            task = asyncio.create_task(accredita_minimarket(uid, remaining))
+            _minimarket_tasks[uid] = task
 
 bot = TokyoHorizonBot()
 
@@ -301,6 +311,8 @@ def carica_dati():
                 ordini = {int(k): v for k, v in ordini_raw.items()}
                 rapine_raw = dati.get("rapine_pendenti", {})
                 rapine = {int(k): v for k, v in rapine_raw.items()}
+                rapine_mini_raw = dati.get("rapine_pendenti_minimarket", {})
+                rapine_mini = {int(k): v for k, v in rapine_mini_raw.items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
@@ -308,10 +320,11 @@ def carica_dati():
                     dati.get("canale_furti_id", None),
                     ordini,
                     rapine,
+                    rapine_mini,
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}
+    return {}, {}, {}, None, {}, {}, {}
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -323,10 +336,11 @@ def salva_dati():
             "canale_furti_id": canale_furti_id,
             "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
             "rapine_pendenti": {str(k): v for k, v in rapine_pendenti_bancomat.items()},
+            "rapine_pendenti_minimarket": {str(k): v for k, v in rapine_pendenti_minimarket.items()},
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -339,7 +353,8 @@ def get_inventario(user_id):
     return inventario[user_id]
 
 NEGOZIO = {
-    "Piede di Porco":      {"prezzo": 1000, "emoji": "🪓",  "descrizione": "Forza porte e finestre. Indispensabile per colpi in case, ville e operazioni ad alto rischio."},
+    "Cacciavite":          {"prezzo": 1250, "emoji": "🪛",  "descrizione": "Forza la cassa dei minimarket. Indispensabile per il Colpo al Minimarket (in alternativa al Piede di Porco)."},
+    "Piede di Porco":      {"prezzo": 1000, "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usabile anche per il Colpo al Minimarket. Indispensabile per bancomat, case e ville."},
     "Grimaldello":         {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
     "Sistema di Hacking":  {"prezzo": 4000, "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
 }
@@ -1290,6 +1305,7 @@ async def negozio(interaction: discord.Interaction):
 @bot.tree.command(name="compra", description="Acquista un articolo dal negozio")
 @app_commands.describe(articolo="L'articolo che vuoi acquistare")
 @app_commands.choices(articolo=[
+    app_commands.Choice(name="Cacciavite (1250€)",         value="Cacciavite"),
     app_commands.Choice(name="Piede di Porco (1000€)",     value="Piede di Porco"),
     app_commands.Choice(name="Grimaldello (1500€)",        value="Grimaldello"),
     app_commands.Choice(name="Sistema di Hacking (4000€)", value="Sistema di Hacking"),
@@ -1415,11 +1431,12 @@ async def inventario_cmd(interaction: discord.Interaction):
 @bot.tree.command(name="resetcooldown", description="[MOD] Azzera il cooldown furto di un giocatore")
 @app_commands.describe(utente="Il giocatore di cui resettare il cooldown", tipo="Quale cooldown azzerare")
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="🏰 Villa",    value="villa"),
-    app_commands.Choice(name="🏠 Casa",     value="casa"),
-    app_commands.Choice(name="🚗 Macchina", value="macchina"),
-    app_commands.Choice(name="🏧 Bancomat", value="bancomat"),
-    app_commands.Choice(name="⚡ Tutti",    value="tutti"),
+    app_commands.Choice(name="🏰 Villa",       value="villa"),
+    app_commands.Choice(name="🏠 Casa",        value="casa"),
+    app_commands.Choice(name="🚗 Macchina",    value="macchina"),
+    app_commands.Choice(name="🏧 Bancomat",    value="bancomat"),
+    app_commands.Choice(name="🍏 Minimarket",  value="minimarket"),
+    app_commands.Choice(name="⚡ Tutti",       value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True):
@@ -1433,12 +1450,18 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     if tipo.value == "tutti":
         furto_cooldown[utente.id] = {}
         rapine_pendenti_bancomat.pop(utente.id, None)
+        rapine_pendenti_minimarket.pop(utente.id, None)
         # Cancella task bancomat attivo se presente
         _task = _bancomat_tasks.pop(utente.id, None)
         if _task and not _task.done():
             _task.cancel()
             print(f"[RESETCD] Task bancomat uid={utente.id} cancellato.")
-        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat"
+        # Cancella task minimarket attivo se presente
+        _task_m = _minimarket_tasks.pop(utente.id, None)
+        if _task_m and not _task_m.done():
+            _task_m.cancel()
+            print(f"[RESETCD] Task minimarket uid={utente.id} cancellato.")
+        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat, 🍏 Minimarket"
     else:
         cd = furto_cooldown.get(utente.id, {})
         cd.pop(tipo.value, None)
@@ -1450,6 +1473,13 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
             if _task and not _task.done():
                 _task.cancel()
                 print(f"[RESETCD] Task bancomat uid={utente.id} cancellato.")
+        elif tipo.value == "minimarket":
+            rapine_pendenti_minimarket.pop(utente.id, None)
+            # Cancella task minimarket attivo se presente
+            _task_m = _minimarket_tasks.pop(utente.id, None)
+            if _task_m and not _task_m.done():
+                _task_m.cancel()
+                print(f"[RESETCD] Task minimarket uid={utente.id} cancellato.")
         azzerati = tipo.name
     print(f"[RESETCD] uid={utente.id} tipo={tipo.value} → furto_cooldown ora: {furto_cooldown.get(utente.id, {})}")
     try:
@@ -1494,6 +1524,7 @@ async def resetordine(interaction: discord.Interaction, utente: discord.Member):
 @app_commands.choices(tipo=[
     app_commands.Choice(name="Contanti in tasca",  value="portafoglio"),
     app_commands.Choice(name="Contanti in banca",  value="banca"),
+    app_commands.Choice(name="Cacciavite",         value="Cacciavite"),
     app_commands.Choice(name="Grimaldello",        value="Grimaldello"),
     app_commands.Choice(name="Piede di Porco",     value="Piede di Porco"),
     app_commands.Choice(name="Sistema di Hacking", value="Sistema di Hacking"),
@@ -1548,6 +1579,7 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
 @app_commands.choices(tipo=[
     app_commands.Choice(name="Contanti in tasca",  value="portafoglio"),
     app_commands.Choice(name="Contanti in banca",  value="banca"),
+    app_commands.Choice(name="Cacciavite",         value="Cacciavite"),
     app_commands.Choice(name="Grimaldello",        value="Grimaldello"),
     app_commands.Choice(name="Piede di Porco",     value="Piede di Porco"),
     app_commands.Choice(name="Sistema di Hacking", value="Sistema di Hacking"),
@@ -1683,7 +1715,10 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
 # RAPINA — BANCOMAT
 # =============================================================================
 
-LOOT_BANCOMAT = 7000
+LOOT_BANCOMAT            = 7000
+LOOT_MINIMARKET          = 15_000
+_minimarket_in_corso: set = set()
+_minimarket_tasks: dict   = {}
 ATM_IMAGE = "attached_assets/IMG_1429_1781378756942.jpeg"
 CANALE_POLIZIA_HARDCODED = 1515439682333180015   # canale #RAPINE (criminale)
 CANALE_FDO               = 1513574802156425267   # canale allerta FDO
@@ -2018,10 +2053,330 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             pass
 
 
+# =============================================================================
+# RAPINA — MINIMARKET
+# =============================================================================
+
+async def accredita_minimarket(criminal_uid: int, delay: float):
+    """Aspetta `delay` secondi, poi accredita il bottino del minimarket."""
+    if criminal_uid in _minimarket_in_corso:
+        print(f"[MINIMARKET] uid={criminal_uid} già in elaborazione — task duplicato ignorato.")
+        return
+    _minimarket_in_corso.add(criminal_uid)
+    try:
+        if delay > 0:
+            await asyncio.sleep(delay)
+        # Controllo in-memory: resettato dallo staff durante il sleep?
+        if criminal_uid not in rapine_pendenti_minimarket:
+            print(f"[MINIMARKET] uid={criminal_uid} rimosso dalla memoria durante il sleep (reset staff) — skip.")
+            return
+        # Rilegge il file per stato fresco
+        try:
+            with open(DATI_FILE, "r") as _f:
+                _dati_freschi = json.load(_f)
+            _rapine_nel_file = {int(k): v for k, v in _dati_freschi.get("rapine_pendenti_minimarket", {}).items()}
+        except Exception as _e:
+            print(f"[MINIMARKET] Errore lettura JSON fresco: {_e} — uso memoria")
+            _rapine_nel_file = rapine_pendenti_minimarket
+        if criminal_uid not in _rapine_nel_file:
+            print(f"[MINIMARKET] uid={criminal_uid} non più nel file — già accreditato o resettato, skip.")
+            rapine_pendenti_minimarket.pop(criminal_uid, None)
+            return
+        bil = get_balance(criminal_uid)
+        bil["banca"] += LOOT_MINIMARKET
+        furto_cooldown.setdefault(criminal_uid, {})["minimarket"] = time.time()
+        rapine_pendenti_minimarket.pop(criminal_uid, None)
+        salva_dati()
+        print(f"[MINIMARKET] Bottino accreditato a uid={criminal_uid}.")
+        testo = (
+            f"✅ <@{criminal_uid}> **Colpo al Minimarket completato!**\n"
+            f"💰 **`{LOOT_MINIMARKET:,}€`** sono stati accreditati in banca.\n"
+            f"🏃 Il bottino è tuo — dialogo obbligatorio di **almeno 2 minuti** con gli FDO!"
+        )
+        inviato = False
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(testo)
+            inviato = True
+        except Exception as e:
+            print(f"[MINIMARKET] Messaggio canale fallito: {e}")
+        if not inviato:
+            try:
+                utente = await bot.fetch_user(criminal_uid)
+                await utente.send(
+                    f"✅ **Colpo al Minimarket completato!**\n"
+                    f"💰 **`{LOOT_MINIMARKET:,}€`** sono stati accreditati in banca.\n"
+                    f"🏃 Dialogo obbligatorio di almeno **2 minuti** con gli FDO!"
+                )
+            except Exception as e:
+                print(f"[MINIMARKET] DM fallback bottino fallito: {e}")
+    finally:
+        _minimarket_in_corso.discard(criminal_uid)
+        _minimarket_tasks.pop(criminal_uid, None)
+
+
+class AccettaRapinaMinimarketView(discord.ui.View):
+    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str, strumento: str):
+        super().__init__(timeout=600)
+        self.criminal_uid = criminal_uid
+        self.nome_pg = nome_pg
+        self.posizione = posizione
+        self.partecipanti = partecipanti
+        self.strumento = strumento
+        self.accettata = False
+        self.message: discord.Message = None
+
+    @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
+    async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.accettata:
+            await interaction.response.send_message("❌ Questa rapina è già stata presa in carico!", ephemeral=True)
+            return
+        self.accettata = True
+        self.stop()
+
+        for child in self.children:
+            child.disabled = True
+
+        fdo_nome = interaction.user.display_name
+        criminal_uid = self.criminal_uid
+        emoji_str = "🪛" if self.strumento == "Cacciavite" else "🪓"
+
+        embed = discord.Embed(
+            title="🚔 RAPINA IN CARICO — MINIMARKET 🍏",
+            description=(
+                f"✅ **Agente in servizio:** {interaction.user.mention}\n\n"
+                f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                f"📍 **Posizione:** `{self.posizione}`\n"
+                f"👥 **Partecipanti criminale:** `{self.partecipanti}`\n"
+                f"{emoji_str} **Strumento usato:** `{self.strumento}`\n\n"
+                f"⏳ **Scassinamento in corso — 4 minuti.**\n"
+                f"💰 Il bottino di `{LOOT_MINIMARKET:,}€` verrà accreditato al termine.\n"
+                f"⚠️ Dopo i 4 minuti dialogo obbligatorio di **2 minuti** con gli FDO."
+            ),
+            color=discord.Color.orange()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina in Corso")
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+
+        rapine_pendenti_minimarket[criminal_uid] = {"accepted_at": time.time()}
+        salva_dati()
+
+        testo_inizio = (
+            f"🚔 <@{criminal_uid}> Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento minimarket iniziato!**\n"
+            f"⏳ Aspetta **4 minuti** per forzare la cassa.\n"
+            f"💰 Riceverai **`{LOOT_MINIMARKET:,}€`** in banca allo scadere del tempo.\n"
+            f"⚠️ Dopo i 4 minuti devi dialogare con gli FDO per almeno **2 minuti**!"
+        )
+        inviato_inizio = False
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(testo_inizio)
+            inviato_inizio = True
+        except Exception as e:
+            print(f"[MINIMARKET] Messaggio canale inizio fallito: {e}")
+        if not inviato_inizio:
+            try:
+                utente = await bot.fetch_user(criminal_uid)
+                await utente.send(
+                    f"🚔 Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento minimarket iniziato!**\n"
+                    f"⏳ Aspetta **4 minuti** per forzare la cassa.\n"
+                    f"💰 Riceverai **`{LOOT_MINIMARKET:,}€`** in banca allo scadere del tempo.\n"
+                    f"⚠️ Dopo i 4 minuti devi dialogare con gli FDO per almeno **2 minuti**!"
+                )
+            except Exception as e:
+                print(f"[MINIMARKET] DM fallback inizio fallito: {e}")
+
+        task = asyncio.create_task(accredita_minimarket(criminal_uid, 240))
+        _minimarket_tasks[criminal_uid] = task
+
+    async def on_timeout(self):
+        inv = get_inventario(self.criminal_uid)
+        inv[self.strumento] = inv.get(self.strumento, 0) + 1
+        salva_dati()
+
+        for child in self.children:
+            child.disabled = True
+
+        emoji_str = "🪛" if self.strumento == "Cacciavite" else "🪓"
+        embed = discord.Embed(
+            title="⌛ RAPINA ANNULLATA — Nessun FDO disponibile",
+            description=(
+                f"La rapina al minimarket di `{self.nome_pg}` è scaduta dopo **10 minuti** senza risposta FDO.\n\n"
+                f"📍 **Posizione:** `{self.posizione}`\n\n"
+                f"{emoji_str} Il `{self.strumento}` è stato restituito al criminale.\n"
+                f"⏱️ Il cooldown è stato azzerato — può riprovare."
+            ),
+            color=discord.Color.dark_gray()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina Scaduta")
+        if self.message:
+            try:
+                await self.message.edit(embed=embed, view=self, attachments=[])
+            except Exception as e:
+                print(f"[MINIMARKET] Edit timeout fallito: {e}")
+
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(
+                f"⌛ <@{self.criminal_uid}> Nessun FDO ha risposto alla tua rapina al minimarket entro 10 minuti.\n"
+                f"{emoji_str} Il tuo **{self.strumento}** è stato restituito e il cooldown azzerato.\n"
+                f"Puoi riprovare quando vuoi!"
+            )
+        except Exception as e:
+            print(f"[MINIMARKET] Messaggio timeout fallito: {e}")
+
+
+class MinimarketModal(discord.ui.Modal, title="🍏 Verbale di Rapina — Minimarket"):
+    nome_pg = discord.ui.TextInput(
+        label="Nome del tuo personaggio",
+        placeholder="Es: Marco Rossi",
+        min_length=2,
+        max_length=50,
+    )
+    posizione = discord.ui.TextInput(
+        label="Posizione del minimarket",
+        placeholder="Es: Via Roma 8, Strawberry, LS",
+        min_length=3,
+        max_length=100,
+    )
+    partecipanti = discord.ui.TextInput(
+        label="Partecipi solo o in coppia?",
+        placeholder="Solo  /  In coppia con [nome personaggio]",
+        min_length=4,
+        max_length=80,
+    )
+
+    def __init__(self, uid: int):
+        super().__init__()
+        self.uid = uid
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=False)
+
+        uid  = self.uid
+        nome = self.nome_pg.value.strip()
+        pos  = self.posizione.value.strip()
+        part = self.partecipanti.value.strip()
+
+        inv = get_inventario(uid)
+        # Determina strumento disponibile (preferisce Cacciavite)
+        if inv.get("Cacciavite", 0) > 0:
+            strumento = "Cacciavite"
+            emoji_str = "🪛"
+        elif inv.get("Piede di Porco", 0) > 0:
+            strumento = "Piede di Porco"
+            emoji_str = "🪓"
+        else:
+            await interaction.followup.send(
+                "❌ Non hai gli strumenti! Serve **`1x Cacciavite`** o **`1x Piede di Porco`**. Acquistali con `/negozio`.",
+                ephemeral=True
+            )
+            return
+        if inv.get("Pistola", 0) <= 0:
+            await interaction.followup.send(
+                "❌ Non hai la `Pistola` nell'inventario! Acquistala con `/compranero`.", ephemeral=True
+            )
+            return
+
+        embed_ok = discord.Embed(
+            title="✅ Rapina Minimarket Inviata!",
+            description=(
+                f"🕵️ **Personaggio:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"{emoji_str} Hai usato **1x {strumento}** (consumato) + 🔫 **Pistola** (mantenuta).\n"
+                f"📡 La notifica è stata inviata agli FDO — aspetta che accettino (**min 2 FDO**).\n"
+                f"⏳ Una volta accettata, iniziano **4 minuti** di scassinamento.\n"
+                f"💰 I **`{LOOT_MINIMARKET:,}€`** ti vengono accreditati in banca **allo scadere dei 4 minuti**.\n"
+                f"⚠️ Dopo i 4 minuti dialogo obbligatorio con gli FDO per almeno **2 minuti**.\n\n"
+                f"🚫 La rapina si annulla se nessun FDO risponde entro **10 minuti** — "
+                f"lo strumento ti viene restituito.\n"
+                f"⚠️ Equipaggiamento consentito: **{strumento} + Pistola** (vietati caschi e giubbotti)"
+            ),
+            color=discord.Color.green()
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
+
+        mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
+        embed_pol = discord.Embed(
+            title="🚨 RAPINA IN CORSO — MINIMARKET 🍏",
+            description=(
+                f"🦹 **Criminale:** `{nome}`\n"
+                f"📍 **Posizione dichiarata:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"👮 **FDO richiesti:** Min **2 FDO**\n"
+                f"⚔️ **Equipaggiamento criminale:** {strumento} + Pistola (vietati caschi e giubbotti)\n"
+                f"⏱️ **Scassinamento:** 4 minuti | Dialogo minimo: 2 minuti\n"
+                f"🚫 **Ostaggi:** Non consentiti\n"
+                f"💰 **Bottino:** `{LOOT_MINIMARKET:,}€` in banca\n\n"
+                f"⏳ Clicca **Accetta Servizio** entro 10 minuti o la rapina viene annullata."
+            ),
+            color=discord.Color.red()
+        )
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — 10 minuti per rispondere")
+
+        view = AccettaRapinaMinimarketView(uid, nome, pos, part, strumento)
+
+        # Consuma lo strumento — la Pistola rimane in inventario
+        inv[strumento] -= 1
+        if inv[strumento] == 0:
+            del inv[strumento]
+        salva_dati()
+
+        try:
+            await interaction.followup.send(embed=embed_ok, ephemeral=False)
+        except Exception as e:
+            print(f"[MINIMARKET] Followup criminale fallito: {e}")
+            try:
+                await interaction.followup.send(embed=embed_ok, ephemeral=True)
+            except Exception:
+                pass
+
+        try:
+            await interaction.followup.send(
+                "📍 **Manda subito uno screenshot del radar** per far vedere la tua posizione esatta agli FDO!",
+                ephemeral=False
+            )
+        except Exception as e:
+            print(f"[MINIMARKET] Messaggio radar fallito: {e}")
+
+        try:
+            canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            msg = await canale_fdo.send(
+                content=mention,
+                embed=embed_pol,
+                view=view,
+                allowed_mentions=discord.AllowedMentions(roles=True),
+            )
+            view.message = msg
+            print(f"[MINIMARKET] Notifica FDO inviata in #{canale_fdo.name} ✅")
+        except discord.Forbidden as e:
+            print(f"[MINIMARKET] ❌ Permessi mancanti nel canale FDO (id={CANALE_FDO}): {e}")
+            try:
+                await interaction.followup.send(
+                    f"⚠️ **Errore:** Il bot non ha i permessi per scrivere nel canale FDO (`{CANALE_FDO}`).",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+        except discord.NotFound as e:
+            print(f"[MINIMARKET] ❌ Canale FDO non trovato (id={CANALE_FDO}): {e}")
+            try:
+                await interaction.followup.send(
+                    f"⚠️ **Errore:** Canale FDO non trovato (id `{CANALE_FDO}`).",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"[MINIMARKET] ❌ Errore invio FDO: {e}")
+
+
 @bot.tree.command(name="rapina", description="Esegui una rapina — bancomat e altro")
 @app_commands.describe(tipo="Tipo di rapina da effettuare")
 @app_commands.choices(tipo=[
     app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h", value="bancomat"),
+    app_commands.Choice(name="🍏 Minimarket — 15.000€ | Cacciavite/PdP + Pistola | Cooldown 24h", value="minimarket"),
 ])
 async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
     uid = interaction.user.id
@@ -2085,7 +2440,55 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
         except Exception as e:
             print(f"[RAPINA] send_modal errore inatteso: {e}")
 
+    elif tipo.value == "minimarket":
+        ora = time.time()
+        ultimo = furto_cooldown.get(uid, {}).get("minimarket", 0)
+        print(f"[RAPINA CHECK] uid={uid} tipo=minimarket ora={ora:.0f} ultimo={ultimo:.0f} diff={ora-ultimo:.0f}s (limite={24*3600}s) CD={ora-ultimo < 24*3600}")
+        if ora - ultimo < 24 * 3600:
+            rimanenti = int(24 * 3600 - (ora - ultimo))
+            ore_r = rimanenti // 3600
+            min_r = (rimanenti % 3600) // 60
+            try:
+                await interaction.response.send_message(
+                    f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di poter rapinare un altro minimarket.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+            return
 
+        inv = get_inventario(uid)
+        ha_strumento = inv.get("Cacciavite", 0) > 0 or inv.get("Piede di Porco", 0) > 0
+        print(f"[RAPINA INV] uid={uid} cacciavite={inv.get('Cacciavite',0)} pdp={inv.get('Piede di Porco',0)} pistola={inv.get('Pistola',0)}")
+        if not ha_strumento:
+            try:
+                await interaction.response.send_message(
+                    "🔒 Per rapinare un minimarket serve **`1x Cacciavite`** o **`1x Piede di Porco`** e **`1x Pistola`**. Acquistali con `/negozio` e `/compranero`.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+            return
+        if inv.get("Pistola", 0) <= 0:
+            try:
+                await interaction.response.send_message(
+                    "🔒 Per rapinare un minimarket serve anche **`1x Pistola`**. Acquistala con `/compranero`.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+            return
+
+        try:
+            await interaction.response.send_modal(MinimarketModal(uid))
+        except discord.InteractionResponded:
+            print(f"[RAPINA] MinimarketModal ignorato — interazione già risposta per uid={uid}")
+        except discord.NotFound:
+            print(f"[RAPINA] MinimarketModal 10062 — interazione scaduta per uid={uid}")
+        except discord.HTTPException as e:
+            print(f"[RAPINA] MinimarketModal fallito: {e}")
+        except Exception as e:
+            print(f"[RAPINA] MinimarketModal errore inatteso: {e}")
 
 
 # =============================================================================
