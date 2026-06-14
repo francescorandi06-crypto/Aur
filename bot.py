@@ -1377,11 +1377,14 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     # Esegui il reset PRIMA di qualsiasi chiamata Discord (non può fallire)
     if tipo.value == "tutti":
         furto_cooldown[utente.id] = {}
+        rapine_pendenti_bancomat.pop(utente.id, None)
         azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat"
     else:
         cd = furto_cooldown.get(utente.id, {})
         cd.pop(tipo.value, None)
         furto_cooldown[utente.id] = cd
+        if tipo.value == "bancomat":
+            rapine_pendenti_bancomat.pop(utente.id, None)
         azzerati = tipo.name
     print(f"[RESETCD] uid={utente.id} tipo={tipo.value} → furto_cooldown ora: {furto_cooldown.get(utente.id, {})}")
     try:
@@ -1600,6 +1603,10 @@ async def accredita_bancomat(criminal_uid: int, delay: float):
     """Aspetta `delay` secondi, poi accredita il bottino e notifica nel canale."""
     if delay > 0:
         await asyncio.sleep(delay)
+    # Se il cooldown è stato resettato dallo staff durante l'attesa, non impostarlo di nuovo
+    if criminal_uid not in rapine_pendenti_bancomat:
+        print(f"[BANCOMAT] Rapina uid={criminal_uid} annullata dal reset — nessun cooldown impostato.")
+        return
     bil = get_balance(criminal_uid)
     bil["banca"] += LOOT_BANCOMAT
     furto_cooldown.setdefault(criminal_uid, {})["bancomat"] = time.time()
