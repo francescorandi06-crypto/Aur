@@ -70,8 +70,7 @@ class TokyoHorizonBot(commands.Bot):
     async def setup_hook(self):
         self.aiohttp_session = aiohttp.ClientSession()
         self.add_view(VeicoloButtons())
-        await self.tree.sync()
-        print("Tokyo Horizon Bot: Comandi slash sincronizzati con successo!")
+        print("Tokyo Horizon Bot: setup_hook completato.")
 
     async def close(self):
         if self.aiohttp_session and not self.aiohttp_session.closed:
@@ -2116,39 +2115,67 @@ async def accredita_minimarket(criminal_uid: int, delay: float):
 
 
 class AccettaRapinaMinimarketView(discord.ui.View):
-    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str, strumento: str):
+    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, nome_complice: str, strumento: str):
         super().__init__(timeout=600)
         self.criminal_uid = criminal_uid
         self.nome_pg = nome_pg
         self.posizione = posizione
-        self.partecipanti = partecipanti
+        self.nome_complice = nome_complice
         self.strumento = strumento
-        self.accettata = False
+        self.fdo_list: list = []      # nomi FDO che hanno cliccato
+        self.avviata = False          # scassinamento avviato (2 FDO raggiunti)
         self.message: discord.Message = None
 
-    @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
+    @discord.ui.button(label="Accetta Servizio (0/2)", style=discord.ButtonStyle.success, emoji="🚔")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if self.accettata:
-            await interaction.response.send_message("❌ Questa rapina è già stata presa in carico!", ephemeral=True)
+        if self.avviata:
+            await interaction.response.send_message("❌ Lo scassinamento è già iniziato!", ephemeral=True)
             return
-        self.accettata = True
-        self.stop()
-
-        for child in self.children:
-            child.disabled = True
-
         fdo_nome = interaction.user.display_name
+        if fdo_nome in self.fdo_list:
+            await interaction.response.send_message("❌ Hai già accettato questo servizio!", ephemeral=True)
+            return
+
+        self.fdo_list.append(fdo_nome)
         criminal_uid = self.criminal_uid
         emoji_str = "🪛" if self.strumento == "Cacciavite" else "🪓"
 
+        if len(self.fdo_list) == 1:
+            # Primo FDO — aggiorna embed e label, bottone rimane attivo
+            button.label = "Accetta Servizio (1/2)"
+            embed = discord.Embed(
+                title="🚔 IN ATTESA 2° FDO — MINIMARKET 🍏",
+                description=(
+                    f"✅ **1° Agente:** {interaction.user.mention}\n"
+                    f"⏳ **In attesa del 2° FDO…**\n\n"
+                    f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                    f"🤝 **Complice:** `{self.nome_complice}`\n"
+                    f"📍 **Posizione:** `{self.posizione}`\n"
+                    f"{emoji_str} **Strumento:** `{self.strumento}`\n\n"
+                    f"👮 Serve un **2° FDO** per avviare lo scassinamento."
+                ),
+                color=discord.Color.yellow()
+            )
+            embed.set_footer(text="Tokyo Horizon RP | In attesa del 2° agente")
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+            return
+
+        # Secondo FDO — avvia lo scassinamento
+        self.avviata = True
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+
+        fdo1, fdo2 = self.fdo_list[0], self.fdo_list[1]
         embed = discord.Embed(
             title="🚔 RAPINA IN CARICO — MINIMARKET 🍏",
             description=(
-                f"✅ **Agente in servizio:** {interaction.user.mention}\n\n"
+                f"✅ **1° Agente:** `{fdo1}`\n"
+                f"✅ **2° Agente:** {interaction.user.mention}\n\n"
                 f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                f"🤝 **Complice:** `{self.nome_complice}`\n"
                 f"📍 **Posizione:** `{self.posizione}`\n"
-                f"👥 **Partecipanti criminale:** `{self.partecipanti}`\n"
-                f"{emoji_str} **Strumento usato:** `{self.strumento}`\n\n"
+                f"{emoji_str} **Strumento:** `{self.strumento}`\n\n"
                 f"⏳ **Scassinamento in corso — 4 minuti.**\n"
                 f"💰 Il bottino di `{LOOT_MINIMARKET:,}€` verrà accreditato al termine.\n"
                 f"⚠️ Dopo i 4 minuti dialogo obbligatorio di **2 minuti** con gli FDO."
@@ -2162,7 +2189,7 @@ class AccettaRapinaMinimarketView(discord.ui.View):
         salva_dati()
 
         testo_inizio = (
-            f"🚔 <@{criminal_uid}> Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento minimarket iniziato!**\n"
+            f"🚔 <@{criminal_uid}> **2 FDO hanno accettato** (`{fdo1}` e `{fdo2}`) — **scassinamento minimarket iniziato!**\n"
             f"⏳ Aspetta **4 minuti** per forzare la cassa.\n"
             f"💰 Riceverai **`{LOOT_MINIMARKET:,}€`** in banca allo scadere del tempo.\n"
             f"⚠️ Dopo i 4 minuti devi dialogare con gli FDO per almeno **2 minuti**!"
@@ -2178,7 +2205,7 @@ class AccettaRapinaMinimarketView(discord.ui.View):
             try:
                 utente = await bot.fetch_user(criminal_uid)
                 await utente.send(
-                    f"🚔 Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento minimarket iniziato!**\n"
+                    f"🚔 **2 FDO hanno accettato** — **scassinamento minimarket iniziato!**\n"
                     f"⏳ Aspetta **4 minuti** per forzare la cassa.\n"
                     f"💰 Riceverai **`{LOOT_MINIMARKET:,}€`** in banca allo scadere del tempo.\n"
                     f"⚠️ Dopo i 4 minuti devi dialogare con gli FDO per almeno **2 minuti**!"
@@ -2190,18 +2217,26 @@ class AccettaRapinaMinimarketView(discord.ui.View):
         _minimarket_tasks[criminal_uid] = task
 
     async def on_timeout(self):
-        inv = get_inventario(self.criminal_uid)
-        inv[self.strumento] = inv.get(self.strumento, 0) + 1
-        salva_dati()
+        if not self.avviata:
+            inv = get_inventario(self.criminal_uid)
+            inv[self.strumento] = inv.get(self.strumento, 0) + 1
+            salva_dati()
 
         for child in self.children:
             child.disabled = True
 
         emoji_str = "🪛" if self.strumento == "Cacciavite" else "🪓"
+        n_fdo = len(self.fdo_list)
+        if n_fdo == 0:
+            motivo = "Nessun FDO ha risposto entro 10 minuti."
+        else:
+            motivo = f"Solo **1 FDO** ha accettato (`{self.fdo_list[0]}`) — servono 2 agenti."
+
         embed = discord.Embed(
-            title="⌛ RAPINA ANNULLATA — Nessun FDO disponibile",
+            title="⌛ RAPINA ANNULLATA — FDO insufficienti",
             description=(
-                f"La rapina al minimarket di `{self.nome_pg}` è scaduta dopo **10 minuti** senza risposta FDO.\n\n"
+                f"{motivo}\n\n"
+                f"🦹 **Criminale:** `{self.nome_pg}`\n"
                 f"📍 **Posizione:** `{self.posizione}`\n\n"
                 f"{emoji_str} Il `{self.strumento}` è stato restituito al criminale.\n"
                 f"⏱️ Il cooldown è stato azzerato — può riprovare."
@@ -2218,7 +2253,7 @@ class AccettaRapinaMinimarketView(discord.ui.View):
         try:
             canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
             await canale.send(
-                f"⌛ <@{self.criminal_uid}> Nessun FDO ha risposto alla tua rapina al minimarket entro 10 minuti.\n"
+                f"⌛ <@{self.criminal_uid}> La rapina al minimarket è annullata — {motivo}\n"
                 f"{emoji_str} Il tuo **{self.strumento}** è stato restituito e il cooldown azzerato.\n"
                 f"Puoi riprovare quando vuoi!"
             )
@@ -2239,11 +2274,11 @@ class MinimarketModal(discord.ui.Modal, title="🍏 Verbale di Rapina — Minima
         min_length=3,
         max_length=100,
     )
-    partecipanti = discord.ui.TextInput(
-        label="Partecipi solo o in coppia?",
-        placeholder="Solo  /  In coppia con [nome personaggio]",
-        min_length=4,
-        max_length=80,
+    nome_complice = discord.ui.TextInput(
+        label="Nome del tuo 2° complice (obbligatorio)",
+        placeholder="Es: Luigi Bianchi",
+        min_length=2,
+        max_length=50,
     )
 
     def __init__(self, uid: int):
@@ -2253,10 +2288,10 @@ class MinimarketModal(discord.ui.Modal, title="🍏 Verbale di Rapina — Minima
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=False)
 
-        uid  = self.uid
-        nome = self.nome_pg.value.strip()
-        pos  = self.posizione.value.strip()
-        part = self.partecipanti.value.strip()
+        uid      = self.uid
+        nome     = self.nome_pg.value.strip()
+        pos      = self.posizione.value.strip()
+        complice = self.nome_complice.value.strip()
 
         inv = get_inventario(uid)
         # Determina strumento disponibile (preferisce Cacciavite)
@@ -2282,14 +2317,14 @@ class MinimarketModal(discord.ui.Modal, title="🍏 Verbale di Rapina — Minima
             title="✅ Rapina Minimarket Inviata!",
             description=(
                 f"🕵️ **Personaggio:** `{nome}`\n"
-                f"📍 **Posizione:** `{pos}`\n"
-                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"🤝 **Complice:** `{complice}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
                 f"{emoji_str} Hai usato **1x {strumento}** (consumato) + 🔫 **Pistola** (mantenuta).\n"
-                f"📡 La notifica è stata inviata agli FDO — aspetta che accettino (**min 2 FDO**).\n"
-                f"⏳ Una volta accettata, iniziano **4 minuti** di scassinamento.\n"
+                f"📡 La notifica è stata inviata agli FDO — aspetta che **2 FDO** accettino.\n"
+                f"⏳ Una volta confermata da 2 agenti, iniziano **4 minuti** di scassinamento.\n"
                 f"💰 I **`{LOOT_MINIMARKET:,}€`** ti vengono accreditati in banca **allo scadere dei 4 minuti**.\n"
                 f"⚠️ Dopo i 4 minuti dialogo obbligatorio con gli FDO per almeno **2 minuti**.\n\n"
-                f"🚫 La rapina si annulla se nessun FDO risponde entro **10 minuti** — "
+                f"🚫 La rapina si annulla se non si raggiungono 2 FDO entro **10 minuti** — "
                 f"lo strumento ti viene restituito.\n"
                 f"⚠️ Equipaggiamento consentito: **{strumento} + Pistola** (vietati caschi e giubbotti)"
             ),
@@ -2302,20 +2337,20 @@ class MinimarketModal(discord.ui.Modal, title="🍏 Verbale di Rapina — Minima
             title="🚨 RAPINA IN CORSO — MINIMARKET 🍏",
             description=(
                 f"🦹 **Criminale:** `{nome}`\n"
-                f"📍 **Posizione dichiarata:** `{pos}`\n"
-                f"👥 **Partecipanti:** `{part}`\n\n"
-                f"👮 **FDO richiesti:** Min **2 FDO**\n"
+                f"🤝 **Complice:** `{complice}`\n"
+                f"📍 **Posizione dichiarata:** `{pos}`\n\n"
+                f"👮 **FDO richiesti:** **2 FDO** devono cliccare il bottone\n"
                 f"⚔️ **Equipaggiamento criminale:** {strumento} + Pistola (vietati caschi e giubbotti)\n"
                 f"⏱️ **Scassinamento:** 4 minuti | Dialogo minimo: 2 minuti\n"
                 f"🚫 **Ostaggi:** Non consentiti\n"
                 f"💰 **Bottino:** `{LOOT_MINIMARKET:,}€` in banca\n\n"
-                f"⏳ Clicca **Accetta Servizio** entro 10 minuti o la rapina viene annullata."
+                f"⏳ **Devono cliccare 2 FDO** entro 10 minuti o la rapina viene annullata."
             ),
             color=discord.Color.red()
         )
-        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — 10 minuti per rispondere")
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — servono 2 agenti")
 
-        view = AccettaRapinaMinimarketView(uid, nome, pos, part, strumento)
+        view = AccettaRapinaMinimarketView(uid, nome, pos, complice, strumento)
 
         # Consuma lo strumento — la Pistola rimane in inventario
         inv[strumento] -= 1
