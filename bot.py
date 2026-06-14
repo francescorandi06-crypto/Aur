@@ -1381,6 +1381,7 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
         cd.pop(tipo.value, None)
         furto_cooldown[utente.id] = cd
         azzerati = tipo.name
+    print(f"[RESETCD] uid={utente.id} tipo={tipo.value} → furto_cooldown ora: {furto_cooldown.get(utente.id, {})}")
     try:
         salva_dati()
     except Exception as e:
@@ -1889,6 +1890,7 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
     if tipo.value == "bancomat":
         ora = time.time()
         ultimo = furto_cooldown.get(uid, {}).get("bancomat", 0)
+        print(f"[RAPINA CHECK] uid={uid} ora={ora:.0f} ultimo={ultimo:.0f} diff={ora-ultimo:.0f}s (limite={12*3600}s) CD={ora-ultimo < 12*3600}")
         if ora - ultimo < 12 * 3600:
             rimanenti = int(12 * 3600 - (ora - ultimo))
             ore_r = rimanenti // 3600
