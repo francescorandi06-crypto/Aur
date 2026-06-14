@@ -1600,12 +1600,11 @@ class AccettaRapinaView(discord.ui.View):
         self.accettata = True
         self.stop()
 
-        bil = get_balance(self.criminal_uid)
-        bil["banca"] += LOOT_BANCOMAT
-        salva_dati()
-
         for child in self.children:
             child.disabled = True
+
+        fdo_nome = interaction.user.display_name
+        criminal_uid = self.criminal_uid
 
         embed = discord.Embed(
             title="🚔 RAPINA IN CARICO — BANCOMAT 🏧",
@@ -1614,23 +1613,45 @@ class AccettaRapinaView(discord.ui.View):
                 f"🦹 **Criminale:** `{self.nome_pg}`\n"
                 f"📍 **Posizione:** `{self.posizione}`\n"
                 f"👥 **Partecipanti criminale:** `{self.partecipanti}`\n\n"
-                f"💰 Bottino di `{LOOT_BANCOMAT:,}€` accreditato in banca al criminale.\n"
-                f"⏱️ Scassinamento: 4 minuti | Fuga immediata (nessun dialogo)"
+                f"⏳ **Scassinamento in corso — 4 minuti.**\n"
+                f"💰 Il bottino di `{LOOT_BANCOMAT:,}€` verrà accreditato al termine.\n"
+                f"🏃 Dopo 4 minuti il criminale può scappare."
             ),
             color=discord.Color.orange()
         )
         embed.set_footer(text="Tokyo Horizon RP | Rapina in Corso")
         await interaction.response.edit_message(embed=embed, view=self, attachments=[])
 
+        # DM immediato al criminale: scassinamento iniziato
         try:
-            criminal = await bot.fetch_user(self.criminal_uid)
+            criminal = await bot.fetch_user(criminal_uid)
             await criminal.send(
-                f"🚔 Un FDO (**{interaction.user.display_name}**) ha accettato il servizio per la tua rapina al bancomat!\n"
-                f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
-                f"⚠️ Procedi con il piano — rispetta le regole di equipaggiamento!"
+                f"🚔 Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento iniziato!**\n"
+                f"⏳ Aspetta **4 minuti** mentre scarti il bancomat.\n"
+                f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca allo scadere del tempo.\n"
+                f"⚠️ Non scappare prima dei 4 minuti!"
             )
         except Exception as e:
-            print(f"[BANCOMAT] DM criminale fallito: {e}")
+            print(f"[BANCOMAT] DM avvio scassinamento fallito: {e}")
+
+        # Task asincrono: aspetta 4 minuti, poi accredita e avvisa
+        async def accredita_dopo_4min():
+            await asyncio.sleep(240)
+            bil = get_balance(criminal_uid)
+            bil["banca"] += LOOT_BANCOMAT
+            salva_dati()
+            print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid} dopo 4 minuti.")
+            try:
+                criminal = await bot.fetch_user(criminal_uid)
+                await criminal.send(
+                    f"✅ **Scassinamento completato!**\n"
+                    f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+                    f"🏃 Puoi scappare adesso — buona fuga!"
+                )
+            except Exception as e:
+                print(f"[BANCOMAT] DM bottino finale fallito: {e}")
+
+        asyncio.create_task(accredita_dopo_4min())
 
     async def on_timeout(self):
         inv = get_inventario(self.criminal_uid)
@@ -1717,8 +1738,10 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
                 f"📍 **Posizione:** `{pos}`\n"
                 f"👥 **Partecipanti:** `{part}`\n\n"
                 f"🪓 Hai usato **1x Piede di Porco** (consumato) + 🔫 **Pistola** (mantenuta).\n"
-                f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca non appena un FDO accetta il servizio.\n\n"
-                f"⏳ La rapina si annulla se nessun FDO risponde entro **10 minuti** — "
+                f"📡 La notifica è stata inviata agli FDO — aspetta che uno accetti.\n"
+                f"⏳ Una volta accettata, iniziano **4 minuti** di scassinamento.\n"
+                f"💰 I **`{LOOT_BANCOMAT:,}€`** ti vengono accreditati in banca **allo scadere dei 4 minuti**.\n\n"
+                f"🚫 La rapina si annulla se nessun FDO risponde entro **10 minuti** — "
                 f"il Piede di Porco ti viene restituito.\n"
                 f"⚠️ Equipaggiamento consentito: **Piede di Porco + Pistola**"
             ),
