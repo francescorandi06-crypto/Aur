@@ -1603,15 +1603,28 @@ async def accredita_bancomat(criminal_uid: int, delay: float):
     rapine_pendenti_bancomat.pop(criminal_uid, None)
     salva_dati()
     print(f"[BANCOMAT] Bottino accreditato a uid={criminal_uid}.")
+    testo = (
+        f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
+        f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+        f"🏃 Puoi scappare adesso — buona fuga!"
+    )
+    inviato = False
     try:
         canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
-        await canale.send(
-            f"✅ <@{criminal_uid}> **Scassinamento completato!**\n"
-            f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
-            f"🏃 Puoi scappare adesso — buona fuga!"
-        )
+        await canale.send(testo)
+        inviato = True
     except Exception as e:
-        print(f"[BANCOMAT] Messaggio bottino finale fallito: {e}")
+        print(f"[BANCOMAT] Messaggio canale fallito: {e}")
+    if not inviato:
+        try:
+            utente = await bot.fetch_user(criminal_uid)
+            await utente.send(
+                f"✅ **Scassinamento completato!**\n"
+                f"💰 **`{LOOT_BANCOMAT:,}€`** sono stati accreditati in banca.\n"
+                f"🏃 Puoi scappare adesso — buona fuga!"
+            )
+        except Exception as e:
+            print(f"[BANCOMAT] DM fallback bottino fallito: {e}")
 
 
 class AccettaRapinaView(discord.ui.View):
@@ -1658,17 +1671,31 @@ class AccettaRapinaView(discord.ui.View):
         rapine_pendenti_bancomat[criminal_uid] = {"accepted_at": time.time()}
         salva_dati()
 
-        # Messaggio nel canale rapine: scassinamento iniziato
+        # Messaggio scassinamento iniziato — canale con fallback DM
+        testo_inizio = (
+            f"🚔 <@{criminal_uid}> Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento iniziato!**\n"
+            f"⏳ Aspetta **4 minuti** mentre scarti il bancomat.\n"
+            f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca allo scadere del tempo.\n"
+            f"⚠️ Non scappare prima dei 4 minuti!"
+        )
+        inviato_inizio = False
         try:
             canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
-            await canale.send(
-                f"🚔 <@{criminal_uid}> Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento iniziato!**\n"
-                f"⏳ Aspetta **4 minuti** mentre scarti il bancomat.\n"
-                f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca allo scadere del tempo.\n"
-                f"⚠️ Non scappare prima dei 4 minuti!"
-            )
+            await canale.send(testo_inizio)
+            inviato_inizio = True
         except Exception as e:
-            print(f"[BANCOMAT] Messaggio avvio scassinamento fallito: {e}")
+            print(f"[BANCOMAT] Messaggio canale inizio fallito: {e}")
+        if not inviato_inizio:
+            try:
+                utente = await bot.fetch_user(criminal_uid)
+                await utente.send(
+                    f"🚔 Un FDO (**{fdo_nome}**) ha accettato il servizio — **scassinamento iniziato!**\n"
+                    f"⏳ Aspetta **4 minuti** mentre scarti il bancomat.\n"
+                    f"💰 Riceverai **`{LOOT_BANCOMAT:,}€`** in banca allo scadere del tempo.\n"
+                    f"⚠️ Non scappare prima dei 4 minuti!"
+                )
+            except Exception as e:
+                print(f"[BANCOMAT] DM fallback inizio fallito: {e}")
 
         # Task persistente: usa la funzione condivisa (sopravvive ai restart via on_ready)
         asyncio.create_task(accredita_bancomat(criminal_uid, 240))
