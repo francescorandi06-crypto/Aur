@@ -6,17 +6,12 @@
     }
   },
   "furto_cooldown": {
-    "1083459553892499476": {
-      "villa": 1781480380.8795047,
-      "macchina": 1781438191.123334,
-      "bancomat": 1781438385.038231,
-      "minimarket": 1781439733.3872304
-    }
+    "1083459553892499476": {}
   },
   "inventario": {
     "1083459553892499476": {
       "Sistema di Hacking": 98,
-      "Piede di Porco": 82,
+      "Piede di Porco": 81,
       "Pistola": 2
     }
   },
@@ -31,6 +26,10 @@
       "consegnato": false
     }
   },
-  "rapine_pendenti": {},
+  "rapine_pendenti": {
+    "1083459553892499476": {
+      "accepted_at": 1781480508.596787
+    }
+  },
   "rapine_pendenti_minimarket": {}
 }
