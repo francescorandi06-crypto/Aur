@@ -102,7 +102,8 @@ class TokyoHorizonBot(commands.Bot):
             elapsed = time.time() - accepted_at
             remaining = max(0.0, 240.0 - elapsed)
             print(f"[BANCOMAT] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
-            asyncio.create_task(accredita_bancomat(uid, remaining))
+            task = asyncio.create_task(accredita_bancomat(uid, remaining))
+            _bancomat_tasks[uid] = task
 
 bot = TokyoHorizonBot()
 
@@ -1432,6 +1433,11 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     if tipo.value == "tutti":
         furto_cooldown[utente.id] = {}
         rapine_pendenti_bancomat.pop(utente.id, None)
+        # Cancella task bancomat attivo se presente
+        _task = _bancomat_tasks.pop(utente.id, None)
+        if _task and not _task.done():
+            _task.cancel()
+            print(f"[RESETCD] Task bancomat uid={utente.id} cancellato.")
         azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat"
     else:
         cd = furto_cooldown.get(utente.id, {})
@@ -1439,6 +1445,11 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
         furto_cooldown[utente.id] = cd
         if tipo.value == "bancomat":
             rapine_pendenti_bancomat.pop(utente.id, None)
+            # Cancella task bancomat attivo se presente
+            _task = _bancomat_tasks.pop(utente.id, None)
+            if _task and not _task.done():
+                _task.cancel()
+                print(f"[RESETCD] Task bancomat uid={utente.id} cancellato.")
         azzerati = tipo.name
     print(f"[RESETCD] uid={utente.id} tipo={tipo.value} → furto_cooldown ora: {furto_cooldown.get(utente.id, {})}")
     try:
@@ -1682,6 +1693,8 @@ RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 # Tiene traccia di quali uid hanno già un task accredita_bancomat in esecuzione
 # per evitare doppi accrediti in caso di istanze multiple o on_ready duplicati
 _bancomat_in_corso: set = set()
+# task bancomat attivi per uid → cancellabili da resetcooldown
+_bancomat_tasks: dict = {}
 
 
 async def accredita_bancomat(criminal_uid: int, delay: float):
@@ -1693,6 +1706,10 @@ async def accredita_bancomat(criminal_uid: int, delay: float):
     try:
         if delay > 0:
             await asyncio.sleep(delay)
+        # Controllo in-memory: resettato dallo staff durante il sleep?
+        if criminal_uid not in rapine_pendenti_bancomat:
+            print(f"[BANCOMAT] uid={criminal_uid} rimosso dalla memoria durante il sleep (reset staff) — skip.")
+            return
         # Rilegge il file per stato fresco (prevenzione doppio accredito multi-istanza)
         try:
             with open(DATI_FILE, "r") as _f:
@@ -1735,6 +1752,7 @@ async def accredita_bancomat(criminal_uid: int, delay: float):
                 print(f"[BANCOMAT] DM fallback bottino fallito: {e}")
     finally:
         _bancomat_in_corso.discard(criminal_uid)
+        _bancomat_tasks.pop(criminal_uid, None)
 
 
 class AccettaRapinaView(discord.ui.View):
@@ -1808,7 +1826,8 @@ class AccettaRapinaView(discord.ui.View):
                 print(f"[BANCOMAT] DM fallback inizio fallito: {e}")
 
         # Task persistente: usa la funzione condivisa (sopravvive ai restart via on_ready)
-        asyncio.create_task(accredita_bancomat(criminal_uid, 240))
+        task = asyncio.create_task(accredita_bancomat(criminal_uid, 240))
+        _bancomat_tasks[criminal_uid] = task
 
     async def on_timeout(self):
         inv = get_inventario(self.criminal_uid)
