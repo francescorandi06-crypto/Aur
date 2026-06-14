@@ -2,12 +2,13 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 52000,
-      "banca": 64000
+      "banca": 71000
     }
   },
   "furto_cooldown": {
     "1083459553892499476": {
-      "villa": 1781428892.6714447
+      "villa": 1781428892.6714447,
+      "bancomat": 1781435341.4417052
     }
   },
   "inventario": {
@@ -18,19 +19,6 @@
     }
   },
   "canale_furti_id": 1515093746671292547,
-  "ordini_macchina": {
-    "1083459553892499476": {
-      "guadagno": 5000,
-      "destinazione": "Chop Shop clandestino di Paleto Bay",
-      "modello": "Aur",
-      "foto_ok": true,
-      "in_attesa": true,
-      "consegnato": false
-    }
-  },
-  "rapine_pendenti": {
-    "1083459553892499476": {
-      "accepted_at": 1781435100.9807117
-    }
-  }
+  "ordini_macchina": {},
+  "rapine_pendenti": {}
 }
