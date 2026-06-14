@@ -2,18 +2,19 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 52000,
-      "banca": 34000
+      "banca": 41000
     }
   },
   "furto_cooldown": {
     "1083459553892499476": {
-      "villa": 1781377036.8238769
+      "villa": 1781377036.8238769,
+      "bancomat": 1781399411.451184
     }
   },
   "inventario": {
     "1083459553892499476": {
       "Sistema di Hacking": 100,
-      "Piede di Porco": 89,
+      "Piede di Porco": 88,
       "Pistola": 2
     }
   },
