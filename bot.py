@@ -40,23 +40,23 @@ intents.members = True
 
 
 class HorizonTree(app_commands.CommandTree):
-    """CommandTree personalizzato che filtra slash command scaduti prima di eseguirli."""
+    """CommandTree personalizzato che filtra slash command pre-boot prima di eseguirli."""
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.type == discord.InteractionType.application_command:
-            now = discord.utils.utcnow()
-            age = (now - interaction.created_at).total_seconds()
-            stale = age > 2.5 or (bot.ready_time and interaction.created_at < bot.ready_time)
-            if stale:
+            # Scarta solo interazioni create PRIMA che il bot fosse pronto (ghost interactions)
+            # Non usiamo un check sull'età: Discord gestisce il timeout di 3s con un 404,
+            # che i singoli command handler catturano già con except discord.NotFound.
+            if bot.ready_time and interaction.created_at < bot.ready_time:
                 cmd = getattr(interaction.command, 'name', '?')
-                print(f"[SKIP] Slash command scaduto ({age:.1f}s): /{cmd} — ignorato.")
-                # Prova a rispondere con messaggio amichevole prima di rifiutare
+                age = (discord.utils.utcnow() - interaction.created_at).total_seconds()
+                print(f"[SKIP] Slash command pre-boot ({age:.1f}s): /{cmd} — ignorato.")
                 try:
                     await interaction.response.send_message(
-                        "⚡ Connessione lenta — riprova il comando!",
+                        "⚡ Il bot si è appena riavviato — riprova il comando!",
                         ephemeral=True
                     )
                 except Exception:
-                    pass  # Interazione già scaduta, niente da fare
+                    pass
                 return False
         return True
 
