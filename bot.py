@@ -304,12 +304,13 @@ def carica_dati():
                     ordini,
                     rapine,
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
     return {}, {}, {}, None, {}, {}
 
 def salva_dati():
-    with open(DATI_FILE, "w") as f:
+    tmp = DATI_FILE + ".tmp"
+    with open(tmp, "w") as f:
         json.dump({
             "economia":        {str(k): v for k, v in economia.items()},
             "furto_cooldown":  {str(k): v for k, v in furto_cooldown.items()},
@@ -318,6 +319,7 @@ def salva_dati():
             "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
             "rapine_pendenti": {str(k): v for k, v in rapine_pendenti_bancomat.items()},
         }, f, indent=2)
+    os.replace(tmp, DATI_FILE)
 
 economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat = carica_dati()
 
@@ -1905,6 +1907,7 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             return
 
         inv = get_inventario(uid)
+        print(f"[RAPINA INV] uid={uid} pdp={inv.get('Piede di Porco',0)} pistola={inv.get('Pistola',0)}")
         if inv.get("Piede di Porco", 0) <= 0:
             try:
                 await interaction.response.send_message(
