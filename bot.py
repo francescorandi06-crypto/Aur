@@ -1481,20 +1481,32 @@ async def compra(interaction: discord.Interaction, articolo: app_commands.Choice
         return
     prezzo = info["prezzo"]
     bil = get_balance(interaction.user.id)
-    if bil["portafoglio"] < prezzo:
+    totale = bil["portafoglio"] + bil["banca"]
+    if totale < prezzo:
         await interaction.followup.send(
-            f"❌ Non hai abbastanza contanti in tasca! Ti servono `{prezzo:,}€` ma ne hai solo `{bil['portafoglio']:,}€`.", ephemeral=True
+            f"❌ Non hai abbastanza soldi! Ti servono `{prezzo:,}€`.\n"
+            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`",
+            ephemeral=True
         )
         return
-    bil["portafoglio"] -= prezzo
+    da_tasca = min(bil["portafoglio"], prezzo)
+    da_banca = prezzo - da_tasca
+    bil["portafoglio"] -= da_tasca
+    bil["banca"] -= da_banca
     inv = get_inventario(interaction.user.id)
     inv[nome] = inv.get(nome, 0) + 1
     salva_dati()
+    fonte = ""
+    if da_banca > 0 and da_tasca > 0:
+        fonte = f"💵 `{da_tasca:,}€` dalla tasca + 🏛️ `{da_banca:,}€` dalla banca\n"
+    elif da_banca > 0:
+        fonte = f"🏛️ Pagato dalla banca\n"
     embed = discord.Embed(
         title="✅ Acquisto Completato!",
         description=(
             f"Hai acquistato **{info['emoji']} {nome}** per `{prezzo:,}€`.\n\n"
-            f"💵 **Contanti rimasti:** `{bil['portafoglio']:,}€`\n"
+            f"{fonte}"
+            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`\n"
             f"🎒 **In inventario:** `{inv[nome]}x {nome}`"
         ),
         color=discord.Color.green()
@@ -1537,25 +1549,32 @@ async def compranero(interaction: discord.Interaction, articolo: app_commands.Ch
         return
     prezzo = info["prezzo"]
     bil = get_balance(interaction.user.id)
-    if bil["portafoglio"] < prezzo:
-        mancanti = prezzo - bil["portafoglio"]
+    totale = bil["portafoglio"] + bil["banca"]
+    if totale < prezzo:
         await interaction.followup.send(
-            f"❌ Non hai abbastanza contanti in tasca!\n\n"
-            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`\n"
-            f"💸 **Ti mancano:** `{mancanti:,}€` in tasca\n\n"
-            f"👉 Preleva dalla banca con `/preleva {mancanti:,}` e riprova.",
+            f"❌ Non hai abbastanza soldi! Ti servono `{prezzo:,}€`.\n"
+            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`",
             ephemeral=True
         )
         return
-    bil["portafoglio"] -= prezzo
+    da_tasca = min(bil["portafoglio"], prezzo)
+    da_banca = prezzo - da_tasca
+    bil["portafoglio"] -= da_tasca
+    bil["banca"] -= da_banca
     inv = get_inventario(interaction.user.id)
     inv[nome] = inv.get(nome, 0) + 1
     salva_dati()
+    fonte = ""
+    if da_banca > 0 and da_tasca > 0:
+        fonte = f"💵 `{da_tasca:,}€` dalla tasca + 🏛️ `{da_banca:,}€` dalla banca\n"
+    elif da_banca > 0:
+        fonte = f"🏛️ Pagato dalla banca\n"
     embed = discord.Embed(
         title="✅ Acquisto Completato!",
         description=(
             f"Hai acquistato **{info['emoji']} {nome}** per `{prezzo:,}€`.\n\n"
-            f"💵 **Contanti rimasti:** `{bil['portafoglio']:,}€`\n"
+            f"{fonte}"
+            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`\n"
             f"🎒 **In inventario:** `{inv[nome]}x {nome}`"
         ),
         color=discord.Color.dark_red()
