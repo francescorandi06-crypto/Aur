@@ -4484,6 +4484,83 @@ async def setupcarta(interaction: discord.Interaction):
 
 
 # =============================================================================
+# PANNELLO TUTORIAL WHITELIST
+# =============================================================================
+
+CANALE_TUTORIAL_WL = 1516184631857385592   # canale tutorial / come ottenere la wl
+
+@bot.tree.command(
+    name="setuptutorial",
+    description="[MOD] Pubblica il messaggio tutorial WL nel canale apposito",
+)
+async def setuptutorial(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message(
+            "❌ Solo lo staff può usare questo comando.", ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    embed = discord.Embed(
+        title="🗼 Come diventare Residente di Tokyo Horizon",
+        description=(
+            "Benvenuto/a! Per ottenere la **whitelist** e iniziare a fare roleplay "
+            "nella città devi seguire **3 semplici passi**.\n\u200b"
+        ),
+        color=discord.Color.from_rgb(88, 101, 242),
+    )
+
+    embed.add_field(
+        name="1️⃣  Compila il Modulo Personaggio (PG)",
+        value=(
+            "Vai nel canale apposito e premi il bottone **📋 Richiesta PG**.\n"
+            "Compila il form con i dati del tuo personaggio e invialo.\n"
+            "⏳ Attendi la conferma dello staff — ti arriverà una notifica nel canale esiti."
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="2️⃣  Studia il Regolamento",
+        value=(
+            "Nel frattempo leggi con attenzione:\n"
+            "📖 **Regolamento Generale** — le regole base del server\n"
+            "🗺️ **Regolamento Zone** — comportamenti specifici per ogni area della città\n"
+            "La conoscenza del regolamento è **obbligatoria** per la WL orale."
+        ),
+        inline=False,
+    )
+
+    embed.add_field(
+        name="3️⃣  Supera la Whitelist Orale",
+        value=(
+            "Dopo che il tuo PG è stato approvato, uno staffer ti contatterà "
+            "per un breve **colloquio orale** sul regolamento.\n"
+            "✅ Se lo superi… sei ufficialmente un **Residente di Tokyo Horizon**! 🎉"
+        ),
+        inline=False,
+    )
+
+    embed.set_footer(text="Tokyo Horizon RP | Benvenuto nella città")
+    embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/684/684908.png")
+
+    try:
+        canale = bot.get_channel(CANALE_TUTORIAL_WL) or await bot.fetch_channel(CANALE_TUTORIAL_WL)
+        await canale.send(embed=embed)
+        await interaction.followup.send(
+            f"✅ Tutorial WL pubblicato in <#{CANALE_TUTORIAL_WL}>!", ephemeral=True
+        )
+        print(f"[TUTORIAL] Pannello pubblicato da {interaction.user} in #{canale.name}")
+    except discord.Forbidden:
+        await interaction.followup.send(
+            f"❌ Il bot non ha i permessi per scrivere in <#{CANALE_TUTORIAL_WL}>.", ephemeral=True
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
+
+
+# =============================================================================
 # AVVIO BOT
 # =============================================================================
 token = os.environ.get("DISCORD_TOKEN", "").strip()
