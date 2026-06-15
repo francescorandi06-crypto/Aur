@@ -47,5 +47,11 @@
   "rapine_pendenti_armeria": {},
   "rapine_pendenti_fleeca": {},
   "rapine_pendenti_gioielleria": {},
-  "rapine_pendenti_mazebank": {}
+  "rapine_pendenti_mazebank": {},
+  "richieste_pg_pendenti": {
+    "1083459553892499476": {
+      "nome": "Aura",
+      "processata": true
+    }
+  }
 }
