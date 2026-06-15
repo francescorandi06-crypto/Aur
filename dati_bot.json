@@ -29,7 +29,18 @@
     }
   },
   "canale_furti_id": 1515093746671292547,
-  "ordini_macchina": {},
+  "ordini_macchina": {
+    "1214733905349845032": {
+      "guadagno": 10000,
+      "destinazione": "Hangar dell'Esportatore a Grapeseed",
+      "modello": "Aur",
+      "foto_ok": true,
+      "in_attesa": true,
+      "consegnato": false,
+      "in_attesa_at": 1781542367.7134404,
+      "origin_ch_id": 1515093746671292547
+    }
+  },
   "rapine_pendenti": {},
   "rapine_pendenti_minimarket": {},
   "rapine_pendenti_armeria": {},

@@ -1016,7 +1016,7 @@ class VeicoloButtons(discord.ui.View):
         )
         try:
             canale_staff = await bot.fetch_channel(CANALE_STAFF_VEICOLI)
-            await canale_staff.send(embed=embed_staff, view=view_approvazione)
+            await canale_staff.send(content="<@&1514407155577524385>", embed=embed_staff, view=view_approvazione)
             print(f"[VEICOLO] Embed staff inviato in #{canale_staff.name} ✅")
         except discord.Forbidden:
             print(f"[VEICOLO] ❌ Permessi mancanti in CANALE_STAFF_VEICOLI ({CANALE_STAFF_VEICOLI})")
@@ -3653,6 +3653,41 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             print(f"[RAPINA] MazeBankModal 10062 uid={uid}")
         except Exception as e:
             print(f"[RAPINA] MazeBankModal errore: {e}")
+
+
+# =============================================================================
+# COMANDO PULISCI — Cancella messaggi (solo staff)
+# =============================================================================
+RUOLI_PULISCI = {
+    1514817350359060571,  # Founder
+    1514817646229717174,  # CEO
+    1514818027882024960,  # CO CEO
+    1513686043155763280,  # Moderatore
+}
+
+@bot.tree.command(name="pulisci", description="Cancella un numero di messaggi recenti dal canale (solo staff)")
+@app_commands.describe(quantita="Quanti messaggi cancellare (1–100)")
+async def pulisci(interaction: discord.Interaction, quantita: app_commands.Range[int, 1, 100]):
+    member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+    role_ids = {r.id for r in member.roles} if member else set()
+    if not role_ids.intersection(RUOLI_PULISCI):
+        await interaction.response.send_message(
+            "❌ Non hai i permessi per usare questo comando.", ephemeral=True
+        )
+        return
+    await interaction.response.defer(ephemeral=True)
+    try:
+        cancellati = await interaction.channel.purge(limit=quantita)
+        await interaction.followup.send(
+            f"🗑️ Cancellati **{len(cancellati)}** messaggi.", ephemeral=True
+        )
+        print(f"[PULISCI] {interaction.user} ha cancellato {len(cancellati)} messaggi in #{interaction.channel.name}")
+    except discord.Forbidden:
+        await interaction.followup.send(
+            "❌ Non ho i permessi per cancellare messaggi in questo canale.", ephemeral=True
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
 
 
 # =============================================================================
