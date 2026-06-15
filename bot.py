@@ -3930,7 +3930,7 @@ class RichiestaPGModal(discord.ui.Modal, title="📋 Richiesta Personaggio — T
             title="✅ Richiesta PG Inviata!",
             description=(
                 "La tua richiesta di personaggio è stata inviata allo staff.\n"
-                "Riceverai un **messaggio privato** non appena verrà revisionata.\n\n"
+                f"Riceverai un messaggio in <#{CANALE_ESITO_PG}> non appena verrà revisionata.\n\n"
                 "Nel frattempo puoi esplorare il server e leggere le regole. 🗼"
             ),
             color=discord.Color.green(),
