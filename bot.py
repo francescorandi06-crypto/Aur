@@ -4564,6 +4564,137 @@ async def setuptutorial(interaction: discord.Interaction):
 
 
 # =============================================================================
+# PANNELLO SANZIONI
+# =============================================================================
+
+CANALE_SANZIONI = 1516222042817433661
+
+@bot.tree.command(
+    name="setupsanzioni",
+    description="[MOD] Pubblica il pannello informativo delle sanzioni nel canale dedicato",
+)
+async def setupsanzioni(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message(
+            "❌ Solo lo staff può usare questo comando.", ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    try:
+        canale = bot.get_channel(CANALE_SANZIONI) or await bot.fetch_channel(CANALE_SANZIONI)
+    except Exception as e:
+        await interaction.followup.send(f"❌ Canale non trovato: {e}", ephemeral=True)
+        return
+
+    # ── Embed 1: intestazione + AVVISI & WARN ──────────────────────────────
+    embed_warn = discord.Embed(
+        title="⚖️ REGOLAMENTO SANZIONI — Tokyo Horizon RP",
+        description=(
+            "*Di seguito l'elenco completo delle sanzioni attive nel server, "
+            "la loro durata e le modalità di gestione.*\n\u200b"
+        ),
+        color=discord.Color.from_rgb(230, 140, 20),
+    )
+
+    embed_warn.add_field(
+        name="⏳ AVVISI — Richiami Progressivi",
+        value=(
+            "• <@&1516210042762690650> ➜ Primo richiamo formale — **2 giorni**\n"
+            "• <@&1516210228490932334> ➜ Secondo richiamo — **4 giorni**\n"
+            "• <@&1516210479385677944> ➜ Avviso finale prima del Warn — **6 giorni**\n"
+        ),
+        inline=False,
+    )
+
+    embed_warn.add_field(
+        name="🔴 WARN — Sanzioni Disciplinari",
+        value=(
+            "• <@&1516210617415897128> ➜ Sanzione disciplinare lieve — **8 giorni**\n"
+            "• <@&1516210769317068951> ➜ Sanzione disciplinare media — **12 giorni**\n"
+            "• <@&1516210828699897927> ➜ Sanzione disciplinare grave — **16 giorni**\n"
+            "• <@&1516211005666103357> ➜ Ultima opportunità nel server — **21 giorni**\n"
+        ),
+        inline=False,
+    )
+
+    embed_warn.set_footer(text="Tokyo Horizon RP | Sistema Sanzioni")
+
+    # ── Embed 2: BAN temporanei + permanente ──────────────────────────────
+    embed_ban = discord.Embed(
+        color=discord.Color.from_rgb(200, 30, 30),
+    )
+
+    embed_ban.add_field(
+        name="❌ BAN TEMPORANEI — Sospensione dalle Sessioni",
+        value=(
+            "• <@&1516211996561768578> ➜ Accesso alle sessioni negato per **24 ore**\n"
+            "• <@&1516215698718855279> ➜ Accesso alle sessioni negato per **48 ore**\n"
+            "• <@&1516215922430578849> ➜ Accesso alle sessioni negato per **72 ore**\n"
+            "• <@&1516216863678402692> ➜ Accesso alle sessioni negato per **7 giorni**\n"
+        ),
+        inline=False,
+    )
+
+    embed_ban.add_field(
+        name="🚫 BAN PERMANENTE",
+        value=(
+            "• <@&1516211162184814752> ➜ Espulsione definitiva dal server\n"
+            "↳ *L'unico modo per rientrare è presentare un appello formale, se consentito.*\n"
+        ),
+        inline=False,
+    )
+
+    embed_ban.set_footer(text="Tokyo Horizon RP | Sistema Sanzioni")
+
+    # ── Embed 3: info rimozione ────────────────────────────────────────────
+    embed_info = discord.Embed(
+        color=discord.Color.from_rgb(60, 80, 180),
+    )
+
+    embed_info.add_field(
+        name="📋 COME VIENE RIMOSSA UNA SANZIONE",
+        value=(
+            "Le sanzioni **non vengono rimosse automaticamente**. "
+            "Per richiedere la rimozione segui questi passi:\n\u200b\n"
+            "**1️⃣  Attendi la scadenza**\n"
+            "Aspetta che il periodo indicato sia trascorso interamente.\n\n"
+            "**2️⃣  Apri un Ticket**\n"
+            "Solo a scadenza avvenuta apri un ticket Supporto chiedendo la rimozione del ruolo.\n\n"
+            "**3️⃣  Verifica Staff**\n"
+            "Lo Staff controllerà che durante il periodo di sanzione il tuo comportamento "
+            "sia stato corretto prima di procedere alla rimozione.\n"
+        ),
+        inline=False,
+    )
+
+    embed_info.add_field(
+        name="⚠️ NOTA IMPORTANTE",
+        value=(
+            "I Ban temporanei vengono gestiti dallo Staff allo scadere del tempo indicato.\n"
+            "Per i Ban Permanenti l'unico modo per rientrare è un eventuale appello, se concesso dall'Amministrazione."
+        ),
+        inline=False,
+    )
+
+    embed_info.set_footer(text="Tokyo Horizon RP | Sistema Sanzioni")
+
+    try:
+        await canale.send(embeds=[embed_warn, embed_ban, embed_info])
+        await interaction.followup.send(
+            f"✅ Pannello sanzioni pubblicato in <#{CANALE_SANZIONI}>!", ephemeral=True
+        )
+        print(f"[SANZIONI] Pannello pubblicato da {interaction.user} in #{canale.name}")
+    except discord.Forbidden:
+        await interaction.followup.send(
+            f"❌ Il bot non ha i permessi per scrivere in <#{CANALE_SANZIONI}>.", ephemeral=True
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
+
+
+# =============================================================================
 # SISTEMA TICKET
 # =============================================================================
 
