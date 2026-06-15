@@ -4050,14 +4050,19 @@ async def setuppg(interaction: discord.Interaction):
 
 _FONT_REGULAR = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 _FONT_BOLD    = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+_FONT_CJK     = "assets/fonts/NotoSansCJKjp-Regular.otf"
 
-# Colori carta
-_C_BG        = (11,  17,  35)   # sfondo carta scuro
-_C_CARD      = (22,  38,  68)   # pannello interno
-_C_GOLD      = (212, 175,  55)  # oro accent
-_C_WHITE     = (240, 240, 240)
-_C_LABEL     = (160, 170, 190)  # testo etichetta
-_C_DIVIDER   = (40,  60,  100)
+# Colori stile 在留カード giapponese
+_C_BG        = (242, 245, 252)   # sfondo carta celeste chiaro
+_C_WHITE     = (255, 255, 255)
+_C_NAVY      = (15,  25,  70)    # header/footer navy
+_C_LABEL_JP  = (148,  20,  65)   # etichette giapponesi bordeaux
+_C_LABEL_EN  = (90,  100, 140)   # etichette inglesi grigio-blu
+_C_VALUE     = (10,   15,  45)   # testo valore scuro
+_C_DIVIDER   = (190, 198, 220)   # linee divisorie
+_C_RED_SEAL  = (185,  20,  20)   # timbro rosso
+_C_GOLD      = (170, 130,  20)   # accento dorato
+_C_PHOTO_BG  = (225, 230, 245)   # sfondo placeholder foto
 
 
 async def _scarica_foto(session: aiohttp.ClientSession, url: str):
@@ -4090,152 +4095,231 @@ async def _genera_carta_img(
     foto_url: str | None,
 ) -> discord.File:
     from PIL import Image, ImageDraw, ImageFont
+    import hashlib
 
-    W, H = 920, 530
+    W, H = 960, 580
 
-    img   = Image.new("RGB", (W, H), _C_BG)
-    draw  = ImageDraw.Draw(img)
+    img  = Image.new("RGB", (W, H), _C_BG)
+    draw = ImageDraw.Draw(img)
 
-    # --- Cornice esterna oro ---
-    draw.rounded_rectangle([4, 4, W - 5, H - 5], radius=18, outline=_C_GOLD, width=3)
+    # --- Watermark: griglia di cerchi sovrapposti (stile 在留カード) ---
+    for ix in range(-20, W + 20, 44):
+        for iy in range(-20, H + 20, 44):
+            draw.ellipse([ix - 16, iy - 16, ix + 16, iy + 16],
+                         outline=(218, 224, 240), width=1)
 
-    # --- Pannello interno ---
-    draw.rounded_rectangle([14, 14, W - 15, H - 15], radius=14, fill=_C_CARD)
-
-    # --- Header bar ---
-    draw.rounded_rectangle([14, 14, W - 15, 74], radius=14, fill=_C_GOLD)
-    draw.rectangle([14, 50, W - 15, 74], fill=_C_GOLD)  # bottom corners flat
-
+    # --- Font ---
     try:
-        f_header = ImageFont.truetype(_FONT_BOLD, 22)
-        f_sub    = ImageFont.truetype(_FONT_REGULAR, 13)
-        f_label  = ImageFont.truetype(_FONT_REGULAR, 13)
-        f_value  = ImageFont.truetype(_FONT_BOLD,    17)
-        f_small  = ImageFont.truetype(_FONT_REGULAR, 12)
-        f_title  = ImageFont.truetype(_FONT_BOLD,    14)
+        fj_big   = ImageFont.truetype(_FONT_CJK, 20)
+        fj_med   = ImageFont.truetype(_FONT_CJK, 14)
+        fj_sm    = ImageFont.truetype(_FONT_CJK, 11)
+        fj_title = ImageFont.truetype(_FONT_CJK, 30)
+        fe_bold  = ImageFont.truetype(_FONT_BOLD,    16)
+        fe_med   = ImageFont.truetype(_FONT_BOLD,    13)
+        fe_sm    = ImageFont.truetype(_FONT_REGULAR, 11)
+        fe_val   = ImageFont.truetype(_FONT_BOLD,    15)
+        fe_valsm = ImageFont.truetype(_FONT_BOLD,    13)
+        fe_hdr   = ImageFont.truetype(_FONT_BOLD,    11)
     except Exception:
-        f_header = f_sub = f_label = f_value = f_small = f_title = ImageFont.load_default()
+        fj_big = fj_med = fj_sm = fj_title = fe_bold = fe_med = \
+        fe_sm = fe_val = fe_valsm = fe_hdr = ImageFont.load_default()
 
-    # Testo header
-    draw.text((W // 2, 26), "🪪  CARTA D'IDENTITÀ", font=f_header,
-              fill=_C_BG, anchor="mm")
-    draw.text((W // 2, 57), "TOKYO HORIZON ROLEPLAY", font=f_sub,
-              fill=_C_BG, anchor="mm")
+    # =========================================================
+    # HEADER BAR
+    # =========================================================
+    HDR_H = 54
+    draw.rectangle([0, 0, W, HDR_H], fill=_C_NAVY)
+    # Sinistra: "東京ホライゾン RP" + sub
+    draw.text((14, 8),  "東京ホライゾン RP", font=fj_med,  fill=_C_WHITE)
+    draw.text((14, 28), "TOKYO HORIZON RP",  font=fe_hdr, fill=(170, 180, 210))
+    # Centro: titolo grande
+    draw.text((W // 2, 10), "在留カード",     font=fj_title, fill=_C_WHITE, anchor="mt")
+    draw.text((W // 2, 40), "PLAYER CARD",   font=fe_hdr,   fill=(170, 180, 210), anchor="mt")
+    # Destra: numero carta
+    card_num = "TH-" + hashlib.md5(nome.encode()).hexdigest()[:6].upper()
+    draw.text((W - 14, 9),  "番号",   font=fj_sm,  fill=(170, 180, 210), anchor="rt")
+    draw.text((W - 14, 22), "No.",    font=fe_hdr, fill=(170, 180, 210), anchor="rt")
+    draw.text((W - 14, 35), card_num, font=fe_hdr, fill=_C_WHITE,        anchor="rt")
+    # Linea oro sotto header
+    draw.line([0, HDR_H, W, HDR_H], fill=_C_GOLD, width=2)
 
-    # --- Sezione foto (sinistra) ---
-    PH_X, PH_Y, PH_W, PH_H = 30, 95, 200, 265
-    # Sfondo grigio placeholder
-    draw.rectangle([PH_X, PH_Y, PH_X + PH_W, PH_Y + PH_H], fill=(30, 45, 75))
-    draw.rectangle([PH_X, PH_Y, PH_X + PH_W, PH_Y + PH_H], outline=_C_GOLD, width=2)
+    # =========================================================
+    # LAYOUT COSTANTI
+    # =========================================================
+    CY   = HDR_H + 2        # content start y
+    FX   = 12               # field x start
+    PH_X = 710              # foto colonna x
+    PH_W = W - PH_X - 14   # foto width  (~236px)
+    PH_H = 290              # foto height
+
+    # Sfondo bianco zona foto
+    draw.rectangle([PH_X - 1, CY, W, H], fill=_C_WHITE)
+    draw.line([PH_X - 1, CY, PH_X - 1, H], fill=_C_DIVIDER, width=2)
+
+    FIELD_W = PH_X - FX - 8  # larghezza disponibile campi
+
+    def draw_row(y, h, jp_lbl, en_lbl, value, vfont=None, alt=False):
+        """Disegna una riga campo stile 在留カード."""
+        draw.rectangle([0, y, PH_X - 2, y + h], fill=(_C_WHITE if alt else _C_BG))
+        draw.text((FX,      y + 3),  jp_lbl, font=fj_sm,  fill=_C_LABEL_JP)
+        draw.text((FX,      y + 16), en_lbl, font=fe_hdr, fill=_C_LABEL_EN)
+        draw.line([FX, y + 29, PH_X - 10, y + 29], fill=_C_DIVIDER, width=1)
+        if value:
+            vf = vfont or fe_val
+            v  = _tronca(value, vf, FIELD_W - 8)
+            draw.text((FX + 4, y + 32), v, font=vf, fill=_C_VALUE)
+        draw.line([0, y + h - 1, PH_X - 2, y + h - 1], fill=_C_DIVIDER, width=1)
+        return y + h
+
+    # --- Parsing ---
+    eta_val = sesso_val = ""
+    if "/" in eta_sesso:
+        p = [x.strip() for x in eta_sesso.split("/", 1)]
+        eta_val, sesso_val = p[0], p[1]
+    else:
+        eta_val = eta_sesso.strip()
+
+    oggi     = date.today()
+    scadenza = oggi.replace(year=oggi.year + 1)
+    rilascio_str = oggi.strftime("%Y年%m月%d日")
+    scadenza_str = scadenza.strftime("%Y年%m月%d日")
+
+    y = CY
+
+    # Riga 1 — 氏名 / NAME
+    y = draw_row(y, 62, "氏名", "NAME", nome, fe_val, alt=True)
+
+    # Riga 2 — 生年月日 / DATE OF BIRTH  +  性別 / SEX  (split orizzontale)
+    r2h = 56
+    draw.rectangle([0, y, PH_X - 2, y + r2h], fill=_C_BG)
+    c1w = int(FIELD_W * 0.64)
+    # Data/luogo
+    draw.text((FX,      y + 3),  "生年月日",        font=fj_sm,  fill=_C_LABEL_JP)
+    draw.text((FX,      y + 16), "DATE OF BIRTH / PLACE", font=fe_hdr, fill=_C_LABEL_EN)
+    draw.line([FX, y + 29, FX + c1w, y + 29], fill=_C_DIVIDER, width=1)
+    draw.text((FX + 4,  y + 32), _tronca(data_luogo, fe_valsm, c1w - 8), font=fe_valsm, fill=_C_VALUE)
+    # Sesso
+    sx = FX + c1w + 12
+    sw = PH_X - sx - 10
+    draw.text((sx,     y + 3),  "性別",  font=fj_sm,  fill=_C_LABEL_JP)
+    draw.text((sx,     y + 16), "SEX",   font=fe_hdr, fill=_C_LABEL_EN)
+    draw.line([sx, y + 29, sx + sw, y + 29], fill=_C_DIVIDER, width=1)
+    draw.text((sx + 4, y + 32), sesso_val or eta_val, font=fe_val, fill=_C_VALUE)
+    draw.line([0, y + r2h - 1, PH_X - 2, y + r2h - 1], fill=_C_DIVIDER, width=1)
+    y += r2h
+
+    # Riga 3 — 国籍・地域 / NATIONALITY
+    y = draw_row(y, 50, "国籍・地域", "NATIONALITY / REGION",
+                 "Tokyo Horizon", fe_valsm, alt=True)
+
+    # Riga 4 — 住居地 / ADDRESS
+    y = draw_row(y, 50, "住居地", "ADDRESS",
+                 "Tokyo Horizon RP — Città Virtuale", fe_valsm)
+
+    # Riga 5 — 在留資格 / STATUS
+    y = draw_row(y, 50, "在留資格", "STATUS",
+                 "Personaggio Registrato", fe_valsm, alt=True)
+
+    # Riga 6 — 特記事項 / SPECIAL NOTES
+    y = draw_row(y, 58, "特記事項", "SPECIAL NOTES", segni, fe_valsm)
+
+    # Riga 7 — Date affiancate (rilascio | scadenza)
+    r7h = 56
+    draw.rectangle([0, y, PH_X - 2, y + r7h], fill=_C_WHITE)
+    hw = (FIELD_W - 16) // 2
+    # Rilascio
+    draw.text((FX,        y + 3),  "交付年月日",      font=fj_sm,  fill=_C_LABEL_JP)
+    draw.text((FX,        y + 16), "DATE OF ISSUE",   font=fe_hdr, fill=_C_LABEL_EN)
+    draw.line([FX, y + 29, FX + hw, y + 29], fill=_C_DIVIDER, width=1)
+    draw.text((FX + 4,    y + 32), rilascio_str,      font=fe_valsm, fill=_C_VALUE)
+    # Scadenza
+    ex = FX + hw + 16
+    draw.text((ex,        y + 3),  "在留期間（満了日）",     font=fj_sm,  fill=_C_LABEL_JP)
+    draw.text((ex,        y + 16), "PERIOD OF STAY (EXPIRY)", font=fe_hdr, fill=_C_LABEL_EN)
+    draw.line([ex, y + 29, ex + hw, y + 29], fill=_C_DIVIDER, width=1)
+    draw.text((ex + 4,    y + 32), scadenza_str, font=fe_valsm, fill=_C_RED_SEAL)
+    draw.line([0, y + r7h - 1, PH_X - 2, y + r7h - 1], fill=_C_DIVIDER, width=1)
+    y += r7h
+
+    # =========================================================
+    # FOTO
+    # =========================================================
+    PH_PX = PH_X + 8
+    PH_PY = CY + 6
+    draw.rectangle([PH_PX, PH_PY, PH_PX + PH_W, PH_PY + PH_H],
+                   fill=_C_PHOTO_BG, outline=_C_DIVIDER, width=1)
 
     foto_img = None
     if foto_url:
         foto_img = await _scarica_foto(bot.aiohttp_session, foto_url)
 
     if foto_img:
-        # Ritaglia al centro e ridimensiona
         ratio = max(PH_W / foto_img.width, PH_H / foto_img.height)
-        new_w = int(foto_img.width * ratio)
-        new_h = int(foto_img.height * ratio)
-        foto_img = foto_img.resize((new_w, new_h), Image.LANCZOS)
-        cx = (new_w - PH_W) // 2
-        cy = (new_h - PH_H) // 2
-        foto_img = foto_img.crop((cx, cy, cx + PH_W, cy + PH_H))
-        img.paste(foto_img, (PH_X, PH_Y))
-        draw.rectangle([PH_X, PH_Y, PH_X + PH_W, PH_Y + PH_H], outline=_C_GOLD, width=2)
+        nw    = int(foto_img.width  * ratio)
+        nh    = int(foto_img.height * ratio)
+        foto_img = foto_img.resize((nw, nh), Image.LANCZOS)
+        cx = (nw - PH_W) // 2
+        cy_c = (nh - PH_H) // 2
+        foto_img = foto_img.crop((cx, cy_c, cx + PH_W, cy_c + PH_H))
+        img.paste(foto_img, (PH_PX, PH_PY))
+        draw.rectangle([PH_PX, PH_PY, PH_PX + PH_W, PH_PY + PH_H],
+                       outline=_C_DIVIDER, width=1)
     else:
         draw.text(
-            (PH_X + PH_W // 2, PH_Y + PH_H // 2),
-            "FOTO\nPERSONAGGIO",
-            font=f_title,
-            fill=_C_LABEL,
-            anchor="mm",
-            align="center",
+            (PH_PX + PH_W // 2, PH_PY + PH_H // 2),
+            "写真\nPHOTO",
+            font=fj_med, fill=_C_LABEL_EN,
+            anchor="mm", align="center",
         )
 
-    # Timbro sotto foto
+    # --- "TOKYO HORIZON RP" verticale (lato destro, come MINISTRY OF JUSTICE) ---
+    try:
+        vert_txt = "TOKYO HORIZON RP"
+        tw       = int(fe_hdr.getlength(vert_txt))
+        vert_img = Image.new("RGBA", (tw + 4, 14), (0, 0, 0, 0))
+        vd       = ImageDraw.Draw(vert_img)
+        vd.text((0, 0), vert_txt, font=fe_hdr, fill=_C_NAVY)
+        vert_rot = vert_img.rotate(90, expand=True)
+        vx = W - 13
+        vy = CY + 10
+        img.paste(vert_rot, (vx, vy), vert_rot)
+    except Exception:
+        pass
+
+    # --- Timbro rosso 法務大臣印 ---
+    seal_cx = PH_X + (W - PH_X) // 2
+    seal_cy = PH_PY + PH_H + 46
+    sr      = 38
+    draw.ellipse([seal_cx - sr,     seal_cy - sr,     seal_cx + sr,     seal_cy + sr],
+                 outline=_C_RED_SEAL, width=3)
+    draw.ellipse([seal_cx - sr + 5, seal_cy - sr + 5, seal_cx + sr - 5, seal_cy + sr - 5],
+                 outline=_C_RED_SEAL, width=1)
+    draw.text((seal_cx, seal_cy - 8), "法務",   font=fj_med, fill=_C_RED_SEAL, anchor="mm")
+    draw.text((seal_cx, seal_cy + 9), "大臣印", font=fj_sm,  fill=_C_RED_SEAL, anchor="mm")
+
+    # --- MOJ badge (come nella carta originale) ---
+    badge_y = PH_PY + PH_H + 4
+    draw.text((PH_X + 10, badge_y), "◆MOJ◆", font=fe_hdr, fill=_C_NAVY)
+
+    # =========================================================
+    # FOOTER BAR
+    # =========================================================
+    footer_y = max(y + 2, H - 68)
+    draw.rectangle([0, footer_y, W, H], fill=_C_NAVY)
+    draw.line([0, footer_y, W, footer_y], fill=_C_GOLD, width=2)
+    # Testo footer giapponese + inglese
     draw.text(
-        (PH_X + PH_W // 2, PH_Y + PH_H + 14),
-        "TOKYO HORIZON RP",
-        font=f_small,
-        fill=_C_GOLD,
-        anchor="mm",
+        (14, footer_y + 8),
+        f"このカードは {scadenza_str} まで有効です",
+        font=fj_med, fill=_C_WHITE,
     )
-
-    # --- Sezione campi (destra) ---
-    RX = PH_X + PH_W + 28   # x inizio colonna destra
-    RW = W - RX - 20         # larghezza disponibile
-
-    oggi     = date.today()
-    scadenza = oggi.replace(year=oggi.year + 1)
-    rilascio_str = oggi.strftime("%d / %m / %Y")
-    scadenza_str = scadenza.strftime("%d / %m / %Y")
-
-    # Parsing età e sesso dalla stringa "28 / M"
-    eta_val = sesso_val = ""
-    if "/" in eta_sesso:
-        parti = [p.strip() for p in eta_sesso.split("/", 1)]
-        eta_val, sesso_val = parti[0], parti[1]
-    else:
-        eta_val = eta_sesso.strip()
-
-    campi = [
-        ("NOME E COGNOME",          nome),
-        ("DATA E LUOGO DI NASCITA", data_luogo),
-        (None, None),              # separatore età/sesso affiancati
-        ("SEGNI PARTICOLARI",       segni),
-        (None, None),              # separatore date
-    ]
-
-    cy_field = 95
-
-    def draw_field(x, y, label, value, w):
-        draw.text((x, y), label, font=f_label, fill=_C_LABEL)
-        draw.line([x, y + 18, x + w, y + 18], fill=_C_DIVIDER, width=1)
-        v = _tronca(value, f_value, w)
-        draw.text((x, y + 22), v, font=f_value, fill=_C_WHITE)
-        return y + 22 + f_value.size + 10
-
-    # Nome e Cognome
-    cy_field = draw_field(RX, cy_field, "NOME E COGNOME", nome, RW)
-    cy_field += 4
-
-    # Data e Luogo
-    cy_field = draw_field(RX, cy_field, "DATA E LUOGO DI NASCITA", data_luogo, RW)
-    cy_field += 4
-
-    # Età | Sesso affiancati
-    half = (RW - 20) // 2
-    draw_field(RX,           cy_field, "ETÀ",   eta_val,   half)
-    draw_field(RX + half + 20, cy_field, "SESSO", sesso_val, half)
-    cy_field += 55
-
-    # Segni Particolari
-    cy_field = draw_field(RX, cy_field, "SEGNI PARTICOLARI", segni, RW)
-    cy_field += 10
-
-    # Linea divisoria
-    draw.line([RX, cy_field, W - 20, cy_field], fill=_C_DIVIDER, width=1)
-    cy_field += 10
-
-    # Date affiancate
-    dw = (RW - 20) // 2
-    # Rilascio
-    draw.text((RX,              cy_field), "📅 DATA DI RILASCIO", font=f_label, fill=_C_LABEL)
-    draw.text((RX,              cy_field + 20), rilascio_str,      font=f_value, fill=_C_WHITE)
-    # Scadenza
-    draw.text((RX + dw + 20,   cy_field), "⏳ DATA DI SCADENZA", font=f_label, fill=_C_LABEL)
-    draw.text((RX + dw + 20,   cy_field + 20), scadenza_str,      font=f_value, fill=_C_GOLD)
-
-    # --- Footer ---
-    draw.line([20, H - 38, W - 20, H - 38], fill=_C_DIVIDER, width=1)
     draw.text(
-        (W // 2, H - 22),
-        "Documento ufficiale Tokyo Horizon RP — valido 1 anno dal rilascio",
-        font=f_small,
-        fill=_C_LABEL,
-        anchor="mm",
+        (14, footer_y + 30),
+        f"PERIOD OF VALIDITY OF THIS CARD  ·  {scadenza.strftime('%d / %m / %Y')}",
+        font=fe_hdr, fill=(170, 180, 210),
     )
+    # Riga bassa sottolineata come nell'originale
+    draw.line([14, footer_y + 26, W - 14, footer_y + 26], fill=_C_GOLD, width=1)
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
