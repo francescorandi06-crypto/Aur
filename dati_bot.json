@@ -1,7 +1,7 @@
 {
   "economia": {
     "1083459553892499476": {
-      "portafoglio": 40000,
+      "portafoglio": 36000,
       "banca": 172000
     },
     "1214733905349845032": {
@@ -20,7 +20,8 @@
       "Sistema di Hacking": 98,
       "Piede di Porco": 81,
       "Pistola": 2,
-      "Slim Jim": 1
+      "Slim Jim": 1,
+      "Dispositivo di Hacking Base": 1
     },
     "1214733905349845032": {
       "Pistola": 1,
@@ -37,7 +38,7 @@
       "foto_ok": true,
       "in_attesa": true,
       "consegnato": false,
-      "in_attesa_at": 1781542367.7134404,
+      "in_attesa_at": 1781542367.6938086,
       "origin_ch_id": 1515093746671292547
     }
   },

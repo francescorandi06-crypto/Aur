@@ -1110,6 +1110,8 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         # Ricarica dal file per avere lo stato aggiornato anche dopo un restart del bot
         _dati_r = carica_dati()
         ordini_pendenti_macchina.update(_dati_r[4])
+        for _k, _v in _dati_r[2].items():
+            inventario[_k] = _v
         ordine_attivo = ordini_pendenti_macchina.get(uid)
         if ordine_attivo and ordine_attivo.get("in_attesa"):
             # Auto-cancella ordini bloccati da più di 4 ore (bot riavviato prima che lo staff approvasse)
