@@ -1976,6 +1976,7 @@ CANALE_FDO               = 1513574802156425267   # canale allerta FDO
 CANALE_STAFF_VEICOLI     = 1515676328622428310   # canale revisione consegna veicoli (staff)
 CANALE_PG                = 1516143484145242253   # canale richiesta personaggio (whitelist)
 CANALE_REVISIONE_PG      = 1515676328622428310   # canale revisione staff PG (whitelist)
+CANALE_ESITO_PG          = 1516168066227241073   # canale esito PG (pubblico)
 RUOLO_GESTORE_WL         = 1514818877014409227   # ruolo @gestore wl
 CANALE_CARTA             = 1516151385064869928   # canale carta d'identità
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
@@ -3760,26 +3761,24 @@ class RifiutoPGModal(discord.ui.Modal, title="❌ Motivo del Rifiuto PG"):
         embed_staff.set_footer(text=f"User ID: {self.autore_id} | Tokyo Horizon RP | Whitelist")
         await interaction.message.edit(embed=embed_staff, view=None)
 
-        # DM al giocatore
+        # Notifica nel canale esito PG (pubblico)
         try:
-            utente = bot.get_user(self.autore_id) or await bot.fetch_user(self.autore_id)
-            embed_dm = discord.Embed(
+            canale_esito = bot.get_channel(CANALE_ESITO_PG) or await bot.fetch_channel(CANALE_ESITO_PG)
+            embed_esito = discord.Embed(
                 title="❌ Richiesta Personaggio Rifiutata",
                 description=(
-                    f"Ciao {utente.mention},\n\n"
-                    f"La tua richiesta di personaggio **{self.nome_pg}** è stata **rifiutata** dallo staff.\n\n"
+                    f"<@{self.autore_id}> la tua richiesta di personaggio **{self.nome_pg}** "
+                    f"è stata **rifiutata** dallo staff.\n\n"
                     f"📝 **Motivo:** {self.motivo.value.strip()}\n\n"
                     "Correggila e ripresentala quando vuoi usando il bottone **📋 Richiesta PG**. 🗼"
                 ),
                 color=discord.Color.red(),
             )
-            embed_dm.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
-            await utente.send(embed=embed_dm)
-            print(f"[PG] Richiesta rifiutata per uid={self.autore_id} — DM inviato.")
-        except discord.Forbidden:
-            print(f"[PG] ⚠️ DM disabilitati per uid={self.autore_id} — impossibile notificare.")
+            embed_esito.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
+            await canale_esito.send(content=f"<@{self.autore_id}>", embed=embed_esito)
+            print(f"[PG] Richiesta rifiutata per uid={self.autore_id} — notifica in esito PG inviata.")
         except Exception as e:
-            print(f"[PG] ❌ Errore DM rifiuto: {e}")
+            print(f"[PG] ❌ Errore notifica rifiuto in esito PG: {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         print(f"[PG RIFIUTO MODAL] Errore: {type(error).__name__}: {error}")
@@ -3842,26 +3841,24 @@ class RevisionePGView(discord.ui.View):
         embed_staff.set_footer(text=f"User ID: {self.autore_id} | Tokyo Horizon RP | Whitelist")
         await interaction.response.edit_message(embed=embed_staff, view=None)
 
-        # DM al giocatore
+        # Notifica nel canale esito PG (pubblico)
         try:
-            utente = bot.get_user(self.autore_id) or await bot.fetch_user(self.autore_id)
-            embed_dm = discord.Embed(
+            canale_esito = bot.get_channel(CANALE_ESITO_PG) or await bot.fetch_channel(CANALE_ESITO_PG)
+            embed_esito = discord.Embed(
                 title="✅ Richiesta Personaggio Accettata!",
                 description=(
-                    f"Ciao {utente.mention}! 🎉\n\n"
-                    f"La tua richiesta di personaggio **{nome_pg}** è stata **accettata** dallo staff!\n\n"
+                    f"<@{self.autore_id}> il tuo personaggio **{nome_pg}** è stato accettato, "
+                    f"hai superato la prima fase! 🎉\n\n"
                     "Sarai contattato a breve per il **colloquio orale** e il completamento della whitelist.\n"
                     "Benvenuto su Tokyo Horizon RP! 🗼"
                 ),
                 color=discord.Color.green(),
             )
-            embed_dm.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
-            await utente.send(embed=embed_dm)
-            print(f"[PG] Richiesta accettata per uid={self.autore_id} — DM inviato.")
-        except discord.Forbidden:
-            print(f"[PG] ⚠️ DM disabilitati per uid={self.autore_id} — impossibile notificare.")
+            embed_esito.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
+            await canale_esito.send(content=f"<@{self.autore_id}>", embed=embed_esito)
+            print(f"[PG] Richiesta accettata per uid={self.autore_id} — notifica in esito PG inviata.")
         except Exception as e:
-            print(f"[PG] ❌ Errore DM accettazione: {e}")
+            print(f"[PG] ❌ Errore notifica accettazione in esito PG: {e}")
 
     async def _rifiuta(self, interaction: discord.Interaction):
         if not ha_permessi_revisione_pg(interaction):
