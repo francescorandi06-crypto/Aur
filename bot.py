@@ -70,7 +70,9 @@ class TokyoHorizonBot(commands.Bot):
     async def setup_hook(self):
         self.aiohttp_session = aiohttp.ClientSession()
         self.add_view(VeicoloButtons())
-        print("Tokyo Horizon Bot: setup_hook completato.")
+        # Sync globale — una sola volta all'avvio
+        await self.tree.sync()
+        print("Tokyo Horizon Bot: setup_hook completato — comandi globali sincronizzati.")
 
     async def close(self):
         if self.aiohttp_session and not self.aiohttp_session.closed:
@@ -81,10 +83,11 @@ class TokyoHorizonBot(commands.Bot):
         bot.ready_time = discord.utils.utcnow()  # Timestamp da cui accettare interazioni
         print(f"✅ {self.user} è online e pronto!")
         print(f"   Connesso a {len(self.guilds)} server/i")
+        # Rimuove i comandi guild-specifici duplicati lasciati da vecchie istanze
         for guild in self.guilds:
-            self.tree.copy_global_to(guild=guild)
+            self.tree.clear_commands(guild=guild)
             await self.tree.sync(guild=guild)
-        print("   Comandi sincronizzati su tutti i server.")
+        print("   Comandi guild-specifici rimossi (nessun duplicato).")
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
