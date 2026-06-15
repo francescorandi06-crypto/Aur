@@ -1439,12 +1439,14 @@ async def negozio(interaction: discord.Interaction):
 @bot.tree.command(name="compra", description="Acquista un articolo dal negozio")
 @app_commands.describe(articolo="L'articolo che vuoi acquistare")
 @app_commands.choices(articolo=[
-    app_commands.Choice(name="Cacciavite (1.250€)",            value="Cacciavite"),
-    app_commands.Choice(name="Piede di Porco (1.000€)",        value="Piede di Porco"),
-    app_commands.Choice(name="Grimaldello (1.500€)",           value="Grimaldello"),
-    app_commands.Choice(name="Grimaldello Avanzato (15.000€)", value="Grimaldello Avanzato"),
-    app_commands.Choice(name="Sistema di Hacking (4.000€)",    value="Sistema di Hacking"),
-    app_commands.Choice(name="Trapano (9.990€)",               value="Trapano"),
+    app_commands.Choice(name="Cacciavite (1.250€)",              value="Cacciavite"),
+    app_commands.Choice(name="Piede di Porco (1.000€)",          value="Piede di Porco"),
+    app_commands.Choice(name="Grimaldello (1.500€)",             value="Grimaldello"),
+    app_commands.Choice(name="Grimaldello Avanzato (15.000€)",   value="Grimaldello Avanzato"),
+    app_commands.Choice(name="Sistema di Hacking (4.000€)",      value="Sistema di Hacking"),
+    app_commands.Choice(name="Slim Jim (4.000€)",                value="Slim Jim"),
+    app_commands.Choice(name="Dispositivo di Hacking Base (4.000€)", value="Dispositivo di Hacking Base"),
+    app_commands.Choice(name="Trapano (8.000€)",                 value="Trapano"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True):
