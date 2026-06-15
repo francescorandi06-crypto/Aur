@@ -74,7 +74,6 @@ class TokyoHorizonBot(commands.Bot):
         self.add_view(VeicoloButtons())
         self.add_view(RichiestaPGView())
         self.add_view(CartaIdentitaView())
-        self.add_view(TicketPannelloView())
         self.add_view(ChiudiTicketView())
         # Re-registra le view di approvazione per gli ordini in_attesa sopravvissuti al restart
         for uid, ordine in list(ordini_pendenti_macchina.items()):
