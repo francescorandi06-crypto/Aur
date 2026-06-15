@@ -70,6 +70,15 @@ class TokyoHorizonBot(commands.Bot):
     async def setup_hook(self):
         self.aiohttp_session = aiohttp.ClientSession()
         self.add_view(VeicoloButtons())
+        # Re-registra le view di approvazione per gli ordini in_attesa sopravvissuti al restart
+        for uid, ordine in list(ordini_pendenti_macchina.items()):
+            if ordine.get("in_attesa"):
+                view = ApprovazioneCosegnaView(
+                    autore_id=uid,
+                    origin_ch_id=ordine.get("origin_ch_id"),
+                )
+                self.add_view(view)
+                print(f"[VEICOLO] Vista approvazione ri-registrata per uid={uid} modello={ordine.get('modello', '?')}")
         # Sync globale — una sola volta all'avvio
         await self.tree.sync()
         print("Tokyo Horizon Bot: setup_hook completato — comandi globali sincronizzati.")
@@ -769,39 +778,62 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
 
 
 class ApprovazioneCosegnaView(discord.ui.View):
-    def __init__(self, autore_id, guadagno, modello, destinazione, messaggio_originale):
-        super().__init__(timeout=1800)
+    """
+    Vista persistente per l'approvazione delle consegne veicolo.
+    - timeout=None: i bottoni rimangono attivi senza limiti di tempo
+    - custom_id univoco per utente: sopravvive ai riavvii del bot
+    - I dati dell'ordine vengono riletti freschi dal dict in-memoria ad ogni click
+    """
+    def __init__(self, autore_id: int, origin_ch_id: int = None):
+        super().__init__(timeout=None)
         self.autore_id = autore_id
-        self.guadagno = guadagno
-        self.modello = modello
-        self.destinazione = destinazione
-        self.messaggio_originale = messaggio_originale
-        self.deciso = False
+        self.origin_ch_id = origin_ch_id
 
-    @discord.ui.button(label="✅ Approva", style=discord.ButtonStyle.success)
-    async def approva(self, interaction: discord.Interaction, button: discord.ui.Button):
+        btn_approva = discord.ui.Button(
+            label="✅ Approva",
+            style=discord.ButtonStyle.success,
+            custom_id=f"vei:approva:{autore_id}",
+        )
+        btn_approva.callback = self._approva
+        self.add_item(btn_approva)
+
+        btn_rifiuta = discord.ui.Button(
+            label="❌ Rifiuta",
+            style=discord.ButtonStyle.danger,
+            custom_id=f"vei:rifiuta:{autore_id}",
+        )
+        btn_rifiuta.callback = self._rifiuta
+        self.add_item(btn_rifiuta)
+
+    async def _approva(self, interaction: discord.Interaction):
         if not ha_permessi_approvazione(interaction):
             await interaction.response.send_message("❌ Solo lo staff può approvare le consegne.", ephemeral=True)
             return
-        if self.deciso:
-            await interaction.response.send_message("⚠️ Questa consegna è già stata processata.", ephemeral=True)
+
+        ordine = ordini_pendenti_macchina.get(self.autore_id)
+        if not ordine or not ordine.get("in_attesa"):
+            await interaction.response.send_message("⚠️ Questa consegna è già stata processata o è scaduta.", ephemeral=True)
             return
 
-        self.deciso = True
-        for child in self.children:
-            child.disabled = True
+        guadagno     = ordine.get("guadagno", 0)
+        modello      = ordine.get("modello", "?")
+        destinazione = ordine.get("destinazione", "?")
+        origin_ch_id = ordine.get("origin_ch_id") or self.origin_ch_id
 
-        ordine = ordini_pendenti_macchina.pop(self.autore_id, None)
+        ordini_pendenti_macchina.pop(self.autore_id, None)
         furto_cooldown.setdefault(self.autore_id, {})["macchina"] = time.time()
         bilancio = get_balance(self.autore_id)
-        bilancio["banca"] += self.guadagno
+        bilancio["banca"] += guadagno
         salva_dati()
+
+        for child in self.children:
+            child.disabled = True
 
         embed_are = discord.Embed(
             title="✅ CONSEGNA APPROVATA",
             description=(
-                f"La consegna del veicolo `{self.modello}` è stata approvata da {interaction.user.mention}.\n\n"
-                f"💰 **Compenso:** `{self.guadagno:,}€` accreditati in banca al giocatore."
+                f"La consegna del veicolo `{modello}` è stata approvata da {interaction.user.mention}.\n\n"
+                f"💰 **Compenso:** `{guadagno:,}€` accreditati in banca al giocatore."
             ),
             color=discord.Color.green()
         )
@@ -812,51 +844,44 @@ class ApprovazioneCosegnaView(discord.ui.View):
             title="🚗 VEICOLO CONSEGNATO — APPROVATO!",
             description=(
                 f"<@{self.autore_id}> Lo staff ha verificato e **approvato** la tua consegna!\n\n"
-                f"🚘 **Veicolo:** `{self.modello}`\n"
-                f"📍 **Destinazione:** `{self.destinazione}`\n"
-                f"💰 **Compenso:** `{self.guadagno:,}€` accreditati in **Banca**."
+                f"🚘 **Veicolo:** `{modello}`\n"
+                f"📍 **Destinazione:** `{destinazione}`\n"
+                f"💰 **Compenso:** `{guadagno:,}€` accreditati in **Banca**."
             ),
             color=discord.Color.green()
         )
         embed_rapine.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-
-        embed_originale_finale = discord.Embed(
-            title="✅ Consegna Approvata",
-            description=f"Veicolo `{self.modello}` — approvato da {interaction.user.mention}.",
-            color=discord.Color.green()
-        )
-        embed_originale_finale.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
-
         try:
-            canale_rapine = self.messaggio_originale.channel
-            await canale_rapine.send(f"<@{self.autore_id}>", embed=embed_rapine)
+            ch = (bot.get_channel(origin_ch_id) or await bot.fetch_channel(origin_ch_id)) if origin_ch_id else None
+            if ch:
+                await ch.send(f"<@{self.autore_id}>", embed=embed_rapine)
         except Exception as e:
-            print(f"[ERRORE] Notifica approvazione in rapine fallita: {e}")
-        try:
-            await self.messaggio_originale.edit(embed=embed_originale_finale, view=None)
-        except Exception as e:
-            print(f"[ERRORE] Aggiornamento messaggio originale fallito: {e}")
+            print(f"[ERRORE] Notifica approvazione fallita: {e}")
 
-    @discord.ui.button(label="❌ Rifiuta", style=discord.ButtonStyle.danger)
-    async def rifiuta(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def _rifiuta(self, interaction: discord.Interaction):
         if not ha_permessi_approvazione(interaction):
             await interaction.response.send_message("❌ Solo lo staff può rifiutare le consegne.", ephemeral=True)
             return
-        if self.deciso:
-            await interaction.response.send_message("⚠️ Questa consegna è già stata processata.", ephemeral=True)
+
+        ordine = ordini_pendenti_macchina.get(self.autore_id)
+        if not ordine or not ordine.get("in_attesa"):
+            await interaction.response.send_message("⚠️ Questa consegna è già stata processata o è scaduta.", ephemeral=True)
             return
 
-        self.deciso = True
+        guadagno     = ordine.get("guadagno", 0)
+        modello      = ordine.get("modello", "?")
+        origin_ch_id = ordine.get("origin_ch_id") or self.origin_ch_id
+
+        ordini_pendenti_macchina.pop(self.autore_id, None)
+        salva_dati()
+
         for child in self.children:
             child.disabled = True
-
-        ordine = ordini_pendenti_macchina.pop(self.autore_id, None)
-        salva_dati()
 
         embed_are = discord.Embed(
             title="❌ CONSEGNA RIFIUTATA",
             description=(
-                f"La consegna del veicolo `{self.modello}` è stata **rifiutata** da {interaction.user.mention}.\n\n"
+                f"La consegna del veicolo `{modello}` è stata **rifiutata** da {interaction.user.mention}.\n\n"
                 f"Il compenso **non** è stato accreditato al giocatore."
             ),
             color=discord.Color.red()
@@ -868,30 +893,19 @@ class ApprovazioneCosegnaView(discord.ui.View):
             title="🚗 CONSEGNA RIFIUTATA",
             description=(
                 f"<@{self.autore_id}> Lo staff ha verificato e **rifiutato** la tua consegna.\n\n"
-                f"🚘 **Veicolo:** `{self.modello}`\n"
-                f"💰 Il compenso di `{self.guadagno:,}€` **non** è stato accreditato.\n\n"
+                f"🚘 **Veicolo:** `{modello}`\n"
+                f"💰 Il compenso di `{guadagno:,}€` **non** è stato accreditato.\n\n"
                 f"Contatta lo staff per maggiori informazioni."
             ),
             color=discord.Color.red()
         )
         embed_rapine.set_footer(text="Tokyo Horizon RP | Sistema Economia")
-
-        embed_originale_finale = discord.Embed(
-            title="❌ Consegna Rifiutata",
-            description=f"Veicolo `{self.modello}` — rifiutato da {interaction.user.mention}.",
-            color=discord.Color.red()
-        )
-        embed_originale_finale.set_footer(text="Tokyo Horizon RP | Sistema Furto Veicoli")
-
         try:
-            canale_rapine = self.messaggio_originale.channel
-            await canale_rapine.send(f"<@{self.autore_id}>", embed=embed_rapine)
+            ch = (bot.get_channel(origin_ch_id) or await bot.fetch_channel(origin_ch_id)) if origin_ch_id else None
+            if ch:
+                await ch.send(f"<@{self.autore_id}>", embed=embed_rapine)
         except Exception as e:
-            print(f"[ERRORE] Notifica rifiuto in rapine fallita: {e}")
-        try:
-            await self.messaggio_originale.edit(embed=embed_originale_finale, view=None)
-        except Exception as e:
-            print(f"[ERRORE] Aggiornamento messaggio originale fallito: {e}")
+            print(f"[ERRORE] Notifica rifiuto fallita: {e}")
 
 
 class VeicoloButtons(discord.ui.View):
@@ -946,8 +960,9 @@ class VeicoloButtons(discord.ui.View):
             await interaction.response.send_message("✅ Questa consegna è già stata processata.", ephemeral=True)
             return
 
-        ordine["in_attesa"] = True
+        ordine["in_attesa"]    = True
         ordine["in_attesa_at"] = time.time()
+        ordine["origin_ch_id"] = interaction.channel_id   # per notifica dopo approvazione/rifiuto
         salva_dati()
         print(f"[VEICOLO] Consegna uid={uid} modello={ordine['modello']} → in_attesa=True salvato")
 
@@ -964,13 +979,12 @@ class VeicoloButtons(discord.ui.View):
         )
         embed_staff.set_footer(text="Tokyo Horizon RP | Pannello Staff — Furto Veicoli")
 
+        # Vista persistente: timeout=None, custom_id univoco per utente — sopravvive ai riavvii
         view_approvazione = ApprovazioneCosegnaView(
             autore_id=uid,
-            guadagno=ordine["guadagno"],
-            modello=ordine["modello"],
-            destinazione=ordine["destinazione"],
-            messaggio_originale=interaction.message,
+            origin_ch_id=interaction.channel_id,
         )
+        bot.add_view(view_approvazione)   # registra subito per questo bot instance
 
         await interaction.response.send_message(
             "📋 **Richiesta inviata allo staff!** Attendi che verifichino la tua consegna.",

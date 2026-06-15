@@ -18,16 +18,11 @@
     }
   },
   "canale_furti_id": 1515093746671292547,
-  "ordini_macchina": {
-    "1083459553892499476": {
-      "guadagno": 5000,
-      "destinazione": "Officina Meccanica di Harmony (Route 68)",
-      "modello": "Aura",
-      "foto_ok": true,
-      "in_attesa": true,
-      "consegnato": false
-    }
-  },
+  "ordini_macchina": {},
   "rapine_pendenti": {},
-  "rapine_pendenti_minimarket": {}
+  "rapine_pendenti_minimarket": {},
+  "rapine_pendenti_armeria": {},
+  "rapine_pendenti_fleeca": {},
+  "rapine_pendenti_gioielleria": {},
+  "rapine_pendenti_mazebank": {}
 }
