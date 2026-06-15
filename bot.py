@@ -404,23 +404,23 @@ def get_inventario(user_id):
     return inventario[user_id]
 
 NEGOZIO = {
-    "Cacciavite":           {"prezzo": 1250,  "emoji": "🪛",  "descrizione": "Forza la cassa dei minimarket. Indispensabile per il Colpo al Minimarket (in alternativa al Piede di Porco)."},
-    "Piede di Porco":       {"prezzo": 1000,  "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usabile anche per il Colpo al Minimarket. Indispensabile per bancomat, case e ville."},
-    "Grimaldello":          {"prezzo": 1500,  "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
-    "Grimaldello Avanzato": {"prezzo": 15000, "emoji": "🔐",  "descrizione": "Scassina serrature blindate di alta sicurezza. Obbligatorio per il Grande Colpo alla Maze Bank (min 2 unità)."},
+    "Piede di Porco":              {"prezzo": 1000,  "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usabile anche per il Colpo al Minimarket. Indispensabile per bancomat, case e ville."},
+    "Cacciavite":                  {"prezzo": 1250,  "emoji": "🪛",  "descrizione": "Forza la cassa dei minimarket. Indispensabile per il Colpo al Minimarket (in alternativa al Piede di Porco)."},
+    "Grimaldello":                 {"prezzo": 1500,  "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
     "Sistema di Hacking":          {"prezzo": 4000,  "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere base. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
     "Slim Jim":                    {"prezzo": 4000,  "emoji": "🔓",  "descrizione": "Apre le portiere dei veicoli senza chiave. Obbligatorio per il furto di veicoli (insieme al Dispositivo di Hacking Base)."},
     "Dispositivo di Hacking Base": {"prezzo": 4000,  "emoji": "📟",  "descrizione": "Azzera il sistema antifurto del veicolo. Obbligatorio per il furto di veicoli (insieme allo Slim Jim)."},
     "Trapano":                     {"prezzo": 8000,  "emoji": "🔧",  "descrizione": "Perfora le cassette di sicurezza blindate. Obbligatorio per la Rapina alla Banca Fleeca (1x, insieme a 5x Piede di Porco)."},
+    "Grimaldello Avanzato":        {"prezzo": 15000, "emoji": "🔐",  "descrizione": "Scassina serrature blindate di alta sicurezza. Obbligatorio per il Grande Colpo alla Maze Bank (min 2 unità)."},
 }
 
 MERCATO_NERO = {
-    "Pistola":                         {"prezzo": 10000, "emoji": "🔫", "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Non viene consumata — resta in inventario."},
-    "Gas Soporifero":                  {"prezzo": 8000,  "emoji": "😴", "descrizione": "Gas anestetico militare che induce il sonno. Necessario per l'Assalto alla Gioielleria."},
-    "Dispositivo di Hacking Medio":    {"prezzo": 15000, "emoji": "📡", "descrizione": "Hackera sistemi di sorveglianza di livello medio. Obbligatorio per l'Assalto alla Gioielleria."},
+    "Gas Soporifero":                  {"prezzo": 8000,  "emoji": "😴",  "descrizione": "Gas anestetico militare che induce il sonno. Necessario per l'Assalto alla Gioielleria."},
+    "Pistola":                         {"prezzo": 10000, "emoji": "🔫",  "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Non viene consumata — resta in inventario."},
+    "Dispositivo di Hacking Medio":    {"prezzo": 15000, "emoji": "📡",  "descrizione": "Hackera sistemi di sorveglianza di livello medio. Obbligatorio per l'Assalto alla Gioielleria."},
+    "Lancia Termica":                  {"prezzo": 30000, "emoji": "🔥",  "descrizione": "Brucia serrature e porte blindate. Necessaria per aprire le serrature del caveau della Maze Bank."},
     "Dispositivo di Hacking Avanzato": {"prezzo": 50000, "emoji": "🖥️", "descrizione": "Hackera sistemi digitali di livello militare. Obbligatorio per il Grande Colpo alla Maze Bank."},
-    "Lancia Termica":                  {"prezzo": 30000, "emoji": "🔥", "descrizione": "Brucia serrature e porte blindate. Necessaria per aprire le serrature del caveau della Maze Bank."},
-    "Trapano Pesante Professionale":   {"prezzo": 50000, "emoji": "⚙️", "descrizione": "Perfora il caveau della Maze Bank. Obbligatorio per il Grande Colpo."},
+    "Trapano Pesante Professionale":   {"prezzo": 50000, "emoji": "⚙️",  "descrizione": "Perfora il caveau della Maze Bank. Obbligatorio per il Grande Colpo."},
 }
 
 RUOLI_STAFF = {
@@ -1439,14 +1439,14 @@ async def negozio(interaction: discord.Interaction):
 @bot.tree.command(name="compra", description="Acquista un articolo dal negozio")
 @app_commands.describe(articolo="L'articolo che vuoi acquistare")
 @app_commands.choices(articolo=[
-    app_commands.Choice(name="Cacciavite (1.250€)",              value="Cacciavite"),
-    app_commands.Choice(name="Piede di Porco (1.000€)",          value="Piede di Porco"),
-    app_commands.Choice(name="Grimaldello (1.500€)",             value="Grimaldello"),
-    app_commands.Choice(name="Grimaldello Avanzato (15.000€)",   value="Grimaldello Avanzato"),
-    app_commands.Choice(name="Sistema di Hacking (4.000€)",      value="Sistema di Hacking"),
-    app_commands.Choice(name="Slim Jim (4.000€)",                value="Slim Jim"),
+    app_commands.Choice(name="Piede di Porco (1.000€)",              value="Piede di Porco"),
+    app_commands.Choice(name="Cacciavite (1.250€)",                  value="Cacciavite"),
+    app_commands.Choice(name="Grimaldello (1.500€)",                 value="Grimaldello"),
+    app_commands.Choice(name="Sistema di Hacking (4.000€)",          value="Sistema di Hacking"),
+    app_commands.Choice(name="Slim Jim (4.000€)",                    value="Slim Jim"),
     app_commands.Choice(name="Dispositivo di Hacking Base (4.000€)", value="Dispositivo di Hacking Base"),
-    app_commands.Choice(name="Trapano (8.000€)",                 value="Trapano"),
+    app_commands.Choice(name="Trapano (8.000€)",                     value="Trapano"),
+    app_commands.Choice(name="Grimaldello Avanzato (15.000€)",       value="Grimaldello Avanzato"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True):
@@ -1497,11 +1497,11 @@ async def mercatonero(interaction: discord.Interaction):
 @bot.tree.command(name="compranero", description="Acquista un articolo dal mercato nero")
 @app_commands.describe(articolo="L'articolo illegale che vuoi acquistare")
 @app_commands.choices(articolo=[
-    app_commands.Choice(name="Pistola (10.000€)",                          value="Pistola"),
     app_commands.Choice(name="Gas Soporifero (8.000€)",                    value="Gas Soporifero"),
+    app_commands.Choice(name="Pistola (10.000€)",                          value="Pistola"),
     app_commands.Choice(name="Dispositivo di Hacking Medio (15.000€)",     value="Dispositivo di Hacking Medio"),
-    app_commands.Choice(name="Dispositivo di Hacking Avanzato (50.000€)",  value="Dispositivo di Hacking Avanzato"),
     app_commands.Choice(name="Lancia Termica (30.000€)",                   value="Lancia Termica"),
+    app_commands.Choice(name="Dispositivo di Hacking Avanzato (50.000€)",  value="Dispositivo di Hacking Avanzato"),
     app_commands.Choice(name="Trapano Pesante Professionale (50.000€)",    value="Trapano Pesante Professionale"),
 ])
 async def compranero(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
