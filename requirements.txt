@@ -1,11 +1,8 @@
 discord.py>=2.3.0
 aiohttp
 flask
-aiohttp
-discord.py
-flask
 email_validator
-flask
 flask-sqlalchemy
 gunicorn
 psycopg2-binary
+Pillow
