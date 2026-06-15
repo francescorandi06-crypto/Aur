@@ -4667,7 +4667,7 @@ async def setupsanzioni(interaction: discord.Interaction):
 
     embed_info.add_field(
         name="2️⃣  Apri un Ticket",
-        value="Solo a scadenza avvenuta apri un ticket Supporto chiedendo la rimozione del ruolo sanzione.\n\u200b",
+        value="Solo a scadenza avvenuta apri un ticket in <#1516194247210963015> chiedendo la rimozione del ruolo sanzione.\n\u200b",
         inline=False,
     )
 
