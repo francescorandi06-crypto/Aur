@@ -70,6 +70,7 @@ class TokyoHorizonBot(commands.Bot):
     async def setup_hook(self):
         self.aiohttp_session = aiohttp.ClientSession()
         self.add_view(VeicoloButtons())
+        self.add_view(RichiestaPGView())
         # Re-registra le view di approvazione per gli ordini in_attesa sopravvissuti al restart
         for uid, ordine in list(ordini_pendenti_macchina.items()):
             if ordine.get("in_attesa"):
@@ -1955,6 +1956,7 @@ ATM_IMAGE = "attached_assets/IMG_1429_1781378756942.jpeg"
 CANALE_POLIZIA_HARDCODED = 1515439682333180015   # canale #RAPINE (criminale)
 CANALE_FDO               = 1513574802156425267   # canale allerta FDO
 CANALE_STAFF_VEICOLI     = 1515676328622428310   # canale revisione consegna veicoli (staff)
+CANALE_PG                = 1516143484145242253   # canale richiesta personaggio (whitelist)
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 
 # Tiene traccia di quali uid hanno già un task accredita_bancomat in esecuzione
@@ -3687,6 +3689,162 @@ async def pulisci(interaction: discord.Interaction, quantita: app_commands.Range
     except discord.Forbidden:
         await interaction.followup.send(
             "❌ Non ho i permessi per cancellare messaggi in questo canale.", ephemeral=True
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
+
+
+# =============================================================================
+# MODULO PG — Richiesta Personaggio (Whitelist)
+# =============================================================================
+
+class RichiestaPGModal(discord.ui.Modal, title="📋 Richiesta Personaggio — Tokyo Horizon RP"):
+    nome_cognome = discord.ui.TextInput(
+        label="1. Nome e Cognome del Personaggio",
+        placeholder="Es: Luca Moretti  (includi il soprannome se ce l'hai)",
+        min_length=3,
+        max_length=80,
+        style=discord.TextStyle.short,
+    )
+    eta = discord.ui.TextInput(
+        label="2. Età del Personaggio",
+        placeholder="Es: 28",
+        min_length=1,
+        max_length=10,
+        style=discord.TextStyle.short,
+    )
+    background = discord.ui.TextInput(
+        label="3. Breve Storia (Background)",
+        placeholder="Qualche riga su chi è e come è arrivato a Tokyo Horizon...",
+        min_length=20,
+        max_length=500,
+        style=discord.TextStyle.paragraph,
+    )
+    esperienza_rp = discord.ui.TextInput(
+        label="4. Hai già esperienza di RP?",
+        placeholder="Sì / No — e se sì, dove hai già giocato",
+        min_length=2,
+        max_length=200,
+        style=discord.TextStyle.short,
+    )
+    disponibilita = discord.ui.TextInput(
+        label="5. Disponibilità per il colloquio orale",
+        placeholder="Es: Lunedì-Venerdì dopo le 19:00, weekend tutto il giorno",
+        min_length=5,
+        max_length=200,
+        style=discord.TextStyle.short,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        nome   = self.nome_cognome.value.strip()
+        eta    = self.eta.value.strip()
+        bg     = self.background.value.strip()
+        exp    = self.esperienza_rp.value.strip()
+        dispo  = self.disponibilita.value.strip()
+
+        embed_utente = discord.Embed(
+            title="✅ Richiesta PG Inviata!",
+            description=(
+                "La tua richiesta di personaggio è stata inviata allo staff.\n"
+                "Verrai contattato per il **colloquio orale** nei giorni da te indicati.\n\n"
+                "Nel frattempo puoi esplorare il server e leggere le regole. 🗼"
+            ),
+            color=discord.Color.green(),
+        )
+        embed_utente.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
+        await interaction.followup.send(embed=embed_utente, ephemeral=True)
+
+        embed_staff = discord.Embed(
+            title="📋 NUOVA RICHIESTA PERSONAGGIO",
+            color=discord.Color.blurple(),
+        )
+        embed_staff.set_author(
+            name=f"{interaction.user.display_name} ({interaction.user})",
+            icon_url=interaction.user.display_avatar.url,
+        )
+        embed_staff.add_field(name="1️⃣ Nome e Cognome", value=nome, inline=False)
+        embed_staff.add_field(name="2️⃣ Età", value=eta, inline=True)
+        embed_staff.add_field(name="4️⃣ Esperienza RP", value=exp, inline=True)
+        embed_staff.add_field(name="3️⃣ Background", value=bg, inline=False)
+        embed_staff.add_field(name="5️⃣ Disponibilità colloquio", value=dispo, inline=False)
+        embed_staff.set_footer(text=f"User ID: {interaction.user.id} | Tokyo Horizon RP | Whitelist")
+
+        try:
+            canale_pg = bot.get_channel(CANALE_PG) or await bot.fetch_channel(CANALE_PG)
+            await canale_pg.send(
+                content=f"📩 Nuova richiesta da {interaction.user.mention}",
+                embed=embed_staff,
+            )
+            print(f"[PG] Richiesta inviata da {interaction.user} (id={interaction.user.id})")
+        except Exception as e:
+            print(f"[PG] ❌ Errore invio richiesta nel canale staff: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        print(f"[PG MODAL] Errore: {type(error).__name__}: {error}")
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
+class RichiestaPGView(discord.ui.View):
+    """Vista persistente — il bottone rimane attivo dopo i riavvii del bot."""
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="📋 Richiesta PG",
+        style=discord.ButtonStyle.primary,
+        custom_id="pg:richiesta",
+    )
+    async def apri_form(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(RichiestaPGModal())
+
+
+@bot.tree.command(
+    name="setuppg",
+    description="[MOD] Pubblica il pannello richiesta personaggio nel canale WL",
+)
+async def setuppg(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message(
+            "❌ Solo lo staff può usare questo comando.", ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    embed = discord.Embed(
+        title="🗼 Richiesta Personaggio — Tokyo Horizon RP",
+        description=(
+            "Benvenuto/a su **Tokyo Horizon RP**!\n\n"
+            "Per ottenere la **whitelist** e iniziare a giocare devi compilare la tua "
+            "**scheda personaggio**. Clicca il bottone qui sotto e rispondi alle domande.\n\n"
+            "📌 **Come funziona:**\n"
+            "• Premi **📋 Richiesta PG** e compila il form\n"
+            "• Lo staff riceverà la tua richiesta e ti contatterà\n"
+            "• Farai un breve **colloquio orale** per completare la whitelist\n\n"
+            "Hai dubbi? Apri un ticket o contatta lo staff. Buon roleplay! 🎮"
+        ),
+        color=discord.Color.from_rgb(88, 101, 242),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
+
+    try:
+        canale = bot.get_channel(CANALE_PG) or await bot.fetch_channel(CANALE_PG)
+        await canale.send(embed=embed, view=RichiestaPGView())
+        await interaction.followup.send(
+            f"✅ Pannello PG pubblicato in <#{CANALE_PG}>!", ephemeral=True
+        )
+        print(f"[PG] Pannello pubblicato da {interaction.user} in #{canale.name}")
+    except discord.Forbidden:
+        await interaction.followup.send(
+            f"❌ Il bot non ha i permessi per scrivere in <#{CANALE_PG}>.", ephemeral=True
         )
     except Exception as e:
         await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
