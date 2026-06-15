@@ -74,6 +74,8 @@ class TokyoHorizonBot(commands.Bot):
         self.add_view(VeicoloButtons())
         self.add_view(RichiestaPGView())
         self.add_view(CartaIdentitaView())
+        self.add_view(TicketPannelloView())
+        self.add_view(ChiudiTicketView())
         # Re-registra le view di approvazione per gli ordini in_attesa sopravvissuti al restart
         for uid, ordine in list(ordini_pendenti_macchina.items()):
             if ordine.get("in_attesa"):
@@ -395,10 +397,11 @@ def carica_dati():
                     rapine_gioielleria,
                     rapine_mazebank,
                     richieste_pg,
+                    dati.get("categoria_ticket_id", None),
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, None
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -416,10 +419,11 @@ def salva_dati():
             "rapine_pendenti_gioielleria":   {str(k): v for k, v in rapine_pendenti_gioielleria.items()},
             "rapine_pendenti_mazebank":      {str(k): v for k, v in rapine_pendenti_mazebank.items()},
             "richieste_pg_pendenti":         {str(k): v for k, v in richieste_pg_pendenti.items()},
+            "categoria_ticket_id":           categoria_ticket_id,
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, richieste_pg_pendenti = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, richieste_pg_pendenti, categoria_ticket_id = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -4555,6 +4559,380 @@ async def setuptutorial(interaction: discord.Interaction):
     except discord.Forbidden:
         await interaction.followup.send(
             f"❌ Il bot non ha i permessi per scrivere in <#{CANALE_TUTORIAL_WL}>.", ephemeral=True
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
+
+
+# =============================================================================
+# SISTEMA TICKET
+# =============================================================================
+
+_TIPI_TICKET = {
+    "supporto": {
+        "label": "🎫 Ticket Supporto",
+        "style": discord.ButtonStyle.primary,
+        "custom_id": "ticket:apri:supporto",
+        "titolo": "🎫 Ticket Supporto",
+        "benvenuto": (
+            "Benvenuto nel tuo ticket di supporto!\n\n"
+            "Hai una domanda o hai bisogno di assistenza? Un membro dello staff ti "
+            "risponderà il prima possibile.\n\n"
+            "📌 **Descrivi il tuo problema con più dettagli possibili** per ricevere "
+            "un aiuto più rapido ed efficace."
+        ),
+        "prefisso": "supporto",
+        "colore": discord.Color.blurple(),
+        "ping_admin": False,
+    },
+    "amministrazione": {
+        "label": "🏛️ Ticket Amministrazione",
+        "style": discord.ButtonStyle.secondary,
+        "custom_id": "ticket:apri:amministrazione",
+        "titolo": "🏛️ Ticket Amministrazione",
+        "benvenuto": (
+            "Benvenuto nel canale riservato all'Amministrazione.\n\n"
+            "Questo spazio è destinato a comunicazioni confidenziali che richiedono "
+            "l'intervento dei gradi più alti del server.\n\n"
+            "📌 **Esponi la tua richiesta in modo chiaro e dettagliato.** "
+            "L'Amministrazione ti risponderà appena possibile."
+        ),
+        "prefisso": "admin",
+        "colore": discord.Color.dark_gold(),
+        "ping_admin": True,
+    },
+    "rapimento": {
+        "label": "🔒 Ticket Rapimento",
+        "style": discord.ButtonStyle.danger,
+        "custom_id": "ticket:apri:rapimento",
+        "titolo": "🔒 Richiesta Autorizzazione Rapimento",
+        "benvenuto": (
+            "Vuoi organizzare il rapimento di un personaggio specifico?\n\n"
+            "Prima di procedere è necessaria l'**autorizzazione dello staff**.\n\n"
+            "📌 **Indica obbligatoriamente:**\n"
+            "• Il nome del personaggio da rapire\n"
+            "• La motivazione roleplay\n"
+            "• Il luogo e il contesto previsti\n\n"
+            "⚠️ Azioni non autorizzate saranno sanzionate secondo il regolamento."
+        ),
+        "prefisso": "rapimento",
+        "colore": discord.Color.red(),
+        "ping_admin": False,
+    },
+    "ricompensa": {
+        "label": "🎁 Ticket Ricompensa",
+        "style": discord.ButtonStyle.success,
+        "custom_id": "ticket:apri:ricompensa",
+        "titolo": "🎁 Riscossione Premio",
+        "benvenuto": (
+            "Hai vinto un giveaway o hai diritto a un premio ricevuto nel server?\n\n"
+            "Sei nel posto giusto per riscuotere la tua ricompensa!\n\n"
+            "📌 **Indica obbligatoriamente:**\n"
+            "• Il tipo di premio che hai vinto\n"
+            "• Lo screenshot o la prova del premio ricevuto\n\n"
+            "Lo staff verificherà e assegnerà il tuo premio al più presto. 🎉"
+        ),
+        "prefisso": "premio",
+        "colore": discord.Color.green(),
+        "ping_admin": False,
+    },
+}
+
+RUOLI_ADMIN_TICKET = {
+    1514817350359060571,  # Founder
+    1514817646229717174,  # CEO
+    1514818027882024960,  # CO CEO
+}
+
+
+async def _crea_canale_ticket(
+    interaction: discord.Interaction,
+    tipo: str,
+) -> None:
+    """Crea un canale ticket privato per l'utente che ha cliccato il bottone."""
+    global categoria_ticket_id
+
+    if not categoria_ticket_id:
+        await interaction.response.send_message(
+            "❌ La categoria ticket non è configurata. Chiedi a un admin di usare `/setcategoriaticket`.",
+            ephemeral=True,
+        )
+        return
+
+    guild = interaction.guild
+    if guild is None:
+        await interaction.response.send_message(
+            "❌ Questo comando funziona solo all'interno di un server.", ephemeral=True
+        )
+        return
+
+    categoria = guild.get_channel(categoria_ticket_id)
+    if categoria is None or not isinstance(categoria, discord.CategoryChannel):
+        await interaction.response.send_message(
+            "❌ Categoria ticket non trovata. Riconfigurala con `/setcategoriaticket`.",
+            ephemeral=True,
+        )
+        return
+
+    info = _TIPI_TICKET[tipo]
+    nome_canale = f"{info['prefisso']}-{interaction.user.name}".lower()[:90]
+
+    # Controlla se l'utente ha già un ticket di questo tipo aperto
+    esistente = discord.utils.get(categoria.channels, name=nome_canale)
+    if esistente:
+        await interaction.response.send_message(
+            f"⚠️ Hai già un ticket **{info['titolo']}** aperto: {esistente.mention}",
+            ephemeral=True,
+        )
+        return
+
+    # Permessi: tutti gli altri non vedono; l'utente e lo staff vedono
+    overwrites = {
+        guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        interaction.user: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True,
+            attach_files=True,
+        ),
+        guild.me: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            manage_channels=True,
+            read_message_history=True,
+        ),
+    }
+    for r_id in RUOLI_STAFF:
+        role = guild.get_role(r_id)
+        if role:
+            overwrites[role] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+                manage_channels=True,
+            )
+
+    try:
+        canale = await guild.create_text_channel(
+            name=nome_canale,
+            category=categoria,
+            overwrites=overwrites,
+            topic=f"Ticket {info['titolo']} — {interaction.user} (ID: {interaction.user.id})",
+        )
+    except discord.Forbidden:
+        await interaction.response.send_message(
+            "❌ Il bot non ha i permessi per creare canali nella categoria ticket.", ephemeral=True
+        )
+        return
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Errore durante la creazione del ticket: {e}", ephemeral=True)
+        return
+
+    # Embed di benvenuto nel canale ticket
+    embed = discord.Embed(
+        title=info["titolo"],
+        description=info["benvenuto"],
+        color=info["colore"],
+    )
+    embed.set_footer(text=f"Tokyo Horizon RP | Ticket aperto da {interaction.user.display_name}")
+    embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1254/1254540.png")
+
+    # Ping staff (e admin se richiesto)
+    ping_parti = [interaction.user.mention]
+    for r_id in RUOLI_STAFF:
+        role = guild.get_role(r_id)
+        if role:
+            ping_parti.append(role.mention)
+            break  # un solo ping ruolo staff basta
+
+    if info["ping_admin"]:
+        for r_id in RUOLI_ADMIN_TICKET:
+            role = guild.get_role(r_id)
+            if role:
+                ping_parti.append(role.mention)
+
+    await canale.send(
+        content=" ".join(ping_parti),
+        embed=embed,
+        view=ChiudiTicketView(),
+    )
+
+    await interaction.response.send_message(
+        f"✅ Il tuo ticket è stato creato: {canale.mention}", ephemeral=True
+    )
+    print(f"[TICKET] Aperto '{nome_canale}' da {interaction.user} (id={interaction.user.id})")
+
+
+class TicketPannelloView(discord.ui.View):
+    """Pannello ticket persistente con 4 bottoni — sopravvive ai riavvii."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="🎫 Ticket Supporto",
+        style=discord.ButtonStyle.primary,
+        custom_id="ticket:apri:supporto",
+        row=0,
+    )
+    async def apri_supporto(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _crea_canale_ticket(interaction, "supporto")
+
+    @discord.ui.button(
+        label="🏛️ Ticket Amministrazione",
+        style=discord.ButtonStyle.secondary,
+        custom_id="ticket:apri:amministrazione",
+        row=0,
+    )
+    async def apri_amministrazione(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _crea_canale_ticket(interaction, "amministrazione")
+
+    @discord.ui.button(
+        label="🔒 Ticket Rapimento",
+        style=discord.ButtonStyle.danger,
+        custom_id="ticket:apri:rapimento",
+        row=1,
+    )
+    async def apri_rapimento(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _crea_canale_ticket(interaction, "rapimento")
+
+    @discord.ui.button(
+        label="🎁 Ticket Ricompensa",
+        style=discord.ButtonStyle.success,
+        custom_id="ticket:apri:ricompensa",
+        row=1,
+    )
+    async def apri_ricompensa(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await _crea_canale_ticket(interaction, "ricompensa")
+
+
+class ChiudiTicketView(discord.ui.View):
+    """Bottone chiusura ticket persistente — sopravvive ai riavvii."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="🔒 Chiudi Ticket",
+        style=discord.ButtonStyle.danger,
+        custom_id="ticket:chiudi",
+    )
+    async def chiudi(self, interaction: discord.Interaction, button: discord.ui.Button):
+        raw = getattr(interaction.user, '_roles', None)
+        ha_staff = raw is not None and any(r_id in RUOLI_STAFF for r_id in raw)
+        e_autore = interaction.channel.topic and f"ID: {interaction.user.id})" in interaction.channel.topic
+
+        if not ha_staff and not e_autore:
+            await interaction.response.send_message(
+                "❌ Solo il giocatore che ha aperto il ticket o lo staff possono chiuderlo.",
+                ephemeral=True,
+            )
+            return
+
+        await interaction.response.send_message("🔒 Ticket in chiusura... Ciao! 👋")
+        await asyncio.sleep(3)
+        try:
+            await interaction.channel.delete(reason=f"Ticket chiuso da {interaction.user}")
+            print(f"[TICKET] Canale '{interaction.channel.name}' eliminato da {interaction.user}")
+        except discord.Forbidden:
+            pass
+        except Exception as e:
+            print(f"[TICKET] Errore eliminazione canale: {e}")
+
+
+@bot.tree.command(
+    name="setcategoriaticket",
+    description="[MOD] Imposta la categoria Discord dove verranno creati i canali ticket",
+)
+@app_commands.describe(categoria_id="ID numerico della categoria Discord")
+async def setcategoriaticket(interaction: discord.Interaction, categoria_id: str):
+    global categoria_ticket_id
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message(
+            "❌ Solo lo staff può usare questo comando.", ephemeral=True
+        )
+        return
+
+    try:
+        cid = int(categoria_id)
+    except ValueError:
+        await interaction.response.send_message(
+            "❌ Inserisci un ID numerico valido.", ephemeral=True
+        )
+        return
+
+    categoria = interaction.guild.get_channel(cid)
+    if categoria is None or not isinstance(categoria, discord.CategoryChannel):
+        await interaction.response.send_message(
+            "❌ Categoria non trovata. Assicurati che l'ID sia corretto e che il bot sia nel server.",
+            ephemeral=True,
+        )
+        return
+
+    categoria_ticket_id = cid
+    salva_dati()
+    await interaction.response.send_message(
+        f"✅ Categoria ticket impostata su **{categoria.name}** (ID: `{cid}`).", ephemeral=True
+    )
+    print(f"[TICKET] Categoria impostata: {categoria.name} ({cid}) da {interaction.user}")
+
+
+@bot.tree.command(
+    name="setupticket",
+    description="[MOD] Pubblica il pannello ticket nel canale corrente",
+)
+async def setupticket(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message(
+            "❌ Solo lo staff può usare questo comando.", ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    embed = discord.Embed(
+        title="🎟️ Centro Assistenza — Tokyo Horizon RP",
+        description=(
+            "Hai bisogno di aiuto o vuoi contattare il nostro team?\n"
+            "Scegli la tipologia di ticket più adatta alla tua richiesta "
+            "e ti risponderemo il prima possibile.\n\u200b"
+        ),
+        color=discord.Color.from_rgb(88, 101, 242),
+    )
+
+    embed.add_field(
+        name="🎫 Ticket Supporto",
+        value="Hai domande o hai bisogno di assistenza? Contatta un membro dello staff.",
+        inline=False,
+    )
+    embed.add_field(
+        name="🏛️ Ticket Amministrazione",
+        value="Per richieste riservate che richiedono l'intervento dei gradi più elevati.",
+        inline=False,
+    )
+    embed.add_field(
+        name="🔒 Ticket Rapimento",
+        value="Richiedi l'autorizzazione dello staff prima di procedere al rapimento di un personaggio.",
+        inline=False,
+    )
+    embed.add_field(
+        name="🎁 Ticket Ricompensa",
+        value="Vinci un giveaway o hai diritto a un premio? Riscuotilo qui con l'aiuto dello staff.",
+        inline=False,
+    )
+
+    embed.set_footer(text="Tokyo Horizon RP | Un solo ticket per tipologia • Verrà eliminato alla chiusura")
+    embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1254/1254540.png")
+
+    try:
+        await interaction.channel.send(embed=embed, view=TicketPannelloView())
+        await interaction.followup.send(
+            f"✅ Pannello ticket pubblicato in {interaction.channel.mention}!", ephemeral=True
+        )
+        print(f"[TICKET] Pannello pubblicato da {interaction.user} in #{interaction.channel.name}")
+    except discord.Forbidden:
+        await interaction.followup.send(
+            "❌ Il bot non ha i permessi per scrivere in questo canale.", ephemeral=True
         )
     except Exception as e:
         await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
