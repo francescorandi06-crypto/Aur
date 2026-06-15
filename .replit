@@ -3,6 +3,7 @@ modules = ["nodejs-20", "python-3.11", "web"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
@@ -32,7 +33,7 @@ args = "python3 bot.py"
 outputType = "console"
 
 [agent]
-stack = "BEST_EFFORT_FALLBACK"
+stack = "FLASK_VANILLA_JS"
 expertMode = true
 
 [postMerge]
@@ -61,6 +62,7 @@ externalPort = 3002
 
 [nix]
 channel = "stable-25_05"
+packages = ["openssl", "postgresql"]
 
 [userenv]
 
