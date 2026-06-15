@@ -279,10 +279,10 @@ def classifica_macchina(modello: str):
         "jester4", "sugoi", "imorgon",
     ]
     for k in alta:
-        if k in m: return "🔴 Alta", 25000, discord.Color.gold()
+        if k in m: return "🔴 Alta", 30000, discord.Color.gold()
     for k in media:
-        if k in m: return "🟡 Media", 15000, discord.Color.blue()
-    return "⚪ Bassa", 5000, discord.Color.light_gray()
+        if k in m: return "🟡 Media", 20000, discord.Color.blue()
+    return "⚪ Bassa", 10000, discord.Color.light_gray()
 
 def etichetta_rarità(peso: int) -> str:
     if peso <= 2:   return "✨ Leggendario"
@@ -399,8 +399,10 @@ NEGOZIO = {
     "Piede di Porco":       {"prezzo": 1000,  "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usabile anche per il Colpo al Minimarket. Indispensabile per bancomat, case e ville."},
     "Grimaldello":          {"prezzo": 1500,  "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
     "Grimaldello Avanzato": {"prezzo": 15000, "emoji": "🔐",  "descrizione": "Scassina serrature blindate di alta sicurezza. Obbligatorio per il Grande Colpo alla Maze Bank (min 2 unità)."},
-    "Sistema di Hacking":   {"prezzo": 4000,  "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere base. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
-    "Trapano":              {"prezzo": 8000,  "emoji": "🔧",  "descrizione": "Perfora le cassette di sicurezza blindate. Obbligatorio per la Rapina alla Banca Fleeca (1x, insieme a 5x Piede di Porco)."},
+    "Sistema di Hacking":          {"prezzo": 4000,  "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere base. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
+    "Slim Jim":                    {"prezzo": 4000,  "emoji": "🔓",  "descrizione": "Apre le portiere dei veicoli senza chiave. Obbligatorio per il furto di veicoli (insieme al Dispositivo di Hacking Base)."},
+    "Dispositivo di Hacking Base": {"prezzo": 4000,  "emoji": "📟",  "descrizione": "Azzera il sistema antifurto del veicolo. Obbligatorio per il furto di veicoli (insieme allo Slim Jim)."},
+    "Trapano":                     {"prezzo": 8000,  "emoji": "🔧",  "descrizione": "Perfora le cassette di sicurezza blindate. Obbligatorio per la Rapina alla Banca Fleeca (1x, insieme a 5x Piede di Porco)."},
 }
 
 MERCATO_NERO = {
@@ -439,6 +441,25 @@ def ha_permessi_approvazione(interaction: discord.Interaction) -> bool:
     if raw is not None:
         return any(r_id in RUOLI_APPROVAZIONE_VEICOLO for r_id in raw)
     return False
+
+
+def get_criminal_lock(uid: int) -> float:
+    """Ritorna i secondi rimanenti del blocco attività criminale, 0 se libero."""
+    lock_until = furto_cooldown.get(uid, {}).get("criminal_lock_until", 0)
+    return max(0.0, lock_until - time.time())
+
+
+def formatta_durata(secondi: float) -> str:
+    """Formatta una durata in secondi in una stringa leggibile (giorni, ore, minuti)."""
+    s = int(secondi)
+    giorni = s // 86400
+    ore = (s % 86400) // 3600
+    minuti = (s % 3600) // 60
+    parti = []
+    if giorni: parti.append(f"**{giorni}g**")
+    if ore: parti.append(f"**{ore}h**")
+    if minuti or not parti: parti.append(f"**{minuti}m**")
+    return " ".join(parti)
 
 
 async def safe_defer(interaction: discord.Interaction, ephemeral: bool = True) -> bool:
@@ -683,6 +704,22 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
         self.autore_id = autore_id
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Consuma gli attrezzi richiesti
+        inv = get_inventario(self.autore_id)
+        if inv.get("Slim Jim", 0) < 1 or inv.get("Dispositivo di Hacking Base", 0) < 1:
+            await interaction.response.send_message(
+                "❌ Non hai più gli attrezzi richiesti (`Slim Jim` e `Dispositivo di Hacking Base`). Acquistali con `/negozio`.",
+                ephemeral=True
+            )
+            return
+        inv["Slim Jim"] -= 1
+        if inv["Slim Jim"] == 0:
+            del inv["Slim Jim"]
+        inv["Dispositivo di Hacking Base"] -= 1
+        if inv["Dispositivo di Hacking Base"] == 0:
+            del inv["Dispositivo di Hacking Base"]
+        salva_dati()
+
         modello_input = self.modello.value.strip()
         rarita_label, guadagno, colore = classifica_macchina(modello_input)
         dest = random.choice(DESTINAZIONI_MACCHINA)
@@ -867,8 +904,8 @@ class VeicoloButtons(discord.ui.View):
         ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
             # Ricarica dal file: potrebbe essere stato scritto da un'altra istanza
-            _, _, _, _, ordini_freschi, _ = carica_dati()
-            ordini_pendenti_macchina.update(ordini_freschi)
+            _dati_r = carica_dati()
+            ordini_pendenti_macchina.update(_dati_r[4])
             ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
             await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
@@ -893,8 +930,8 @@ class VeicoloButtons(discord.ui.View):
         ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
             # Ricarica dal file: potrebbe essere stato scritto da un'altra istanza
-            _, _, _, _, ordini_freschi, _ = carica_dati()
-            ordini_pendenti_macchina.update(ordini_freschi)
+            _dati_r = carica_dati()
+            ordini_pendenti_macchina.update(_dati_r[4])
             ordine = ordini_pendenti_macchina.get(uid)
         if not ordine:
             await interaction.response.send_message("❌ Questo ordine è scaduto. Usa `/furto macchina` per iniziarne uno nuovo.", ephemeral=True)
@@ -910,6 +947,7 @@ class VeicoloButtons(discord.ui.View):
             return
 
         ordine["in_attesa"] = True
+        ordine["in_attesa_at"] = time.time()
         salva_dati()
         print(f"[VEICOLO] Consegna uid={uid} modello={ordine['modello']} → in_attesa=True salvato")
 
@@ -1003,6 +1041,16 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
     uid = interaction.user.id
     tipo_scelto = tipo.value
 
+    # Blocco post-colpo: impossibile fare attività criminale per il tempo prestabilito
+    lock_rem = get_criminal_lock(uid)
+    if lock_rem > 0:
+        await interaction.response.send_message(
+            f"🔒 Hai completato un colpo di alto profilo di recente.\n"
+            f"Non puoi svolgere attività criminale per ancora {formatta_durata(lock_rem)}.",
+            ephemeral=True
+        )
+        return
+
     if tipo_scelto == "macchina":
         if canale_furti_id and interaction.channel_id != canale_furti_id:
             await interaction.response.send_message(
@@ -1021,12 +1069,35 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
             )
             return
         # Blocca se c'è già un ordine in attesa di approvazione staff
+        # Ricarica dal file per avere lo stato aggiornato anche dopo un restart del bot
+        _dati_r = carica_dati()
+        ordini_pendenti_macchina.update(_dati_r[4])
         ordine_attivo = ordini_pendenti_macchina.get(uid)
         if ordine_attivo and ordine_attivo.get("in_attesa"):
+            # Auto-cancella ordini bloccati da più di 4 ore (bot riavviato prima che lo staff approvasse)
+            in_attesa_da = time.time() - ordine_attivo.get("in_attesa_at", 0)
+            if in_attesa_da > 4 * 3600:
+                ordini_pendenti_macchina.pop(uid, None)
+                salva_dati()
+                print(f"[VEICOLO] Ordine scaduto auto-rimosso per uid={uid} (in attesa da {in_attesa_da/3600:.1f}h)")
+            else:
+                await interaction.response.send_message(
+                    f"⏳ Hai già una consegna del veicolo `{ordine_attivo.get('modello', '?')}` **in attesa di approvazione dello staff**.\n"
+                    f"Attendi che lo staff approvi o rifiuti prima di iniziare un nuovo furto.\n"
+                    f"Se pensi ci sia un errore, contatta lo staff per usare `/resetordine`.",
+                    ephemeral=True
+                )
+                return
+        # Controlla inventario: serve Slim Jim + Dispositivo di Hacking Base
+        inv = get_inventario(uid)
+        items_mancanti = []
+        if inv.get("Slim Jim", 0) < 1:
+            items_mancanti.append("1x **Slim Jim** (da `/negozio`)")
+        if inv.get("Dispositivo di Hacking Base", 0) < 1:
+            items_mancanti.append("1x **Dispositivo di Hacking Base** (da `/negozio`)")
+        if items_mancanti:
             await interaction.response.send_message(
-                f"⏳ Hai già una consegna del veicolo `{ordine_attivo.get('modello', '?')}` **in attesa di approvazione dello staff**.\n"
-                f"Attendi che lo staff approvi o rifiuti prima di iniziare un nuovo furto.\n"
-                f"Se pensi ci sia un errore, contatta lo staff per usare `/resetordine`.",
+                "🔒 Per rubare un veicolo ti mancano:\n• " + "\n• ".join(items_mancanti),
                 ephemeral=True
             )
             return
@@ -1755,10 +1826,15 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
     ora = time.time()
 
     furti = {
-        "villa":    {"label": "🏰 Villa",       "cooldown": 4 * 3600},
-        "casa":     {"label": "🏠 Casa",        "cooldown": 4 * 3600},
-        "macchina": {"label": "🚗 Macchina",    "cooldown": 2 * 3600},
-        "bancomat": {"label": "🏧 Bancomat",    "cooldown": 12 * 3600},
+        "villa":       {"label": "🏰 Villa",              "cooldown": 4 * 3600},
+        "casa":        {"label": "🏠 Casa",               "cooldown": 4 * 3600},
+        "macchina":    {"label": "🚗 Macchina",           "cooldown": 2 * 3600},
+        "bancomat":    {"label": "🏧 Bancomat",           "cooldown": 12 * 3600},
+        "minimarket":  {"label": "🍏 Minimarket",         "cooldown": 24 * 3600},
+        "armeria":     {"label": "🔫 Ammu-Nation",        "cooldown": 24 * 3600},
+        "fleeca":      {"label": "🏦 Banca Fleeca",       "cooldown": 48 * 3600},
+        "gioielleria": {"label": "💎 Gioielleria",        "cooldown": 96 * 3600},
+        "mazebank":    {"label": "🏛️ Maze Bank",          "cooldown": 168 * 3600},
     }
 
     righe = []
@@ -1775,11 +1851,20 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
             ore = int(rimanente // 3600)
             minuti = int((rimanente % 3600) // 60)
             secondi = int(rimanente % 60)
-            if ore > 0:
+            if ore >= 24:
+                giorni = ore // 24
+                ore_r = ore % 24
+                tempo_str = f"{giorni}g {ore_r}h {minuti}m"
+            elif ore > 0:
                 tempo_str = f"{ore}h {minuti}m"
             else:
                 tempo_str = f"{minuti}m {secondi}s"
             righe.append(f"{info['label']} — ⏳ `{tempo_str}`")
+
+    # Blocco attività criminale post-colpo
+    lock_rem = get_criminal_lock(uid)
+    if lock_rem > 0:
+        righe.append(f"\n🔒 **Blocco attività criminale** — ⏳ `{formatta_durata(lock_rem)}`")
 
     nome = target.display_name
     embed = discord.Embed(
@@ -2512,7 +2597,7 @@ async def _accredita_generico(
     cooldown_key: str, etichetta: str,
     rapine_dict: dict, file_key: str,
     in_corso_set: set, tasks_dict: dict,
-    dialogo_min: int
+    dialogo_min: int, criminal_lock_sec: int = 0
 ):
     if criminal_uid in in_corso_set:
         print(f"[{etichetta.upper()}] uid={criminal_uid} già in elaborazione — ignorato.")
@@ -2536,12 +2621,16 @@ async def _accredita_generico(
         bil = get_balance(criminal_uid)
         bil["banca"] += loot
         furto_cooldown.setdefault(criminal_uid, {})[cooldown_key] = time.time()
+        if criminal_lock_sec > 0:
+            furto_cooldown[criminal_uid]["criminal_lock_until"] = time.time() + criminal_lock_sec
         rapine_dict.pop(criminal_uid, None)
         salva_dati()
+        lock_msg = f"\n🔒 Attività criminale bloccata per **{formatta_durata(criminal_lock_sec)}**." if criminal_lock_sec > 0 else ""
         testo = (
             f"✅ <@{criminal_uid}> **{etichetta} completata!**\n"
             f"💰 **`{loot:,}€`** accreditati in banca.\n"
             f"⚠️ Dialogo obbligatorio di almeno **{dialogo_min} minuti** con gli FDO!"
+            f"{lock_msg}"
         )
         try:
             canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
@@ -2583,12 +2672,14 @@ async def accredita_armeria(criminal_uid: int, delay: float):
         inv["Pistola"]                  = inv.get("Pistola", 0) + 3
         inv["Mitra Compatto"]           = inv.get("Mitra Compatto", 0) + 1
         furto_cooldown.setdefault(criminal_uid, {})["armeria"] = time.time()
+        furto_cooldown[criminal_uid]["criminal_lock_until"] = time.time() + 86400  # 1 giorno
         rapine_pendenti_armeria.pop(criminal_uid, None)
         salva_dati()
         testo = (
             f"✅ <@{criminal_uid}> **Svaligiamento Ammu-Nation completato!**\n"
             f"🎒 Bottino: **5x Giubbotto Antiproiettile**, **3x Pistola**, **1x Mitra Compatto** + munizioni — aggiunti all'inventario.\n"
-            f"⚠️ Dialogo obbligatorio di almeno **4 minuti** con gli FDO!"
+            f"⚠️ Dialogo obbligatorio di almeno **4 minuti** con gli FDO!\n"
+            f"🔒 Attività criminale bloccata per **1 giorno**."
         )
         try:
             canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
@@ -2606,15 +2697,18 @@ async def accredita_armeria(criminal_uid: int, delay: float):
 
 async def accredita_fleeca(criminal_uid: int, delay: float):
     await _accredita_generico(criminal_uid, delay, LOOT_FLEECA, "fleeca", "Rapina Banca Fleeca",
-        rapine_pendenti_fleeca, "rapine_pendenti_fleeca", _fleeca_in_corso, _fleeca_tasks, dialogo_min=6)
+        rapine_pendenti_fleeca, "rapine_pendenti_fleeca", _fleeca_in_corso, _fleeca_tasks, dialogo_min=6,
+        criminal_lock_sec=4 * 86400)  # 4 giorni
 
 async def accredita_gioielleria(criminal_uid: int, delay: float):
     await _accredita_generico(criminal_uid, delay, LOOT_GIOIELLERIA, "gioielleria", "Assalto alla Gioielleria",
-        rapine_pendenti_gioielleria, "rapine_pendenti_gioielleria", _gioielleria_in_corso, _gioielleria_tasks, dialogo_min=7)
+        rapine_pendenti_gioielleria, "rapine_pendenti_gioielleria", _gioielleria_in_corso, _gioielleria_tasks, dialogo_min=7,
+        criminal_lock_sec=7 * 86400)  # 1 settimana
 
 async def accredita_mazebank(criminal_uid: int, delay: float):
     await _accredita_generico(criminal_uid, delay, LOOT_MAZEBANK, "mazebank", "Grande Colpo Maze Bank",
-        rapine_pendenti_mazebank, "rapine_pendenti_mazebank", _mazebank_in_corso, _mazebank_tasks, dialogo_min=10)
+        rapine_pendenti_mazebank, "rapine_pendenti_mazebank", _mazebank_in_corso, _mazebank_tasks, dialogo_min=10,
+        criminal_lock_sec=10 * 86400)  # 1 settimana e 3 giorni
 
 
 class AccettaRapinaGenericaView(discord.ui.View):
@@ -3236,6 +3330,19 @@ class MazeBankModal(discord.ui.Modal, title="🏛️ Verbale — Grande Colpo al
 ])
 async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
     uid = interaction.user.id
+
+    # Blocco post-colpo: impossibile fare attività criminale per il tempo prestabilito
+    lock_rem = get_criminal_lock(uid)
+    if lock_rem > 0:
+        try:
+            await interaction.response.send_message(
+                f"🔒 Hai completato un colpo di alto profilo di recente.\n"
+                f"Non puoi svolgere attività criminale per ancora {formatta_durata(lock_rem)}.",
+                ephemeral=True
+            )
+        except Exception:
+            pass
+        return
 
     if interaction.channel_id != CANALE_POLIZIA_HARDCODED:
         try:
