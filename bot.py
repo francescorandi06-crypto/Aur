@@ -2027,7 +2027,8 @@ class AccettaRapinaView(discord.ui.View):
 
     @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
-        role_ids = [r.id for r in interaction.user.roles]
+        member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+        role_ids = [r.id for r in member.roles] if member else []
         if RUOLO_POLIZIA_HARDCODED not in role_ids:
             await interaction.response.send_message("❌ Non hai il ruolo necessario per accettare il servizio.", ephemeral=True)
             return
@@ -2358,7 +2359,8 @@ class AccettaRapinaMinimarketView(discord.ui.View):
 
     @discord.ui.button(label="Accetta Servizio (0/2)", style=discord.ButtonStyle.success, emoji="🚔")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
-        role_ids = [r.id for r in interaction.user.roles]
+        member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+        role_ids = [r.id for r in member.roles] if member else []
         if RUOLO_POLIZIA_HARDCODED not in role_ids:
             await interaction.response.send_message("❌ Non hai il ruolo necessario per accettare il servizio.", ephemeral=True)
             return
@@ -2798,7 +2800,8 @@ class AccettaRapinaGenericaView(discord.ui.View):
 
     @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
-        role_ids = [r.id for r in interaction.user.roles]
+        member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+        role_ids = [r.id for r in member.roles] if member else []
         if RUOLO_POLIZIA_HARDCODED not in role_ids:
             await interaction.response.send_message("❌ Non hai il ruolo necessario per accettare il servizio.", ephemeral=True)
             return

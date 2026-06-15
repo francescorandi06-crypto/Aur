@@ -3,6 +3,10 @@
     "1083459553892499476": {
       "portafoglio": 40000,
       "banca": 172000
+    },
+    "1214733905349845032": {
+      "portafoglio": 1000000,
+      "banca": 5000
     }
   },
   "furto_cooldown": {
@@ -17,11 +21,18 @@
       "Piede di Porco": 81,
       "Pistola": 2,
       "Slim Jim": 1
+    },
+    "1214733905349845032": {
+      "Pistola": 1
     }
   },
   "canale_furti_id": 1515093746671292547,
   "ordini_macchina": {},
-  "rapine_pendenti": {},
+  "rapine_pendenti": {
+    "1214733905349845032": {
+      "accepted_at": 1781541425.389657
+    }
+  },
   "rapine_pendenti_minimarket": {},
   "rapine_pendenti_armeria": {},
   "rapine_pendenti_fleeca": {},
