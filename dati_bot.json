@@ -19,7 +19,9 @@
     "1083459553892499476": {
       "Sistema di Hacking": 98,
       "Piede di Porco": 81,
-      "Pistola": 2
+      "Pistola": 2,
+      "Slim Jim": 1,
+      "Dispositivo di Hacking Base": 1
     },
     "1214733905349845032": {
       "Pistola": 1,
@@ -46,7 +48,7 @@
       "foto_ok": true,
       "in_attesa": true,
       "consegnato": false,
-      "in_attesa_at": 1781555049.1837022,
+      "in_attesa_at": 1781555049.179969,
       "origin_ch_id": 1515093746671292547
     }
   },
@@ -58,8 +60,8 @@
   "rapine_pendenti_mazebank": {},
   "richieste_pg_pendenti": {
     "1083459553892499476": {
-      "nome": "Aaaaa",
-      "processata": false
+      "nome": "Aura",
+      "processata": true
     }
   }
 }
