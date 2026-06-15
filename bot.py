@@ -4133,12 +4133,12 @@ async def _genera_carta_img(
     draw.text((14, 8),  "東京ホライゾン RP", font=fj_med,  fill=_C_WHITE)
     draw.text((14, 28), "TOKYO HORIZON RP",  font=fe_hdr, fill=(170, 180, 210))
     # Centro: titolo grande
-    draw.text((W // 2, 10), "在留カード",     font=fj_title, fill=_C_WHITE, anchor="mt")
-    draw.text((W // 2, 40), "PLAYER CARD",   font=fe_hdr,   fill=(170, 180, 210), anchor="mt")
+    draw.text((W // 2, 10), "在留カード",        font=fj_title, fill=_C_WHITE, anchor="mt")
+    draw.text((W // 2, 40), "CARTA PERSONAGGIO", font=fe_hdr,   fill=(170, 180, 210), anchor="mt")
     # Destra: numero carta
     card_num = "TH-" + hashlib.md5(nome.encode()).hexdigest()[:6].upper()
     draw.text((W - 14, 9),  "番号",   font=fj_sm,  fill=(170, 180, 210), anchor="rt")
-    draw.text((W - 14, 22), "No.",    font=fe_hdr, fill=(170, 180, 210), anchor="rt")
+    draw.text((W - 14, 22), "N.",     font=fe_hdr, fill=(170, 180, 210), anchor="rt")
     draw.text((W - 14, 35), card_num, font=fe_hdr, fill=_C_WHITE,        anchor="rt")
     # Linea oro sotto header
     draw.line([0, HDR_H, W, HDR_H], fill=_C_GOLD, width=2)
@@ -4186,8 +4186,8 @@ async def _genera_carta_img(
 
     y = CY
 
-    # Riga 1 — 氏名 / NAME
-    y = draw_row(y, 62, "氏名", "NAME", nome, fe_val, alt=True)
+    # Riga 1 — 氏名 / NOME
+    y = draw_row(y, 62, "氏名", "NOME", nome, fe_val, alt=True)
 
     # Riga 2 — 生年月日 / DATE OF BIRTH  +  性別 / SEX  (split orizzontale)
     r2h = 56
@@ -4195,33 +4195,33 @@ async def _genera_carta_img(
     c1w = int(FIELD_W * 0.64)
     # Data/luogo
     draw.text((FX,      y + 3),  "生年月日",        font=fj_sm,  fill=_C_LABEL_JP)
-    draw.text((FX,      y + 16), "DATE OF BIRTH / PLACE", font=fe_hdr, fill=_C_LABEL_EN)
+    draw.text((FX,      y + 16), "DATA DI NASCITA / LUOGO", font=fe_hdr, fill=_C_LABEL_EN)
     draw.line([FX, y + 29, FX + c1w, y + 29], fill=_C_DIVIDER, width=1)
     draw.text((FX + 4,  y + 32), _tronca(data_luogo, fe_valsm, c1w - 8), font=fe_valsm, fill=_C_VALUE)
     # Sesso
     sx = FX + c1w + 12
     sw = PH_X - sx - 10
     draw.text((sx,     y + 3),  "性別",  font=fj_sm,  fill=_C_LABEL_JP)
-    draw.text((sx,     y + 16), "SEX",   font=fe_hdr, fill=_C_LABEL_EN)
+    draw.text((sx,     y + 16), "SESSO", font=fe_hdr, fill=_C_LABEL_EN)
     draw.line([sx, y + 29, sx + sw, y + 29], fill=_C_DIVIDER, width=1)
     draw.text((sx + 4, y + 32), sesso_val or eta_val, font=fe_val, fill=_C_VALUE)
     draw.line([0, y + r2h - 1, PH_X - 2, y + r2h - 1], fill=_C_DIVIDER, width=1)
     y += r2h
 
     # Riga 3 — 国籍・地域 / NATIONALITY
-    y = draw_row(y, 50, "国籍・地域", "NATIONALITY / REGION",
+    y = draw_row(y, 50, "国籍・地域", "NAZIONALITÀ / REGIONE",
                  "Tokyo Horizon", fe_valsm, alt=True)
 
-    # Riga 4 — 住居地 / ADDRESS
-    y = draw_row(y, 50, "住居地", "ADDRESS",
+    # Riga 4 — 住居地 / INDIRIZZO
+    y = draw_row(y, 50, "住居地", "INDIRIZZO",
                  "Tokyo Horizon RP — Città Virtuale", fe_valsm)
 
-    # Riga 5 — 在留資格 / STATUS
-    y = draw_row(y, 50, "在留資格", "STATUS",
+    # Riga 5 — 在留資格 / STATO
+    y = draw_row(y, 50, "在留資格", "STATO",
                  "Personaggio Registrato", fe_valsm, alt=True)
 
-    # Riga 6 — 特記事項 / SPECIAL NOTES
-    y = draw_row(y, 58, "特記事項", "SPECIAL NOTES", segni, fe_valsm)
+    # Riga 6 — 特記事項 / NOTE SPECIALI
+    y = draw_row(y, 58, "特記事項", "NOTE SPECIALI", segni, fe_valsm)
 
     # Riga 7 — Date affiancate (rilascio | scadenza)
     r7h = 56
@@ -4229,13 +4229,13 @@ async def _genera_carta_img(
     hw = (FIELD_W - 16) // 2
     # Rilascio
     draw.text((FX,        y + 3),  "交付年月日",      font=fj_sm,  fill=_C_LABEL_JP)
-    draw.text((FX,        y + 16), "DATE OF ISSUE",   font=fe_hdr, fill=_C_LABEL_EN)
+    draw.text((FX,        y + 16), "DATA DI RILASCIO", font=fe_hdr, fill=_C_LABEL_EN)
     draw.line([FX, y + 29, FX + hw, y + 29], fill=_C_DIVIDER, width=1)
     draw.text((FX + 4,    y + 32), rilascio_str,      font=fe_valsm, fill=_C_VALUE)
     # Scadenza
     ex = FX + hw + 16
     draw.text((ex,        y + 3),  "在留期間（満了日）",     font=fj_sm,  fill=_C_LABEL_JP)
-    draw.text((ex,        y + 16), "PERIOD OF STAY (EXPIRY)", font=fe_hdr, fill=_C_LABEL_EN)
+    draw.text((ex,        y + 16), "PERIODO DI VALIDITÀ (SCADENZA)", font=fe_hdr, fill=_C_LABEL_EN)
     draw.line([ex, y + 29, ex + hw, y + 29], fill=_C_DIVIDER, width=1)
     draw.text((ex + 4,    y + 32), scadenza_str, font=fe_valsm, fill=_C_RED_SEAL)
     draw.line([0, y + r7h - 1, PH_X - 2, y + r7h - 1], fill=_C_DIVIDER, width=1)
@@ -4267,7 +4267,7 @@ async def _genera_carta_img(
     else:
         draw.text(
             (PH_PX + PH_W // 2, PH_PY + PH_H // 2),
-            "写真\nPHOTO",
+            "写真\nFOTO",
             font=fj_med, fill=_C_LABEL_EN,
             anchor="mm", align="center",
         )
@@ -4315,7 +4315,7 @@ async def _genera_carta_img(
     )
     draw.text(
         (14, footer_y + 30),
-        f"PERIOD OF VALIDITY OF THIS CARD  ·  {scadenza.strftime('%d / %m / %Y')}",
+        f"PERIODO DI VALIDITÀ DELLA CARTA  ·  {scadenza.strftime('%d / %m / %Y')}",
         font=fe_hdr, fill=(170, 180, 210),
     )
     # Riga bassa sottolineata come nell'originale
