@@ -83,6 +83,11 @@ class TokyoHorizonBot(commands.Bot):
                 )
                 self.add_view(view)
                 print(f"[VEICOLO] Vista approvazione ri-registrata per uid={uid} modello={ordine.get('modello', '?')}")
+        # Re-registra le view di revisione PG sopravvissute al restart
+        for uid, richiesta in list(richieste_pg_pendenti.items()):
+            if not richiesta.get("processata"):
+                self.add_view(RevisionePGView(autore_id=uid))
+                print(f"[PG] Vista revisione ri-registrata per uid={uid} nome={richiesta.get('nome', '?')}")
         # Sync globale — una sola volta all'avvio
         await self.tree.sync()
         print("Tokyo Horizon Bot: setup_hook completato — comandi globali sincronizzati.")
@@ -376,6 +381,7 @@ def carica_dati():
                 rapine_fleeca       = {int(k): v for k, v in dati.get("rapine_pendenti_fleeca", {}).items()}
                 rapine_gioielleria  = {int(k): v for k, v in dati.get("rapine_pendenti_gioielleria", {}).items()}
                 rapine_mazebank     = {int(k): v for k, v in dati.get("rapine_pendenti_mazebank", {}).items()}
+                richieste_pg        = {int(k): v for k, v in dati.get("richieste_pg_pendenti", {}).items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
@@ -388,10 +394,11 @@ def carica_dati():
                     rapine_fleeca,
                     rapine_gioielleria,
                     rapine_mazebank,
+                    richieste_pg,
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -408,10 +415,11 @@ def salva_dati():
             "rapine_pendenti_fleeca":        {str(k): v for k, v in rapine_pendenti_fleeca.items()},
             "rapine_pendenti_gioielleria":   {str(k): v for k, v in rapine_pendenti_gioielleria.items()},
             "rapine_pendenti_mazebank":      {str(k): v for k, v in rapine_pendenti_mazebank.items()},
+            "richieste_pg_pendenti":         {str(k): v for k, v in richieste_pg_pendenti.items()},
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, richieste_pg_pendenti = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -470,6 +478,13 @@ def ha_permessi_approvazione(interaction: discord.Interaction) -> bool:
     raw = getattr(interaction.user, '_roles', None)
     if raw is not None:
         return any(r_id in RUOLI_APPROVAZIONE_VEICOLO for r_id in raw)
+    return False
+
+
+def ha_permessi_revisione_pg(interaction: discord.Interaction) -> bool:
+    raw = getattr(interaction.user, '_roles', None)
+    if raw is not None:
+        return RUOLO_GESTORE_WL in raw or any(r_id in RUOLI_STAFF for r_id in raw)
     return False
 
 
@@ -1960,6 +1975,8 @@ CANALE_POLIZIA_HARDCODED = 1515439682333180015   # canale #RAPINE (criminale)
 CANALE_FDO               = 1513574802156425267   # canale allerta FDO
 CANALE_STAFF_VEICOLI     = 1515676328622428310   # canale revisione consegna veicoli (staff)
 CANALE_PG                = 1516143484145242253   # canale richiesta personaggio (whitelist)
+CANALE_REVISIONE_PG      = 1515676328622428310   # canale revisione staff PG (whitelist)
+RUOLO_GESTORE_WL         = 1514818877014409227   # ruolo @gestore wl
 CANALE_CARTA             = 1516151385064869928   # canale carta d'identità
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 RUOLO_CITTADINO          = 1513574080232558804   # ruolo assegnato al completamento della carta d'identità
@@ -3703,6 +3720,167 @@ async def pulisci(interaction: discord.Interaction, quantita: app_commands.Range
 # MODULO PG — Richiesta Personaggio (Whitelist)
 # =============================================================================
 
+class RifiutoPGModal(discord.ui.Modal, title="❌ Motivo del Rifiuto PG"):
+    """Modal che lo staffer compila per specificare il motivo del rifiuto."""
+    motivo = discord.ui.TextInput(
+        label="Motivo del rifiuto",
+        placeholder="Spiega al giocatore perché la richiesta è stata rifiutata...",
+        min_length=10,
+        max_length=500,
+        style=discord.TextStyle.paragraph,
+    )
+
+    def __init__(self, autore_id: int, nome_pg: str):
+        super().__init__()
+        self.autore_id = autore_id
+        self.nome_pg   = nome_pg
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        richiesta = richieste_pg_pendenti.get(self.autore_id)
+        if not richiesta or richiesta.get("processata"):
+            await interaction.followup.send("⚠️ Questa richiesta è già stata processata.", ephemeral=True)
+            return
+
+        richiesta["processata"] = True
+        salva_dati()
+
+        # Disabilita i bottoni sul messaggio staff
+        for child in interaction.message.components:
+            pass  # gestito sotto con edit_message
+        embed_staff = discord.Embed(
+            title="❌ RICHIESTA PG RIFIUTATA",
+            description=(
+                f"La richiesta di **{self.nome_pg}** è stata **rifiutata** da {interaction.user.mention}.\n\n"
+                f"📝 **Motivo:** {self.motivo.value.strip()}"
+            ),
+            color=discord.Color.red(),
+        )
+        embed_staff.set_footer(text=f"User ID: {self.autore_id} | Tokyo Horizon RP | Whitelist")
+        await interaction.message.edit(embed=embed_staff, view=None)
+
+        # DM al giocatore
+        try:
+            utente = bot.get_user(self.autore_id) or await bot.fetch_user(self.autore_id)
+            embed_dm = discord.Embed(
+                title="❌ Richiesta Personaggio Rifiutata",
+                description=(
+                    f"Ciao {utente.mention},\n\n"
+                    f"La tua richiesta di personaggio **{self.nome_pg}** è stata **rifiutata** dallo staff.\n\n"
+                    f"📝 **Motivo:** {self.motivo.value.strip()}\n\n"
+                    "Correggila e ripresentala quando vuoi usando il bottone **📋 Richiesta PG**. 🗼"
+                ),
+                color=discord.Color.red(),
+            )
+            embed_dm.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
+            await utente.send(embed=embed_dm)
+            print(f"[PG] Richiesta rifiutata per uid={self.autore_id} — DM inviato.")
+        except discord.Forbidden:
+            print(f"[PG] ⚠️ DM disabilitati per uid={self.autore_id} — impossibile notificare.")
+        except Exception as e:
+            print(f"[PG] ❌ Errore DM rifiuto: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        print(f"[PG RIFIUTO MODAL] Errore: {type(error).__name__}: {error}")
+        try:
+            await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
+class RevisionePGView(discord.ui.View):
+    """
+    Vista persistente per la revisione delle richieste PG.
+    - custom_id univoco per utente: sopravvive ai riavvii del bot
+    """
+    def __init__(self, autore_id: int):
+        super().__init__(timeout=None)
+        self.autore_id = autore_id
+
+        btn_accetta = discord.ui.Button(
+            label="✅ Accetta",
+            style=discord.ButtonStyle.success,
+            custom_id=f"pg:accetta:{autore_id}",
+        )
+        btn_accetta.callback = self._accetta
+        self.add_item(btn_accetta)
+
+        btn_rifiuta = discord.ui.Button(
+            label="❌ Rifiuta",
+            style=discord.ButtonStyle.danger,
+            custom_id=f"pg:rifiuta:{autore_id}",
+        )
+        btn_rifiuta.callback = self._rifiuta
+        self.add_item(btn_rifiuta)
+
+    async def _accetta(self, interaction: discord.Interaction):
+        if not ha_permessi_revisione_pg(interaction):
+            await interaction.response.send_message(
+                "❌ Solo il gestore WL o lo staff può approvare le richieste PG.", ephemeral=True
+            )
+            return
+
+        richiesta = richieste_pg_pendenti.get(self.autore_id)
+        if not richiesta or richiesta.get("processata"):
+            await interaction.response.send_message(
+                "⚠️ Questa richiesta è già stata processata.", ephemeral=True
+            )
+            return
+
+        nome_pg = richiesta.get("nome", "?")
+        richiesta["processata"] = True
+        salva_dati()
+
+        embed_staff = discord.Embed(
+            title="✅ RICHIESTA PG ACCETTATA",
+            description=(
+                f"La richiesta di **{nome_pg}** è stata **accettata** da {interaction.user.mention}."
+            ),
+            color=discord.Color.green(),
+        )
+        embed_staff.set_footer(text=f"User ID: {self.autore_id} | Tokyo Horizon RP | Whitelist")
+        await interaction.response.edit_message(embed=embed_staff, view=None)
+
+        # DM al giocatore
+        try:
+            utente = bot.get_user(self.autore_id) or await bot.fetch_user(self.autore_id)
+            embed_dm = discord.Embed(
+                title="✅ Richiesta Personaggio Accettata!",
+                description=(
+                    f"Ciao {utente.mention}! 🎉\n\n"
+                    f"La tua richiesta di personaggio **{nome_pg}** è stata **accettata** dallo staff!\n\n"
+                    "Sarai contattato a breve per il **colloquio orale** e il completamento della whitelist.\n"
+                    "Benvenuto su Tokyo Horizon RP! 🗼"
+                ),
+                color=discord.Color.green(),
+            )
+            embed_dm.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
+            await utente.send(embed=embed_dm)
+            print(f"[PG] Richiesta accettata per uid={self.autore_id} — DM inviato.")
+        except discord.Forbidden:
+            print(f"[PG] ⚠️ DM disabilitati per uid={self.autore_id} — impossibile notificare.")
+        except Exception as e:
+            print(f"[PG] ❌ Errore DM accettazione: {e}")
+
+    async def _rifiuta(self, interaction: discord.Interaction):
+        if not ha_permessi_revisione_pg(interaction):
+            await interaction.response.send_message(
+                "❌ Solo il gestore WL o lo staff può rifiutare le richieste PG.", ephemeral=True
+            )
+            return
+
+        richiesta = richieste_pg_pendenti.get(self.autore_id)
+        if not richiesta or richiesta.get("processata"):
+            await interaction.response.send_message(
+                "⚠️ Questa richiesta è già stata processata.", ephemeral=True
+            )
+            return
+
+        nome_pg = richiesta.get("nome", "?")
+        await interaction.response.send_modal(RifiutoPGModal(autore_id=self.autore_id, nome_pg=nome_pg))
+
+
 class RichiestaPGModal(discord.ui.Modal, title="📋 Richiesta Personaggio — Tokyo Horizon RP"):
     nome_cognome = discord.ui.TextInput(
         label="1. Nome e Cognome del Personaggio",
@@ -3743,17 +3921,19 @@ class RichiestaPGModal(discord.ui.Modal, title="📋 Richiesta Personaggio — T
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
 
-        nome   = self.nome_cognome.value.strip()
-        eta    = self.eta.value.strip()
-        bg     = self.background.value.strip()
-        exp    = self.esperienza_rp.value.strip()
-        dispo  = self.disponibilita.value.strip()
+        uid   = interaction.user.id
+        nome  = self.nome_cognome.value.strip()
+        eta   = self.eta.value.strip()
+        bg    = self.background.value.strip()
+        exp   = self.esperienza_rp.value.strip()
+        dispo = self.disponibilita.value.strip()
 
+        # Conferma all'utente
         embed_utente = discord.Embed(
             title="✅ Richiesta PG Inviata!",
             description=(
                 "La tua richiesta di personaggio è stata inviata allo staff.\n"
-                "Verrai contattato per il **colloquio orale** nei giorni da te indicati.\n\n"
+                "Riceverai un **messaggio privato** non appena verrà revisionata.\n\n"
                 "Nel frattempo puoi esplorare il server e leggere le regole. 🗼"
             ),
             color=discord.Color.green(),
@@ -3761,6 +3941,15 @@ class RichiestaPGModal(discord.ui.Modal, title="📋 Richiesta Personaggio — T
         embed_utente.set_footer(text="Tokyo Horizon RP | Sistema Whitelist")
         await interaction.followup.send(embed=embed_utente, ephemeral=True)
 
+        # Registra la richiesta come pendente
+        richieste_pg_pendenti[uid] = {"nome": nome, "processata": False}
+        salva_dati()
+
+        # Registra la view persistente
+        view = RevisionePGView(autore_id=uid)
+        bot.add_view(view)
+
+        # Embed per il canale revisione staff
         embed_staff = discord.Embed(
             title="📋 NUOVA RICHIESTA PERSONAGGIO",
             color=discord.Color.blurple(),
@@ -3774,17 +3963,20 @@ class RichiestaPGModal(discord.ui.Modal, title="📋 Richiesta Personaggio — T
         embed_staff.add_field(name="4️⃣ Esperienza RP", value=exp, inline=True)
         embed_staff.add_field(name="3️⃣ Background", value=bg, inline=False)
         embed_staff.add_field(name="5️⃣ Disponibilità colloquio", value=dispo, inline=False)
-        embed_staff.set_footer(text=f"User ID: {interaction.user.id} | Tokyo Horizon RP | Whitelist")
+        embed_staff.set_footer(text=f"User ID: {uid} | Tokyo Horizon RP | Whitelist")
 
         try:
-            canale_pg = bot.get_channel(CANALE_PG) or await bot.fetch_channel(CANALE_PG)
-            await canale_pg.send(
-                content=f"📩 Nuova richiesta da {interaction.user.mention}",
+            canale_rev = bot.get_channel(CANALE_REVISIONE_PG) or await bot.fetch_channel(CANALE_REVISIONE_PG)
+            await canale_rev.send(
+                content=(
+                    f"<@&{RUOLO_GESTORE_WL}> 📩 Nuova richiesta PG da {interaction.user.mention}!"
+                ),
                 embed=embed_staff,
+                view=view,
             )
-            print(f"[PG] Richiesta inviata da {interaction.user} (id={interaction.user.id})")
+            print(f"[PG] Richiesta inviata da {interaction.user} (id={uid})")
         except Exception as e:
-            print(f"[PG] ❌ Errore invio richiesta nel canale staff: {e}")
+            print(f"[PG] ❌ Errore invio richiesta nel canale revisione: {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         print(f"[PG MODAL] Errore: {type(error).__name__}: {error}")
