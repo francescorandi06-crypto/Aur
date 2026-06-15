@@ -2027,6 +2027,10 @@ class AccettaRapinaView(discord.ui.View):
 
     @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_ids = [r.id for r in interaction.user.roles]
+        if RUOLO_POLIZIA_HARDCODED not in role_ids:
+            await interaction.response.send_message("❌ Non hai il ruolo necessario per accettare il servizio.", ephemeral=True)
+            return
         if self.accettata:
             await interaction.response.send_message("❌ Questa rapina è già stata presa in carico!", ephemeral=True)
             return
@@ -2354,6 +2358,10 @@ class AccettaRapinaMinimarketView(discord.ui.View):
 
     @discord.ui.button(label="Accetta Servizio (0/2)", style=discord.ButtonStyle.success, emoji="🚔")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_ids = [r.id for r in interaction.user.roles]
+        if RUOLO_POLIZIA_HARDCODED not in role_ids:
+            await interaction.response.send_message("❌ Non hai il ruolo necessario per accettare il servizio.", ephemeral=True)
+            return
         if self.avviata:
             await interaction.response.send_message("❌ Lo scassinamento è già iniziato!", ephemeral=True)
             return
@@ -2790,6 +2798,10 @@ class AccettaRapinaGenericaView(discord.ui.View):
 
     @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role_ids = [r.id for r in interaction.user.roles]
+        if RUOLO_POLIZIA_HARDCODED not in role_ids:
+            await interaction.response.send_message("❌ Non hai il ruolo necessario per accettare il servizio.", ephemeral=True)
+            return
         if self.avviata:
             await interaction.response.send_message("❌ Lo scassinamento è già iniziato!", ephemeral=True)
             return
