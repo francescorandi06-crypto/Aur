@@ -113,6 +113,34 @@ class TokyoHorizonBot(commands.Bot):
             print(f"[MINIMARKET] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
             task = asyncio.create_task(accredita_minimarket(uid, remaining))
             _minimarket_tasks[uid] = task
+        for uid, info in list(rapine_pendenti_armeria.items()):
+            if uid in _armeria_in_corso:
+                continue
+            elapsed = time.time() - info.get("accepted_at", 0)
+            remaining = max(0.0, 360.0 - elapsed)
+            print(f"[ARMERIA] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
+            _armeria_tasks[uid] = asyncio.create_task(accredita_armeria(uid, remaining))
+        for uid, info in list(rapine_pendenti_fleeca.items()):
+            if uid in _fleeca_in_corso:
+                continue
+            elapsed = time.time() - info.get("accepted_at", 0)
+            remaining = max(0.0, 420.0 - elapsed)
+            print(f"[FLEECA] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
+            _fleeca_tasks[uid] = asyncio.create_task(accredita_fleeca(uid, remaining))
+        for uid, info in list(rapine_pendenti_gioielleria.items()):
+            if uid in _gioielleria_in_corso:
+                continue
+            elapsed = time.time() - info.get("accepted_at", 0)
+            remaining = max(0.0, 540.0 - elapsed)
+            print(f"[GIOIELLERIA] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
+            _gioielleria_tasks[uid] = asyncio.create_task(accredita_gioielleria(uid, remaining))
+        for uid, info in list(rapine_pendenti_mazebank.items()):
+            if uid in _mazebank_in_corso:
+                continue
+            elapsed = time.time() - info.get("accepted_at", 0)
+            remaining = max(0.0, 720.0 - elapsed)
+            print(f"[MAZEBANK] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
+            _mazebank_tasks[uid] = asyncio.create_task(accredita_mazebank(uid, remaining))
 
 bot = TokyoHorizonBot()
 
@@ -312,6 +340,10 @@ def carica_dati():
                 rapine = {int(k): v for k, v in rapine_raw.items()}
                 rapine_mini_raw = dati.get("rapine_pendenti_minimarket", {})
                 rapine_mini = {int(k): v for k, v in rapine_mini_raw.items()}
+                rapine_armeria      = {int(k): v for k, v in dati.get("rapine_pendenti_armeria", {}).items()}
+                rapine_fleeca       = {int(k): v for k, v in dati.get("rapine_pendenti_fleeca", {}).items()}
+                rapine_gioielleria  = {int(k): v for k, v in dati.get("rapine_pendenti_gioielleria", {}).items()}
+                rapine_mazebank     = {int(k): v for k, v in dati.get("rapine_pendenti_mazebank", {}).items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
@@ -320,10 +352,14 @@ def carica_dati():
                     ordini,
                     rapine,
                     rapine_mini,
+                    rapine_armeria,
+                    rapine_fleeca,
+                    rapine_gioielleria,
+                    rapine_mazebank,
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -334,12 +370,16 @@ def salva_dati():
             "inventario":      {str(k): v for k, v in inventario.items()},
             "canale_furti_id": canale_furti_id,
             "ordini_macchina": {str(k): v for k, v in ordini_pendenti_macchina.items()},
-            "rapine_pendenti": {str(k): v for k, v in rapine_pendenti_bancomat.items()},
-            "rapine_pendenti_minimarket": {str(k): v for k, v in rapine_pendenti_minimarket.items()},
+            "rapine_pendenti":               {str(k): v for k, v in rapine_pendenti_bancomat.items()},
+            "rapine_pendenti_minimarket":    {str(k): v for k, v in rapine_pendenti_minimarket.items()},
+            "rapine_pendenti_armeria":       {str(k): v for k, v in rapine_pendenti_armeria.items()},
+            "rapine_pendenti_fleeca":        {str(k): v for k, v in rapine_pendenti_fleeca.items()},
+            "rapine_pendenti_gioielleria":   {str(k): v for k, v in rapine_pendenti_gioielleria.items()},
+            "rapine_pendenti_mazebank":      {str(k): v for k, v in rapine_pendenti_mazebank.items()},
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -352,14 +392,23 @@ def get_inventario(user_id):
     return inventario[user_id]
 
 NEGOZIO = {
-    "Cacciavite":          {"prezzo": 1250, "emoji": "🪛",  "descrizione": "Forza la cassa dei minimarket. Indispensabile per il Colpo al Minimarket (in alternativa al Piede di Porco)."},
-    "Piede di Porco":      {"prezzo": 1000, "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usabile anche per il Colpo al Minimarket. Indispensabile per bancomat, case e ville."},
-    "Grimaldello":         {"prezzo": 1500, "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
-    "Sistema di Hacking":  {"prezzo": 4000, "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
+    "Cacciavite":           {"prezzo": 1250,  "emoji": "🪛",  "descrizione": "Forza la cassa dei minimarket. Indispensabile per il Colpo al Minimarket (in alternativa al Piede di Porco)."},
+    "Piede di Porco":       {"prezzo": 1000,  "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usabile anche per il Colpo al Minimarket. Indispensabile per bancomat, case e ville."},
+    "Grimaldello":          {"prezzo": 1500,  "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
+    "Grimaldello Avanzato": {"prezzo": 15000, "emoji": "🔐",  "descrizione": "Scassina serrature blindate di alta sicurezza. Obbligatorio per il Grande Colpo alla Maze Bank (da 2 a 3 unità)."},
+    "Sistema di Hacking":   {"prezzo": 4000,  "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere base. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
+    "Trapano":              {"prezzo": 9990,  "emoji": "🔧",  "descrizione": "Perfora le cassette di sicurezza blindate. Obbligatorio per la Rapina alla Banca Fleeca (1x, insieme a 5x Piede di Porco)."},
 }
 
 MERCATO_NERO = {
-    "Pistola": {"prezzo": 10000, "emoji": "🔫", "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Non viene consumata — resta in inventario."},
+    "Pistola":                         {"prezzo": 10000, "emoji": "🔫", "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Non viene consumata — resta in inventario."},
+    "Fumogeni":                        {"prezzo": 3000,  "emoji": "💨", "descrizione": "Granate fumogene. Necessarie per l'Assalto alla Gioielleria (copertura durante la fuga)."},
+    "Gas BZ":                          {"prezzo": 5000,  "emoji": "😴", "descrizione": "Gas sonnifero militare. Necessario per l'Assalto alla Gioielleria insieme ai Fumogeni."},
+    "Dispositivo di Hacking Medio":    {"prezzo": 20000, "emoji": "📡", "descrizione": "Hackera sistemi di sorveglianza di livello medio. Obbligatorio per l'Assalto alla Gioielleria."},
+    "Dispositivo di Hacking Avanzato": {"prezzo": 45000, "emoji": "🖥️", "descrizione": "Hackera sistemi digitali di livello militare. Obbligatorio per il Grande Colpo alla Maze Bank."},
+    "Lancia Termica":                  {"prezzo": 30000, "emoji": "🔥", "descrizione": "Brucia serrature e porte blindate. Necessaria per aprire le serrature del caveau della Maze Bank."},
+    "Trapano Pesante Professionale":   {"prezzo": 40000, "emoji": "⚙️", "descrizione": "Perfora il caveau della Maze Bank. Obbligatorio per il Grande Colpo."},
+    "Lanciagranate":                   {"prezzo": 60000, "emoji": "💣", "descrizione": "Arma pesante illegale. Uso vietato in zona civile — solo per operazioni ad alto rischio."},
 }
 
 RUOLI_STAFF = {
@@ -1304,10 +1353,12 @@ async def negozio(interaction: discord.Interaction):
 @bot.tree.command(name="compra", description="Acquista un articolo dal negozio")
 @app_commands.describe(articolo="L'articolo che vuoi acquistare")
 @app_commands.choices(articolo=[
-    app_commands.Choice(name="Cacciavite (1250€)",         value="Cacciavite"),
-    app_commands.Choice(name="Piede di Porco (1000€)",     value="Piede di Porco"),
-    app_commands.Choice(name="Grimaldello (1500€)",        value="Grimaldello"),
-    app_commands.Choice(name="Sistema di Hacking (4000€)", value="Sistema di Hacking"),
+    app_commands.Choice(name="Cacciavite (1.250€)",            value="Cacciavite"),
+    app_commands.Choice(name="Piede di Porco (1.000€)",        value="Piede di Porco"),
+    app_commands.Choice(name="Grimaldello (1.500€)",           value="Grimaldello"),
+    app_commands.Choice(name="Grimaldello Avanzato (15.000€)", value="Grimaldello Avanzato"),
+    app_commands.Choice(name="Sistema di Hacking (4.000€)",    value="Sistema di Hacking"),
+    app_commands.Choice(name="Trapano (9.990€)",               value="Trapano"),
 ])
 async def compra(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True):
@@ -1358,7 +1409,14 @@ async def mercatonero(interaction: discord.Interaction):
 @bot.tree.command(name="compranero", description="Acquista un articolo dal mercato nero")
 @app_commands.describe(articolo="L'articolo illegale che vuoi acquistare")
 @app_commands.choices(articolo=[
-    app_commands.Choice(name="Pistola (10.000€)", value="Pistola"),
+    app_commands.Choice(name="Pistola (10.000€)",                          value="Pistola"),
+    app_commands.Choice(name="Fumogeni (3.000€)",                          value="Fumogeni"),
+    app_commands.Choice(name="Gas BZ (5.000€)",                            value="Gas BZ"),
+    app_commands.Choice(name="Dispositivo di Hacking Medio (20.000€)",     value="Dispositivo di Hacking Medio"),
+    app_commands.Choice(name="Dispositivo di Hacking Avanzato (45.000€)",  value="Dispositivo di Hacking Avanzato"),
+    app_commands.Choice(name="Lancia Termica (30.000€)",                   value="Lancia Termica"),
+    app_commands.Choice(name="Trapano Pesante Professionale (40.000€)",    value="Trapano Pesante Professionale"),
+    app_commands.Choice(name="Lanciagranate (60.000€)",                    value="Lanciagranate"),
 ])
 async def compranero(interaction: discord.Interaction, articolo: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True):
@@ -1430,12 +1488,16 @@ async def inventario_cmd(interaction: discord.Interaction):
 @bot.tree.command(name="resetcooldown", description="[MOD] Azzera il cooldown furto di un giocatore")
 @app_commands.describe(utente="Il giocatore di cui resettare il cooldown", tipo="Quale cooldown azzerare")
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="🏰 Villa",       value="villa"),
-    app_commands.Choice(name="🏠 Casa",        value="casa"),
-    app_commands.Choice(name="🚗 Macchina",    value="macchina"),
-    app_commands.Choice(name="🏧 Bancomat",    value="bancomat"),
-    app_commands.Choice(name="🍏 Minimarket",  value="minimarket"),
-    app_commands.Choice(name="⚡ Tutti",       value="tutti"),
+    app_commands.Choice(name="🏰 Villa",          value="villa"),
+    app_commands.Choice(name="🏠 Casa",           value="casa"),
+    app_commands.Choice(name="🚗 Macchina",       value="macchina"),
+    app_commands.Choice(name="🏧 Bancomat",       value="bancomat"),
+    app_commands.Choice(name="🍏 Minimarket",     value="minimarket"),
+    app_commands.Choice(name="🔫 Armeria",        value="armeria"),
+    app_commands.Choice(name="🏦 Banca Fleeca",   value="fleeca"),
+    app_commands.Choice(name="💎 Gioielleria",    value="gioielleria"),
+    app_commands.Choice(name="🏛️ Maze Bank",     value="mazebank"),
+    app_commands.Choice(name="⚡ Tutti",          value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True):
@@ -1448,37 +1510,39 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
     # Esegui il reset PRIMA di qualsiasi chiamata Discord (non può fallire)
     if tipo.value == "tutti":
         furto_cooldown[utente.id] = {}
-        rapine_pendenti_bancomat.pop(utente.id, None)
-        rapine_pendenti_minimarket.pop(utente.id, None)
-        # Cancella task bancomat attivo se presente
-        _task = _bancomat_tasks.pop(utente.id, None)
-        if _task and not _task.done():
-            _task.cancel()
-            print(f"[RESETCD] Task bancomat uid={utente.id} cancellato.")
-        # Cancella task minimarket attivo se presente
-        _task_m = _minimarket_tasks.pop(utente.id, None)
-        if _task_m and not _task_m.done():
-            _task_m.cancel()
-            print(f"[RESETCD] Task minimarket uid={utente.id} cancellato.")
-        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat, 🍏 Minimarket"
+        for _pd, _td, _label in [
+            (rapine_pendenti_bancomat,    _bancomat_tasks,    "bancomat"),
+            (rapine_pendenti_minimarket,  _minimarket_tasks,  "minimarket"),
+            (rapine_pendenti_armeria,     _armeria_tasks,     "armeria"),
+            (rapine_pendenti_fleeca,      _fleeca_tasks,      "fleeca"),
+            (rapine_pendenti_gioielleria, _gioielleria_tasks, "gioielleria"),
+            (rapine_pendenti_mazebank,    _mazebank_tasks,    "mazebank"),
+        ]:
+            _pd.pop(utente.id, None)
+            _t = _td.pop(utente.id, None)
+            if _t and not _t.done():
+                _t.cancel()
+                print(f"[RESETCD] Task {_label} uid={utente.id} cancellato.")
+        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat, 🍏 Minimarket, 🔫 Armeria, 🏦 Fleeca, 💎 Gioielleria, 🏛️ Maze Bank"
     else:
         cd = furto_cooldown.get(utente.id, {})
         cd.pop(tipo.value, None)
         furto_cooldown[utente.id] = cd
-        if tipo.value == "bancomat":
-            rapine_pendenti_bancomat.pop(utente.id, None)
-            # Cancella task bancomat attivo se presente
-            _task = _bancomat_tasks.pop(utente.id, None)
-            if _task and not _task.done():
-                _task.cancel()
-                print(f"[RESETCD] Task bancomat uid={utente.id} cancellato.")
-        elif tipo.value == "minimarket":
-            rapine_pendenti_minimarket.pop(utente.id, None)
-            # Cancella task minimarket attivo se presente
-            _task_m = _minimarket_tasks.pop(utente.id, None)
-            if _task_m and not _task_m.done():
-                _task_m.cancel()
-                print(f"[RESETCD] Task minimarket uid={utente.id} cancellato.")
+        _rapine_map = {
+            "bancomat":    (rapine_pendenti_bancomat,    _bancomat_tasks),
+            "minimarket":  (rapine_pendenti_minimarket,  _minimarket_tasks),
+            "armeria":     (rapine_pendenti_armeria,     _armeria_tasks),
+            "fleeca":      (rapine_pendenti_fleeca,      _fleeca_tasks),
+            "gioielleria": (rapine_pendenti_gioielleria, _gioielleria_tasks),
+            "mazebank":    (rapine_pendenti_mazebank,    _mazebank_tasks),
+        }
+        if tipo.value in _rapine_map:
+            _pd, _td = _rapine_map[tipo.value]
+            _pd.pop(utente.id, None)
+            _t = _td.pop(utente.id, None)
+            if _t and not _t.done():
+                _t.cancel()
+                print(f"[RESETCD] Task {tipo.value} uid={utente.id} cancellato.")
         azzerati = tipo.name
     print(f"[RESETCD] uid={utente.id} tipo={tipo.value} → furto_cooldown ora: {furto_cooldown.get(utente.id, {})}")
     try:
@@ -1729,6 +1793,20 @@ RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 _bancomat_in_corso: set = set()
 # task bancomat attivi per uid → cancellabili da resetcooldown
 _bancomat_tasks: dict = {}
+
+LOOT_ARMERIA     = 50_000
+LOOT_FLEECA      = 280_000
+LOOT_GIOIELLERIA = 500_000
+LOOT_MAZEBANK    = 1_000_000
+
+_armeria_in_corso: set     = set()
+_armeria_tasks: dict       = {}
+_fleeca_in_corso: set      = set()
+_fleeca_tasks: dict        = {}
+_gioielleria_in_corso: set = set()
+_gioielleria_tasks: dict   = {}
+_mazebank_in_corso: set    = set()
+_mazebank_tasks: dict      = {}
 
 
 async def accredita_bancomat(criminal_uid: int, delay: float):
@@ -2407,11 +2485,697 @@ class MinimarketModal(discord.ui.Modal, title="🍏 Verbale di Rapina — Minima
             print(f"[MINIMARKET] ❌ Errore invio FDO: {e}")
 
 
-@bot.tree.command(name="rapina", description="Esegui una rapina — bancomat e altro")
+# =============================================================================
+# RAPINE AVANZATE — Armeria, Banca Fleeca, Gioielleria, Maze Bank
+# =============================================================================
+
+async def _accredita_generico(
+    criminal_uid: int, delay: float, loot: int,
+    cooldown_key: str, etichetta: str,
+    rapine_dict: dict, file_key: str,
+    in_corso_set: set, tasks_dict: dict,
+    dialogo_min: int
+):
+    if criminal_uid in in_corso_set:
+        print(f"[{etichetta.upper()}] uid={criminal_uid} già in elaborazione — ignorato.")
+        return
+    in_corso_set.add(criminal_uid)
+    try:
+        if delay > 0:
+            await asyncio.sleep(delay)
+        if criminal_uid not in rapine_dict:
+            return
+        try:
+            with open(DATI_FILE, "r") as _f:
+                _dati_freschi = json.load(_f)
+            _nel_file = {int(k): v for k, v in _dati_freschi.get(file_key, {}).items()}
+        except Exception as _e:
+            print(f"[{etichetta.upper()}] Errore lettura JSON: {_e} — uso memoria")
+            _nel_file = rapine_dict
+        if criminal_uid not in _nel_file:
+            rapine_dict.pop(criminal_uid, None)
+            return
+        bil = get_balance(criminal_uid)
+        bil["banca"] += loot
+        furto_cooldown.setdefault(criminal_uid, {})[cooldown_key] = time.time()
+        rapine_dict.pop(criminal_uid, None)
+        salva_dati()
+        testo = (
+            f"✅ <@{criminal_uid}> **{etichetta} completata!**\n"
+            f"💰 **`{loot:,}€`** accreditati in banca.\n"
+            f"⚠️ Dialogo obbligatorio di almeno **{dialogo_min} minuti** con gli FDO!"
+        )
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(testo)
+        except Exception as e:
+            print(f"[{etichetta.upper()}] Messaggio canale fallito: {e}")
+            try:
+                utente = await bot.fetch_user(criminal_uid)
+                await utente.send(testo)
+            except Exception:
+                pass
+    finally:
+        in_corso_set.discard(criminal_uid)
+        tasks_dict.pop(criminal_uid, None)
+
+
+async def accredita_armeria(criminal_uid: int, delay: float):
+    await _accredita_generico(criminal_uid, delay, LOOT_ARMERIA, "armeria", "Svaligiamento Armeria",
+        rapine_pendenti_armeria, "rapine_pendenti_armeria", _armeria_in_corso, _armeria_tasks, dialogo_min=6)
+
+async def accredita_fleeca(criminal_uid: int, delay: float):
+    await _accredita_generico(criminal_uid, delay, LOOT_FLEECA, "fleeca", "Rapina Banca Fleeca",
+        rapine_pendenti_fleeca, "rapine_pendenti_fleeca", _fleeca_in_corso, _fleeca_tasks, dialogo_min=6)
+
+async def accredita_gioielleria(criminal_uid: int, delay: float):
+    await _accredita_generico(criminal_uid, delay, LOOT_GIOIELLERIA, "gioielleria", "Assalto alla Gioielleria",
+        rapine_pendenti_gioielleria, "rapine_pendenti_gioielleria", _gioielleria_in_corso, _gioielleria_tasks, dialogo_min=7)
+
+async def accredita_mazebank(criminal_uid: int, delay: float):
+    await _accredita_generico(criminal_uid, delay, LOOT_MAZEBANK, "mazebank", "Grande Colpo Maze Bank",
+        rapine_pendenti_mazebank, "rapine_pendenti_mazebank", _mazebank_in_corso, _mazebank_tasks, dialogo_min=10)
+
+
+class AccettaRapinaGenericaView(discord.ui.View):
+    """View riusabile per rapine che richiedono N FDO prima dello scassinamento."""
+
+    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str,
+                 fdo_required: int, titolo: str, emoji_tipo: str,
+                 loot: int, delay_s: int, cooldown_key: str,
+                 items_da_restituire: dict,
+                 rapine_dict: dict, in_corso_set: set, tasks_dict: dict,
+                 accredita_func):
+        super().__init__(timeout=600)
+        self.criminal_uid        = criminal_uid
+        self.nome_pg             = nome_pg
+        self.posizione           = posizione
+        self.partecipanti        = partecipanti
+        self.fdo_required        = fdo_required
+        self.titolo              = titolo
+        self.emoji_tipo          = emoji_tipo
+        self.loot                = loot
+        self.delay_s             = delay_s
+        self.cooldown_key        = cooldown_key
+        self.items_da_restituire = items_da_restituire
+        self.rapine_dict         = rapine_dict
+        self.in_corso_set        = in_corso_set
+        self.tasks_dict          = tasks_dict
+        self.accredita_func      = accredita_func
+        self.fdo_list: list      = []
+        self.avviata             = False
+        self.message: discord.Message = None
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.label = f"Accetta Servizio (0/{fdo_required})"
+
+    @discord.ui.button(label="Accetta Servizio", style=discord.ButtonStyle.success, emoji="🚔")
+    async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.avviata:
+            await interaction.response.send_message("❌ Lo scassinamento è già iniziato!", ephemeral=True)
+            return
+        fdo_nome = interaction.user.display_name
+        if fdo_nome in self.fdo_list:
+            await interaction.response.send_message("❌ Hai già accettato questo servizio!", ephemeral=True)
+            return
+
+        self.fdo_list.append(fdo_nome)
+        n = len(self.fdo_list)
+        r = self.fdo_required
+
+        if n < r:
+            button.label = f"Accetta Servizio ({n}/{r})"
+            fdo_str = "\n".join(f"✅ **{i+1}° Agente:** `{nome}`" for i, nome in enumerate(self.fdo_list))
+            mancanti = r - n
+            embed = discord.Embed(
+                title=f"🚔 IN ATTESA FDO ({n}/{r}) — {self.titolo} {self.emoji_tipo}",
+                description=(
+                    f"{fdo_str}\n"
+                    f"⏳ **In attesa... manc{'a' if mancanti==1 else 'ano'} ancora {mancanti} FDO**\n\n"
+                    f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                    f"👥 **Partecipanti:** `{self.partecipanti}`\n"
+                    f"📍 **Posizione:** `{self.posizione}`"
+                ),
+                color=discord.Color.yellow()
+            )
+            embed.set_footer(text="Tokyo Horizon RP | In attesa FDO")
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+            return
+
+        # Raggiunto il numero richiesto — avvia lo scassinamento
+        self.avviata = True
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+
+        fdo_str = "\n".join(f"✅ **{i+1}° Agente:** `{nome}`" for i, nome in enumerate(self.fdo_list))
+        minuti_s = self.delay_s // 60
+        embed = discord.Embed(
+            title=f"🚔 RAPINA IN CARICO — {self.titolo} {self.emoji_tipo}",
+            description=(
+                f"{fdo_str}\n\n"
+                f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                f"👥 **Partecipanti:** `{self.partecipanti}`\n"
+                f"📍 **Posizione:** `{self.posizione}`\n\n"
+                f"⏳ **Scassinamento in corso — {minuti_s} minuti.**\n"
+                f"💰 Il bottino di `{self.loot:,}€` verrà accreditato al termine."
+            ),
+            color=discord.Color.orange()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina in Corso")
+        await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+
+        self.rapine_dict[self.criminal_uid] = {"accepted_at": time.time()}
+        salva_dati()
+
+        nomi_fdo = ", ".join(f"`{n}`" for n in self.fdo_list)
+        testo_inizio = (
+            f"🚔 <@{self.criminal_uid}> **{r} FDO hanno accettato** ({nomi_fdo}) — **scassinamento iniziato!**\n"
+            f"⏳ Aspetta **{minuti_s} minuti**.\n"
+            f"💰 Riceverai **`{self.loot:,}€`** in banca allo scadere del tempo."
+        )
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(testo_inizio)
+        except Exception as e:
+            print(f"[{self.titolo.upper()}] Messaggio inizio fallito: {e}")
+            try:
+                utente = await bot.fetch_user(self.criminal_uid)
+                await utente.send(testo_inizio)
+            except Exception:
+                pass
+
+        task = asyncio.create_task(self.accredita_func(self.criminal_uid, self.delay_s))
+        self.tasks_dict[self.criminal_uid] = task
+
+    async def on_timeout(self):
+        if not self.avviata:
+            inv = get_inventario(self.criminal_uid)
+            for nome_item, qty in self.items_da_restituire.items():
+                inv[nome_item] = inv.get(nome_item, 0) + qty
+            furto_cooldown.get(self.criminal_uid, {}).pop(self.cooldown_key, None)
+            salva_dati()
+
+        for child in self.children:
+            child.disabled = True
+
+        n_fdo = len(self.fdo_list)
+        if n_fdo == 0:
+            motivo = "Nessun FDO ha risposto entro 10 minuti."
+        else:
+            nomi = ", ".join(f"`{n}`" for n in self.fdo_list)
+            motivo = f"Solo **{n_fdo} FDO** {'ha' if n_fdo==1 else 'hanno'} accettato ({nomi}) — servono **{self.fdo_required} agenti**."
+
+        items_str = (", ".join(f"{q}x {n}" for n, q in self.items_da_restituire.items())
+                     if self.items_da_restituire else "Nessun attrezzo da restituire")
+
+        embed = discord.Embed(
+            title="⌛ RAPINA ANNULLATA — FDO insufficienti",
+            description=(
+                f"{motivo}\n\n"
+                f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                f"📍 **Posizione:** `{self.posizione}`\n\n"
+                f"🎒 **Restituito:** `{items_str}`\n"
+                f"⏱️ Il cooldown è stato azzerato — può riprovare."
+            ),
+            color=discord.Color.dark_gray()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina Scaduta")
+        if self.message:
+            try:
+                await self.message.edit(embed=embed, view=self, attachments=[])
+            except Exception as e:
+                print(f"[{self.titolo.upper()}] Edit timeout fallito: {e}")
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(
+                f"⌛ <@{self.criminal_uid}> La rapina ({self.titolo}) è annullata — {motivo}\n"
+                f"🎒 Attrezzi restituiti e cooldown azzerato. Puoi riprovare!"
+            )
+        except Exception as e:
+            print(f"[{self.titolo.upper()}] Messaggio timeout fallito: {e}")
+
+
+def _invia_fdo_generica(canale_fdo, mention, embed_pol, view):
+    """Helper per l'invio della notifica FDO (chiamato con await)."""
+    return canale_fdo.send(content=mention, embed=embed_pol, view=view,
+                            allowed_mentions=discord.AllowedMentions(roles=True))
+
+
+class ArmeriaModal(discord.ui.Modal, title="🔫 Verbale — Svaligiamento Armeria"):
+    nome_pg      = discord.ui.TextInput(label="Nome del tuo personaggio", placeholder="Es: Marco Rossi", min_length=2, max_length=50)
+    posizione    = discord.ui.TextInput(label="Posizione dell'armeria", placeholder="Es: Ammu-Nation di Little Seoul, LS", min_length=3, max_length=100)
+    partecipanti = discord.ui.TextInput(label="Partecipanti (max 3 criminali)", placeholder="Es: Solo / Con [nomi personaggi]", min_length=2, max_length=120)
+
+    def __init__(self, uid: int):
+        super().__init__()
+        self.uid = uid
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=False)
+        uid  = self.uid
+        nome = self.nome_pg.value.strip()
+        pos  = self.posizione.value.strip()
+        part = self.partecipanti.value.strip()
+
+        embed_ok = discord.Embed(
+            title="✅ Svaligiamento Armeria Inviato!",
+            description=(
+                f"🕵️ **Personaggio:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"🔫 **Nessun attrezzo speciale consumato.** Le armi sono in bella vista nel negozio.\n"
+                f"📡 Notifica inviata agli FDO — aspetta che **3 FDO** accettino.\n"
+                f"⏳ Dopo conferma, iniziano **6 minuti** di scassinamento.\n"
+                f"💰 **`{LOOT_ARMERIA:,}€`** accreditati in banca al termine.\n"
+                f"⚠️ Dialogo obbligatorio di **almeno 6 minuti** con gli FDO.\n\n"
+                f"⚔️ Equipaggiamento consentito: **Pistole + Giubbotti antiproiettile** (vietati caschi)"
+            ),
+            color=discord.Color.green()
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
+        mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
+        embed_pol = discord.Embed(
+            title="🚨 SVALIGIAMENTO IN CORSO — ARMERIA 🔫",
+            description=(
+                f"🦹 **Criminale:** `{nome}`\n"
+                f"👥 **Partecipanti:** `{part}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
+                f"👮 **FDO richiesti:** **3 FDO** devono cliccare il bottone\n"
+                f"⚔️ **Equipaggiamento criminale:** Pistole + Giubbotti (vietati caschi)\n"
+                f"🔒 **Ostaggi:** Max 1\n"
+                f"⏱️ **Scassinamento:** 6 min | **Dialogo min.:** 6 min\n"
+                f"💰 **Bottino:** `{LOOT_ARMERIA:,}€`\n\n"
+                f"⏳ Devono cliccare **3 FDO** entro 10 min o la rapina viene annullata."
+            ),
+            color=discord.Color.red()
+        )
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — servono 3 agenti")
+        view = AccettaRapinaGenericaView(
+            uid, nome, pos, part,
+            fdo_required=3, titolo="Svaligiamento Armeria", emoji_tipo="🔫",
+            loot=LOOT_ARMERIA, delay_s=360, cooldown_key="armeria",
+            items_da_restituire={},
+            rapine_dict=rapine_pendenti_armeria, in_corso_set=_armeria_in_corso,
+            tasks_dict=_armeria_tasks, accredita_func=accredita_armeria
+        )
+        try:
+            await interaction.followup.send(embed=embed_ok, ephemeral=False)
+        except Exception as e:
+            print(f"[ARMERIA] Followup criminale fallito: {e}")
+            try:
+                await interaction.followup.send(embed=embed_ok, ephemeral=True)
+            except Exception:
+                pass
+        try:
+            await interaction.followup.send("📍 **Manda subito uno screenshot del radar** per la tua posizione esatta!", ephemeral=False)
+        except Exception as e:
+            print(f"[ARMERIA] Messaggio radar fallito: {e}")
+        try:
+            canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            msg = await canale_fdo.send(content=mention, embed=embed_pol, view=view,
+                                         allowed_mentions=discord.AllowedMentions(roles=True))
+            view.message = msg
+            print(f"[ARMERIA] Notifica FDO inviata ✅")
+        except discord.Forbidden as e:
+            print(f"[ARMERIA] ❌ Permessi mancanti canale FDO: {e}")
+        except discord.NotFound as e:
+            print(f"[ARMERIA] ❌ Canale FDO non trovato: {e}")
+        except Exception as e:
+            print(f"[ARMERIA] ❌ Errore invio FDO: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        code = getattr(getattr(error, "original", error), "code", None)
+        print(f"[ARMERIA MODAL] {type(error).__name__} (code={code}): {error}")
+        if code in (10062, 40060):
+            return
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
+class FleecaModal(discord.ui.Modal, title="🏦 Verbale — Rapina alla Banca Fleeca"):
+    nome_pg      = discord.ui.TextInput(label="Nome del tuo personaggio", placeholder="Es: Marco Rossi", min_length=2, max_length=50)
+    posizione    = discord.ui.TextInput(label="Posizione della banca Fleeca", placeholder="Es: Fleeca di Rockford Hills, LS", min_length=3, max_length=100)
+    partecipanti = discord.ui.TextInput(label="Partecipanti (max 4 criminali)", placeholder="Es: Con [nomi personaggi]", min_length=2, max_length=150)
+
+    def __init__(self, uid: int):
+        super().__init__()
+        self.uid = uid
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=False)
+        uid  = self.uid
+        nome = self.nome_pg.value.strip()
+        pos  = self.posizione.value.strip()
+        part = self.partecipanti.value.strip()
+
+        inv = get_inventario(uid)
+        if inv.get("Piede di Porco", 0) < 5:
+            mancanti = 5 - inv.get("Piede di Porco", 0)
+            await interaction.followup.send(
+                f"❌ Ti mancano **{mancanti}x Piede di Porco** (ne hai `{inv.get('Piede di Porco',0)}/5`). Acquistali con `/negozio`.",
+                ephemeral=True)
+            return
+        if inv.get("Trapano", 0) < 1:
+            await interaction.followup.send("❌ Ti manca **1x Trapano**. Acquistalo con `/negozio`.", ephemeral=True)
+            return
+
+        embed_ok = discord.Embed(
+            title="✅ Rapina Banca Fleeca Inviata!",
+            description=(
+                f"🕵️ **Personaggio:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"🪓 Consumati: **5x Piede di Porco** + **1x Trapano**.\n"
+                f"📡 Notifica inviata agli FDO — aspetta che **4 FDO** accettino.\n"
+                f"⏳ Dopo conferma, iniziano **7 minuti** di scassinamento.\n"
+                f"💰 **`{LOOT_FLEECA:,}€`** accreditati in banca al termine.\n"
+                f"⚠️ Dialogo obbligatorio di **almeno 6 minuti** con gli FDO.\n\n"
+                f"⚔️ Equipaggiamento: **Pistole, mitra leggeri, giubbotti** (vietati caschi)"
+            ),
+            color=discord.Color.green()
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
+        mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
+        embed_pol = discord.Embed(
+            title="🚨 RAPINA IN CORSO — BANCA FLEECA 🏦",
+            description=(
+                f"🦹 **Criminale:** `{nome}`\n"
+                f"👥 **Partecipanti:** `{part}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
+                f"👮 **FDO richiesti:** **4 FDO** devono cliccare il bottone\n"
+                f"⚔️ **Equipaggiamento criminale:** Pistole, mitra leggeri, giubbotti (vietati caschi)\n"
+                f"🔒 **Ostaggi:** Max 1 (riscatto max 15.000€)\n"
+                f"⏱️ **Scassinamento:** 7 min | **Dialogo min.:** 6 min\n"
+                f"💰 **Bottino:** `{LOOT_FLEECA:,}€`\n\n"
+                f"⏳ Devono cliccare **4 FDO** entro 10 min o la rapina viene annullata."
+            ),
+            color=discord.Color.red()
+        )
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — servono 4 agenti")
+        view = AccettaRapinaGenericaView(
+            uid, nome, pos, part,
+            fdo_required=4, titolo="Banca Fleeca", emoji_tipo="🏦",
+            loot=LOOT_FLEECA, delay_s=420, cooldown_key="fleeca",
+            items_da_restituire={"Piede di Porco": 5, "Trapano": 1},
+            rapine_dict=rapine_pendenti_fleeca, in_corso_set=_fleeca_in_corso,
+            tasks_dict=_fleeca_tasks, accredita_func=accredita_fleeca
+        )
+        # Consuma gli attrezzi
+        inv["Piede di Porco"] -= 5
+        if inv["Piede di Porco"] <= 0:
+            del inv["Piede di Porco"]
+        inv["Trapano"] = inv.get("Trapano", 1) - 1
+        if inv["Trapano"] <= 0:
+            del inv["Trapano"]
+        salva_dati()
+        try:
+            await interaction.followup.send(embed=embed_ok, ephemeral=False)
+        except Exception as e:
+            print(f"[FLEECA] Followup criminale fallito: {e}")
+            try:
+                await interaction.followup.send(embed=embed_ok, ephemeral=True)
+            except Exception:
+                pass
+        try:
+            await interaction.followup.send("📍 **Manda subito uno screenshot del radar** per la tua posizione esatta!", ephemeral=False)
+        except Exception as e:
+            print(f"[FLEECA] Messaggio radar fallito: {e}")
+        try:
+            canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            msg = await canale_fdo.send(content=mention, embed=embed_pol, view=view,
+                                         allowed_mentions=discord.AllowedMentions(roles=True))
+            view.message = msg
+            print(f"[FLEECA] Notifica FDO inviata ✅")
+        except discord.Forbidden as e:
+            print(f"[FLEECA] ❌ Permessi mancanti canale FDO: {e}")
+        except discord.NotFound as e:
+            print(f"[FLEECA] ❌ Canale FDO non trovato: {e}")
+        except Exception as e:
+            print(f"[FLEECA] ❌ Errore invio FDO: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        code = getattr(getattr(error, "original", error), "code", None)
+        print(f"[FLEECA MODAL] {type(error).__name__} (code={code}): {error}")
+        if code in (10062, 40060):
+            return
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
+class GioielleriaModal(discord.ui.Modal, title="💎 Verbale — Assalto alla Gioielleria"):
+    nome_pg      = discord.ui.TextInput(label="Nome del tuo personaggio", placeholder="Es: Marco Rossi", min_length=2, max_length=50)
+    posizione    = discord.ui.TextInput(label="Posizione della gioielleria", placeholder="Es: Gioielleria di Rockford Hills, LS", min_length=3, max_length=100)
+    partecipanti = discord.ui.TextInput(label="Partecipanti (max 5 criminali)", placeholder="Es: Con [nomi personaggi]", min_length=2, max_length=180)
+
+    def __init__(self, uid: int):
+        super().__init__()
+        self.uid = uid
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=False)
+        uid  = self.uid
+        nome = self.nome_pg.value.strip()
+        pos  = self.posizione.value.strip()
+        part = self.partecipanti.value.strip()
+
+        inv = get_inventario(uid)
+        if inv.get("Dispositivo di Hacking Medio", 0) < 1:
+            await interaction.followup.send("❌ Ti manca **1x Dispositivo di Hacking Medio**. Acquistalo con `/compranero`.", ephemeral=True)
+            return
+        if inv.get("Fumogeni", 0) < 1:
+            await interaction.followup.send("❌ Ti mancano **Fumogeni**. Acquistali con `/compranero`.", ephemeral=True)
+            return
+        if inv.get("Gas BZ", 0) < 1:
+            await interaction.followup.send("❌ Ti manca **Gas BZ**. Acquistalo con `/compranero`.", ephemeral=True)
+            return
+
+        embed_ok = discord.Embed(
+            title="✅ Assalto alla Gioielleria Inviato!",
+            description=(
+                f"🕵️ **Personaggio:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"📡 Consumati: **1x Dispositivo di Hacking Medio** + **1x Fumogeni** + **1x Gas BZ**\n"
+                f"🔔 Notifica inviata agli FDO — aspetta che **4 FDO** accettino.\n"
+                f"⏳ Dopo conferma, iniziano **9 minuti** di scassinamento.\n"
+                f"💰 **`{LOOT_GIOIELLERIA:,}€`** accreditati in banca al termine.\n"
+                f"⚠️ Dialogo obbligatorio di **almeno 7 minuti** con gli FDO.\n\n"
+                f"⚔️ Equipaggiamento: **Libero totale** (caschi, giubbotti, armi automatiche)\n"
+                f"🔒 **Ostaggi:** Max 2 (riscatto max **30.000€** a ostaggio)"
+            ),
+            color=discord.Color.green()
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
+        mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
+        embed_pol = discord.Embed(
+            title="🚨 ASSALTO IN CORSO — GIOIELLERIA 💎",
+            description=(
+                f"🦹 **Criminale (leader):** `{nome}`\n"
+                f"👥 **Partecipanti:** `{part}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
+                f"👮 **FDO richiesti:** **4 FDO** devono cliccare il bottone\n"
+                f"⚔️ **Equipaggiamento criminale:** Libero totale (caschi integrali, giubbotti, armi automatiche)\n"
+                f"🔒 **Ostaggi:** Max 2 | Riscatto max **30.000€** a ostaggio\n"
+                f"⏱️ **Scassinamento:** 9 min | **Dialogo min.:** 7 min\n"
+                f"💰 **Bottino:** `{LOOT_GIOIELLERIA:,}€`\n\n"
+                f"⏳ Devono cliccare **4 FDO** entro 10 min o la rapina viene annullata."
+            ),
+            color=discord.Color.red()
+        )
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — servono 4 agenti")
+        view = AccettaRapinaGenericaView(
+            uid, nome, pos, part,
+            fdo_required=4, titolo="Gioielleria", emoji_tipo="💎",
+            loot=LOOT_GIOIELLERIA, delay_s=540, cooldown_key="gioielleria",
+            items_da_restituire={"Dispositivo di Hacking Medio": 1, "Fumogeni": 1, "Gas BZ": 1},
+            rapine_dict=rapine_pendenti_gioielleria, in_corso_set=_gioielleria_in_corso,
+            tasks_dict=_gioielleria_tasks, accredita_func=accredita_gioielleria
+        )
+        for item in ("Dispositivo di Hacking Medio", "Fumogeni", "Gas BZ"):
+            inv[item] = inv.get(item, 1) - 1
+            if inv[item] <= 0:
+                del inv[item]
+        salva_dati()
+        try:
+            await interaction.followup.send(embed=embed_ok, ephemeral=False)
+        except Exception as e:
+            print(f"[GIOIELLERIA] Followup criminale fallito: {e}")
+            try:
+                await interaction.followup.send(embed=embed_ok, ephemeral=True)
+            except Exception:
+                pass
+        try:
+            await interaction.followup.send("📍 **Manda subito uno screenshot del radar** per la tua posizione esatta!", ephemeral=False)
+        except Exception as e:
+            print(f"[GIOIELLERIA] Messaggio radar fallito: {e}")
+        try:
+            canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            msg = await canale_fdo.send(content=mention, embed=embed_pol, view=view,
+                                         allowed_mentions=discord.AllowedMentions(roles=True))
+            view.message = msg
+            print(f"[GIOIELLERIA] Notifica FDO inviata ✅")
+        except discord.Forbidden as e:
+            print(f"[GIOIELLERIA] ❌ Permessi mancanti canale FDO: {e}")
+        except discord.NotFound as e:
+            print(f"[GIOIELLERIA] ❌ Canale FDO non trovato: {e}")
+        except Exception as e:
+            print(f"[GIOIELLERIA] ❌ Errore invio FDO: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        code = getattr(getattr(error, "original", error), "code", None)
+        print(f"[GIOIELLERIA MODAL] {type(error).__name__} (code={code}): {error}")
+        if code in (10062, 40060):
+            return
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
+class MazeBankModal(discord.ui.Modal, title="🏛️ Verbale — Grande Colpo alla Maze Bank"):
+    nome_pg      = discord.ui.TextInput(label="Nome del tuo personaggio", placeholder="Es: Marco Rossi", min_length=2, max_length=50)
+    posizione    = discord.ui.TextInput(label="Posizione della Maze Bank", placeholder="Es: Maze Bank Tower, Downtown LS", min_length=3, max_length=100)
+    partecipanti = discord.ui.TextInput(label="Partecipanti (max 6 criminali)", placeholder="Es: Con [nomi personaggi]", min_length=2, max_length=200)
+
+    def __init__(self, uid: int):
+        super().__init__()
+        self.uid = uid
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=False)
+        uid  = self.uid
+        nome = self.nome_pg.value.strip()
+        pos  = self.posizione.value.strip()
+        part = self.partecipanti.value.strip()
+
+        inv = get_inventario(uid)
+        if inv.get("Dispositivo di Hacking Avanzato", 0) < 1:
+            await interaction.followup.send("❌ Ti manca **1x Dispositivo di Hacking Avanzato**. Acquistalo con `/compranero`.", ephemeral=True)
+            return
+        if inv.get("Lancia Termica", 0) < 1:
+            await interaction.followup.send("❌ Ti manca **1x Lancia Termica**. Acquistala con `/compranero`.", ephemeral=True)
+            return
+        if inv.get("Trapano Pesante Professionale", 0) < 1:
+            await interaction.followup.send("❌ Ti manca **1x Trapano Pesante Professionale**. Acquistalo con `/compranero`.", ephemeral=True)
+            return
+        if inv.get("Grimaldello Avanzato", 0) < 2:
+            mancanti = 2 - inv.get("Grimaldello Avanzato", 0)
+            await interaction.followup.send(
+                f"❌ Ti mancano **{mancanti}x Grimaldello Avanzato** (ne hai `{inv.get('Grimaldello Avanzato',0)}/2`). Acquistali con `/negozio`.",
+                ephemeral=True)
+            return
+
+        embed_ok = discord.Embed(
+            title="✅ Grande Colpo alla Maze Bank Inviato!",
+            description=(
+                f"🕵️ **Personaggio:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"🖥️ Consumati: **1x Hack Avanzato** + **1x Lancia Termica** + **1x Trapano Pesante Professionale** + **2x Grimaldello Avanzato**\n"
+                f"📡 Notifica inviata agli FDO — aspetta che **5 FDO** accettino.\n"
+                f"⏳ Dopo conferma, iniziano **12 minuti** di scassinamento.\n"
+                f"💰 **`{LOOT_MAZEBANK:,}€`** accreditati in banca al termine.\n"
+                f"⚠️ Dialogo obbligatorio di **almeno 10 minuti** con gli FDO.\n\n"
+                f"⚔️ Equipaggiamento: **Libero totale**\n"
+                f"🔒 **Ostaggi:** Max 3 (riscatto max **80.000€** a ostaggio)"
+            ),
+            color=discord.Color.green()
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
+        mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
+        embed_pol = discord.Embed(
+            title="🚨 GRANDE COLPO IN CORSO — MAZE BANK 🏛️",
+            description=(
+                f"🦹 **Criminale (leader):** `{nome}`\n"
+                f"👥 **Partecipanti:** `{part}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
+                f"👮 **FDO richiesti:** **5 FDO** devono cliccare il bottone\n"
+                f"⚔️ **Equipaggiamento criminale:** Libero totale\n"
+                f"🔒 **Ostaggi:** Max 3 | Riscatto max **80.000€** a ostaggio\n"
+                f"⏱️ **Scassinamento:** 12 min | **Dialogo min.:** 10 min\n"
+                f"💰 **Bottino:** `{LOOT_MAZEBANK:,}€`\n\n"
+                f"⏳ Devono cliccare **5 FDO** entro 10 min o la rapina viene annullata."
+            ),
+            color=discord.Color.dark_red()
+        )
+        embed_pol.set_footer(text="Tokyo Horizon RP | ALLERTA MASSIMA — servono 5 agenti")
+        view = AccettaRapinaGenericaView(
+            uid, nome, pos, part,
+            fdo_required=5, titolo="Maze Bank", emoji_tipo="🏛️",
+            loot=LOOT_MAZEBANK, delay_s=720, cooldown_key="mazebank",
+            items_da_restituire={"Dispositivo di Hacking Avanzato": 1, "Lancia Termica": 1,
+                                  "Trapano Pesante Professionale": 1, "Grimaldello Avanzato": 2},
+            rapine_dict=rapine_pendenti_mazebank, in_corso_set=_mazebank_in_corso,
+            tasks_dict=_mazebank_tasks, accredita_func=accredita_mazebank
+        )
+        for item, qty in [("Dispositivo di Hacking Avanzato", 1), ("Lancia Termica", 1),
+                           ("Trapano Pesante Professionale", 1), ("Grimaldello Avanzato", 2)]:
+            inv[item] = inv.get(item, qty) - qty
+            if inv[item] <= 0:
+                del inv[item]
+        salva_dati()
+        try:
+            await interaction.followup.send(embed=embed_ok, ephemeral=False)
+        except Exception as e:
+            print(f"[MAZEBANK] Followup criminale fallito: {e}")
+            try:
+                await interaction.followup.send(embed=embed_ok, ephemeral=True)
+            except Exception:
+                pass
+        try:
+            await interaction.followup.send("📍 **Manda subito uno screenshot del radar** per la tua posizione esatta!", ephemeral=False)
+        except Exception as e:
+            print(f"[MAZEBANK] Messaggio radar fallito: {e}")
+        try:
+            canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            msg = await canale_fdo.send(content=mention, embed=embed_pol, view=view,
+                                         allowed_mentions=discord.AllowedMentions(roles=True))
+            view.message = msg
+            print(f"[MAZEBANK] Notifica FDO inviata ✅")
+        except discord.Forbidden as e:
+            print(f"[MAZEBANK] ❌ Permessi mancanti canale FDO: {e}")
+        except discord.NotFound as e:
+            print(f"[MAZEBANK] ❌ Canale FDO non trovato: {e}")
+        except Exception as e:
+            print(f"[MAZEBANK] ❌ Errore invio FDO: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        code = getattr(getattr(error, "original", error), "code", None)
+        print(f"[MAZEBANK MODAL] {type(error).__name__} (code={code}): {error}")
+        if code in (10062, 40060):
+            return
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
+@bot.tree.command(name="rapina", description="Esegui una rapina — bancomat, armeria, banca e altro")
 @app_commands.describe(tipo="Tipo di rapina da effettuare")
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h", value="bancomat"),
-    app_commands.Choice(name="🍏 Minimarket — 15.000€ | Cacciavite/PdP + Pistola | Cooldown 24h", value="minimarket"),
+    app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h",                         value="bancomat"),
+    app_commands.Choice(name="🍏 Minimarket — 15.000€ | Cacciavite/PdP + Pistola | Cooldown 24h",                      value="minimarket"),
+    app_commands.Choice(name="🔫 Armeria — 50.000€ | Nessun attrezzo speciale | Cooldown 24h",                         value="armeria"),
+    app_commands.Choice(name="🏦 Banca Fleeca — 280.000€ | 5x PdP + Trapano | Cooldown 48h",                           value="fleeca"),
+    app_commands.Choice(name="💎 Gioielleria — 500.000€ | Hack Medio + Fumogeni + Gas BZ | Cooldown 4gg",              value="gioielleria"),
+    app_commands.Choice(name="🏛️ Maze Bank — 1.000.000€ | Hack Avanzato + Lancia + Trapano + Grim | Cooldown 1 sett.", value="mazebank"),
 ])
 async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str]):
     uid = interaction.user.id
@@ -2524,6 +3288,130 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             print(f"[RAPINA] MinimarketModal fallito: {e}")
         except Exception as e:
             print(f"[RAPINA] MinimarketModal errore inatteso: {e}")
+
+    elif tipo.value == "armeria":
+        ora = time.time()
+        ultimo = furto_cooldown.get(uid, {}).get("armeria", 0)
+        if ora - ultimo < 24 * 3600:
+            rimanenti = int(24 * 3600 - (ora - ultimo))
+            ore_r, min_r = rimanenti // 3600, (rimanenti % 3600) // 60
+            try:
+                await interaction.response.send_message(
+                    f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di svaligiare un'altra armeria.", ephemeral=True)
+            except Exception: pass
+            return
+        try:
+            await interaction.response.send_modal(ArmeriaModal(uid))
+        except discord.InteractionResponded:
+            print(f"[RAPINA] ArmeriaModal già risposta uid={uid}")
+        except discord.NotFound:
+            print(f"[RAPINA] ArmeriaModal 10062 uid={uid}")
+        except Exception as e:
+            print(f"[RAPINA] ArmeriaModal errore: {e}")
+
+    elif tipo.value == "fleeca":
+        ora = time.time()
+        ultimo = furto_cooldown.get(uid, {}).get("fleeca", 0)
+        if ora - ultimo < 48 * 3600:
+            rimanenti = int(48 * 3600 - (ora - ultimo))
+            ore_r, min_r = rimanenti // 3600, (rimanenti % 3600) // 60
+            try:
+                await interaction.response.send_message(
+                    f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di rapinare un'altra Fleeca.", ephemeral=True)
+            except Exception: pass
+            return
+        inv = get_inventario(uid)
+        if inv.get("Piede di Porco", 0) < 5:
+            mancanti = 5 - inv.get("Piede di Porco", 0)
+            try:
+                await interaction.response.send_message(
+                    f"🔒 Ti mancano **{mancanti}x Piede di Porco** (hai `{inv.get('Piede di Porco',0)}/5`). Comprali con `/negozio`.", ephemeral=True)
+            except Exception: pass
+            return
+        if inv.get("Trapano", 0) < 1:
+            try:
+                await interaction.response.send_message("🔒 Ti manca **1x Trapano**. Compralo con `/negozio`.", ephemeral=True)
+            except Exception: pass
+            return
+        try:
+            await interaction.response.send_modal(FleecaModal(uid))
+        except discord.InteractionResponded:
+            print(f"[RAPINA] FleecaModal già risposta uid={uid}")
+        except discord.NotFound:
+            print(f"[RAPINA] FleecaModal 10062 uid={uid}")
+        except Exception as e:
+            print(f"[RAPINA] FleecaModal errore: {e}")
+
+    elif tipo.value == "gioielleria":
+        ora = time.time()
+        ultimo = furto_cooldown.get(uid, {}).get("gioielleria", 0)
+        if ora - ultimo < 96 * 3600:
+            rimanenti = int(96 * 3600 - (ora - ultimo))
+            ore_r, min_r = rimanenti // 3600, (rimanenti % 3600) // 60
+            try:
+                await interaction.response.send_message(
+                    f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di assaltare un'altra gioielleria.", ephemeral=True)
+            except Exception: pass
+            return
+        inv = get_inventario(uid)
+        items_mancanti = []
+        if inv.get("Dispositivo di Hacking Medio", 0) < 1:
+            items_mancanti.append("1x Dispositivo di Hacking Medio (da `/compranero`)")
+        if inv.get("Fumogeni", 0) < 1:
+            items_mancanti.append("1x Fumogeni (da `/compranero`)")
+        if inv.get("Gas BZ", 0) < 1:
+            items_mancanti.append("1x Gas BZ (da `/compranero`)")
+        if items_mancanti:
+            try:
+                await interaction.response.send_message(
+                    "🔒 Ti mancano:\n• " + "\n• ".join(items_mancanti), ephemeral=True)
+            except Exception: pass
+            return
+        try:
+            await interaction.response.send_modal(GioielleriaModal(uid))
+        except discord.InteractionResponded:
+            print(f"[RAPINA] GioielleriaModal già risposta uid={uid}")
+        except discord.NotFound:
+            print(f"[RAPINA] GioielleriaModal 10062 uid={uid}")
+        except Exception as e:
+            print(f"[RAPINA] GioielleriaModal errore: {e}")
+
+    elif tipo.value == "mazebank":
+        ora = time.time()
+        ultimo = furto_cooldown.get(uid, {}).get("mazebank", 0)
+        if ora - ultimo < 168 * 3600:
+            rimanenti = int(168 * 3600 - (ora - ultimo))
+            ore_r, min_r = rimanenti // 3600, (rimanenti % 3600) // 60
+            try:
+                await interaction.response.send_message(
+                    f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di colpire un'altra Maze Bank.", ephemeral=True)
+            except Exception: pass
+            return
+        inv = get_inventario(uid)
+        items_mancanti = []
+        if inv.get("Dispositivo di Hacking Avanzato", 0) < 1:
+            items_mancanti.append("1x Dispositivo di Hacking Avanzato (da `/compranero`)")
+        if inv.get("Lancia Termica", 0) < 1:
+            items_mancanti.append("1x Lancia Termica (da `/compranero`)")
+        if inv.get("Trapano Pesante Professionale", 0) < 1:
+            items_mancanti.append("1x Trapano Pesante Professionale (da `/compranero`)")
+        if inv.get("Grimaldello Avanzato", 0) < 2:
+            mancanti = 2 - inv.get("Grimaldello Avanzato", 0)
+            items_mancanti.append(f"{mancanti}x Grimaldello Avanzato (hai `{inv.get('Grimaldello Avanzato',0)}/2` — da `/negozio`)")
+        if items_mancanti:
+            try:
+                await interaction.response.send_message(
+                    "🔒 Ti mancano:\n• " + "\n• ".join(items_mancanti), ephemeral=True)
+            except Exception: pass
+            return
+        try:
+            await interaction.response.send_modal(MazeBankModal(uid))
+        except discord.InteractionResponded:
+            print(f"[RAPINA] MazeBankModal già risposta uid={uid}")
+        except discord.NotFound:
+            print(f"[RAPINA] MazeBankModal 10062 uid={uid}")
+        except Exception as e:
+            print(f"[RAPINA] MazeBankModal errore: {e}")
 
 
 # =============================================================================
