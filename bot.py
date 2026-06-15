@@ -407,6 +407,7 @@ NEGOZIO = {
     "Piede di Porco":              {"prezzo": 1000,  "emoji": "🪓",  "descrizione": "Forza porte e finestre. Usabile anche per il Colpo al Minimarket. Indispensabile per bancomat, case e ville."},
     "Cacciavite":                  {"prezzo": 1250,  "emoji": "🪛",  "descrizione": "Forza la cassa dei minimarket. Indispensabile per il Colpo al Minimarket (in alternativa al Piede di Porco)."},
     "Grimaldello":                 {"prezzo": 1500,  "emoji": "🗝️", "descrizione": "Scassina serrature di alta sicurezza. Fondamentale per colpi in ville, operazioni epiche e leggendarie."},
+    "Torcia":                      {"prezzo": 2000,  "emoji": "🔦",  "descrizione": "Illumina gli ambienti bui. Obbligatoria per il furto in casa (insieme al Piede di Porco)."},
     "Sistema di Hacking":          {"prezzo": 4000,  "emoji": "💻",  "descrizione": "Disabilita sistemi di allarme e telecamere base. Obbligatorio per ogni furto in villa (insieme a Piede di Porco o Grimaldello)."},
     "Slim Jim":                    {"prezzo": 4000,  "emoji": "🔓",  "descrizione": "Apre le portiere dei veicoli senza chiave. Obbligatorio per il furto di veicoli (insieme al Dispositivo di Hacking Base)."},
     "Dispositivo di Hacking Base": {"prezzo": 4000,  "emoji": "📟",  "descrizione": "Azzera il sistema antifurto del veicolo. Obbligatorio per il furto di veicoli (insieme allo Slim Jim)."},
@@ -563,9 +564,16 @@ class ScassoButtons(discord.ui.View):
         if inv.get(self.strumento, 0) <= 0:
             await interaction.response.send_message(f"❌ Non hai più `{self.strumento}` nell'inventario!", ephemeral=True)
             return
+        if self.tipo_furto == "casa" and inv.get("Torcia", 0) <= 0:
+            await interaction.response.send_message("❌ Non hai più la `Torcia` nell'inventario!", ephemeral=True)
+            return
         inv[self.strumento] -= 1
         if inv[self.strumento] == 0:
             del inv[self.strumento]
+        if self.tipo_furto == "casa":
+            inv["Torcia"] -= 1
+            if inv["Torcia"] == 0:
+                del inv["Torcia"]
         salva_dati()
 
         await interaction.response.send_message(
@@ -1147,6 +1155,19 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
                 "💻 Hai lo strumento da scasso ma ti manca il **`Sistema di Hacking`** (4.000€). Acquistalo con `/negozio`.", ephemeral=True
             )
             return
+    elif tipo_scelto == "casa":
+        inv = get_inventario(uid)
+        strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
+        if not strumento_usato:
+            await interaction.followup.send(
+                "🔒 Per il furto in casa serve **`1x Piede di Porco`** e **`1x Torcia`**. Acquistali con `/negozio`.", ephemeral=True
+            )
+            return
+        if inv.get("Torcia", 0) <= 0:
+            await interaction.followup.send(
+                "🔦 Hai il Piede di Porco ma ti manca la **`Torcia`** (2.000€). Acquistala con `/negozio`.", ephemeral=True
+            )
+            return
     elif preferenza:
         inv = get_inventario(uid)
         strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
@@ -1239,7 +1260,7 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
                 "• 🪟 Forza la finestra\n"
                 "• 🚪 Forza la porta\n\n"
                 f"📦 **Beni comuni individuati all'interno (Max {valore_max:,}€):**\n{descrizione_oggetti}\n"
-                "🔑 **Strumento richiesto:** 🛠️ `Cacciavite o Piede di Porco`"
+                "🔑 **Strumenti richiesti:** 🪓 `Piede di Porco` + 🔦 `Torcia`"
             ),
             color=discord.Color.dark_green()
         )
@@ -1442,6 +1463,7 @@ async def negozio(interaction: discord.Interaction):
     app_commands.Choice(name="Piede di Porco (1.000€)",              value="Piede di Porco"),
     app_commands.Choice(name="Cacciavite (1.250€)",                  value="Cacciavite"),
     app_commands.Choice(name="Grimaldello (1.500€)",                 value="Grimaldello"),
+    app_commands.Choice(name="Torcia (2.000€)",                      value="Torcia"),
     app_commands.Choice(name="Sistema di Hacking (4.000€)",          value="Sistema di Hacking"),
     app_commands.Choice(name="Slim Jim (4.000€)",                    value="Slim Jim"),
     app_commands.Choice(name="Dispositivo di Hacking Base (4.000€)", value="Dispositivo di Hacking Base"),
@@ -1677,6 +1699,7 @@ async def resetordine(interaction: discord.Interaction, utente: discord.Member):
     app_commands.Choice(name="Grimaldello",                    value="Grimaldello"),
     app_commands.Choice(name="Grimaldello Avanzato",           value="Grimaldello Avanzato"),
     app_commands.Choice(name="Piede di Porco",                 value="Piede di Porco"),
+    app_commands.Choice(name="Torcia",                         value="Torcia"),
     app_commands.Choice(name="Sistema di Hacking",             value="Sistema di Hacking"),
     app_commands.Choice(name="Slim Jim",                       value="Slim Jim"),
     app_commands.Choice(name="Dispositivo di Hacking Base",    value="Dispositivo di Hacking Base"),
@@ -1744,6 +1767,7 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
     app_commands.Choice(name="Grimaldello",                    value="Grimaldello"),
     app_commands.Choice(name="Grimaldello Avanzato",           value="Grimaldello Avanzato"),
     app_commands.Choice(name="Piede di Porco",                 value="Piede di Porco"),
+    app_commands.Choice(name="Torcia",                         value="Torcia"),
     app_commands.Choice(name="Sistema di Hacking",             value="Sistema di Hacking"),
     app_commands.Choice(name="Slim Jim",                       value="Slim Jim"),
     app_commands.Choice(name="Dispositivo di Hacking Base",    value="Dispositivo di Hacking Base"),
