@@ -4601,19 +4601,21 @@ async def setupsanzioni(interaction: discord.Interaction):
     embed_warn.add_field(
         name="⏳ AVVISI — Richiami Progressivi",
         value=(
-            "• <@&1516210042762690650> ➜ Primo richiamo formale — **2 giorni**\n"
-            "• <@&1516210228490932334> ➜ Secondo richiamo — **4 giorni**\n"
+            "• <@&1516210042762690650> ➜ Primo richiamo formale — **2 giorni**\n\n"
+            "• <@&1516210228490932334> ➜ Secondo richiamo — **4 giorni**\n\n"
             "• <@&1516210479385677944> ➜ Avviso finale prima del Warn — **6 giorni**\n"
         ),
         inline=False,
     )
 
+    embed_warn.add_field(name="\u200b", value="\u200b", inline=False)
+
     embed_warn.add_field(
         name="🔴 WARN — Sanzioni Disciplinari",
         value=(
-            "• <@&1516210617415897128> ➜ Sanzione disciplinare lieve — **8 giorni**\n"
-            "• <@&1516210769317068951> ➜ Sanzione disciplinare media — **12 giorni**\n"
-            "• <@&1516210828699897927> ➜ Sanzione disciplinare grave — **16 giorni**\n"
+            "• <@&1516210617415897128> ➜ Sanzione disciplinare lieve — **8 giorni**\n\n"
+            "• <@&1516210769317068951> ➜ Sanzione disciplinare media — **12 giorni**\n\n"
+            "• <@&1516210828699897927> ➜ Sanzione disciplinare grave — **16 giorni**\n\n"
             "• <@&1516211005666103357> ➜ Ultima opportunità nel server — **21 giorni**\n"
         ),
         inline=False,
@@ -4629,19 +4631,21 @@ async def setupsanzioni(interaction: discord.Interaction):
     embed_ban.add_field(
         name="❌ BAN TEMPORANEI — Sospensione dalle Sessioni",
         value=(
-            "• <@&1516211996561768578> ➜ Accesso alle sessioni negato per **24 ore**\n"
-            "• <@&1516215698718855279> ➜ Accesso alle sessioni negato per **48 ore**\n"
-            "• <@&1516215922430578849> ➜ Accesso alle sessioni negato per **72 ore**\n"
+            "• <@&1516211996561768578> ➜ Accesso alle sessioni negato per **24 ore**\n\n"
+            "• <@&1516215698718855279> ➜ Accesso alle sessioni negato per **48 ore**\n\n"
+            "• <@&1516215922430578849> ➜ Accesso alle sessioni negato per **72 ore**\n\n"
             "• <@&1516216863678402692> ➜ Accesso alle sessioni negato per **7 giorni**\n"
         ),
         inline=False,
     )
 
+    embed_ban.add_field(name="\u200b", value="\u200b", inline=False)
+
     embed_ban.add_field(
         name="🚫 BAN PERMANENTE",
         value=(
-            "• <@&1516211162184814752> ➜ Espulsione definitiva dal server\n"
-            "↳ *L'unico modo per rientrare è presentare un appello formale, se consentito.*\n"
+            "• <@&1516211162184814752> ➜ Espulsione definitiva dal server\n\n"
+            "↳ *L'unico modo per rientrare è presentare un appello formale, se consentito.*"
         ),
         inline=False,
     )
@@ -4655,24 +4659,35 @@ async def setupsanzioni(interaction: discord.Interaction):
 
     embed_info.add_field(
         name="📋 COME VIENE RIMOSSA UNA SANZIONE",
+        value="Le sanzioni **non vengono rimosse automaticamente**. Per richiedere la rimozione segui questi passi:",
+        inline=False,
+    )
+
+    embed_info.add_field(
+        name="1️⃣  Attendi la scadenza",
+        value="Aspetta che il periodo indicato sia trascorso interamente.\n\u200b",
+        inline=False,
+    )
+
+    embed_info.add_field(
+        name="2️⃣  Apri un Ticket",
+        value="Solo a scadenza avvenuta apri un ticket Supporto chiedendo la rimozione del ruolo sanzione.\n\u200b",
+        inline=False,
+    )
+
+    embed_info.add_field(
+        name="3️⃣  Verifica Staff",
         value=(
-            "Le sanzioni **non vengono rimosse automaticamente**. "
-            "Per richiedere la rimozione segui questi passi:\n\u200b\n"
-            "**1️⃣  Attendi la scadenza**\n"
-            "Aspetta che il periodo indicato sia trascorso interamente.\n\n"
-            "**2️⃣  Apri un Ticket**\n"
-            "Solo a scadenza avvenuta apri un ticket Supporto chiedendo la rimozione del ruolo.\n\n"
-            "**3️⃣  Verifica Staff**\n"
             "Lo Staff controllerà che durante il periodo di sanzione il tuo comportamento "
-            "sia stato corretto prima di procedere alla rimozione.\n"
+            "sia stato corretto prima di procedere alla rimozione.\n\u200b"
         ),
         inline=False,
     )
 
     embed_info.add_field(
-        name="⚠️ NOTA IMPORTANTE",
+        name="⚠️ Nota",
         value=(
-            "I Ban temporanei vengono gestiti dallo Staff allo scadere del tempo indicato.\n"
+            "I Ban temporanei vengono gestiti dallo Staff allo scadere del tempo indicato. "
             "Per i Ban Permanenti l'unico modo per rientrare è un eventuale appello, se concesso dall'Amministrazione."
         ),
         inline=False,
