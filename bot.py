@@ -4737,22 +4737,8 @@ async def _crea_canale_ticket(
     embed.set_footer(text=f"Tokyo Horizon RP | Ticket aperto da {interaction.user.display_name}")
     embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1254/1254540.png")
 
-    # Ping staff (e admin se richiesto)
-    ping_parti = [interaction.user.mention]
-    for r_id in RUOLI_STAFF:
-        role = guild.get_role(r_id)
-        if role:
-            ping_parti.append(role.mention)
-            break  # un solo ping ruolo staff basta
-
-    if info["ping_admin"]:
-        for r_id in RUOLI_ADMIN_TICKET:
-            role = guild.get_role(r_id)
-            if role:
-                ping_parti.append(role.mention)
-
     await canale.send(
-        content=" ".join(ping_parti),
+        content=f"{interaction.user.mention} <@&1514407155577524385>",
         embed=embed,
         view=ChiudiTicketView(),
     )
