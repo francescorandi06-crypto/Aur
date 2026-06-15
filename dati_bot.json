@@ -1,13 +1,14 @@
 {
   "economia": {
     "1083459553892499476": {
-      "portafoglio": 44000,
-      "banca": 142000
+      "portafoglio": 40000,
+      "banca": 172000
     }
   },
   "furto_cooldown": {
     "1083459553892499476": {
-      "bancomat": 1781480749.0936272
+      "bancomat": 1781480749.0936272,
+      "macchina": 1781529934.6644647
     }
   },
   "inventario": {
@@ -15,8 +16,7 @@
       "Sistema di Hacking": 98,
       "Piede di Porco": 81,
       "Pistola": 2,
-      "Slim Jim": 1,
-      "Dispositivo di Hacking Base": 1
+      "Slim Jim": 1
     }
   },
   "canale_furti_id": 1515093746671292547,

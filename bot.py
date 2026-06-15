@@ -156,6 +156,22 @@ class TokyoHorizonBot(commands.Bot):
 
 bot = TokyoHorizonBot()
 
+RUOLO_BENVENUTO = 1516070200494002276  # Ruolo assegnato automaticamente a ogni nuovo membro
+
+@bot.event
+async def on_member_join(member: discord.Member):
+    role = member.guild.get_role(RUOLO_BENVENUTO)
+    if role:
+        try:
+            await member.add_roles(role, reason="Assegnazione automatica ruolo nuovo membro")
+            print(f"[JOIN] Ruolo '{role.name}' assegnato a {member} (id={member.id})")
+        except discord.Forbidden:
+            print(f"[JOIN] ❌ Permessi insufficienti per assegnare il ruolo a {member}")
+        except Exception as e:
+            print(f"[JOIN] ❌ Errore assegnazione ruolo a {member}: {e}")
+    else:
+        print(f"[JOIN] ⚠️ Ruolo {RUOLO_BENVENUTO} non trovato nel server")
+
 # =============================================================================
 # POSIZIONI — Ville e Case
 # =============================================================================
@@ -1132,51 +1148,36 @@ async def furto(interaction: discord.Interaction, tipo: app_commands.Choice[str]
         )
         return
 
-    await interaction.response.defer()
-
-    if tipo_scelto == "villa":
-        preferenza = ["Grimaldello", "Piede di Porco"]
-    elif tipo_scelto == "casa":
-        preferenza = ["Piede di Porco"]
-    else:
-        preferenza = []
-
+    # --- Controllo inventario PRIMA del defer: errori visibili solo al giocatore ---
     strumento_usato = None
     if tipo_scelto == "villa":
-        inv = get_inventario(uid)
-        strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
+        inv_check = get_inventario(uid)
+        strumento_usato = next((s for s in ["Grimaldello", "Piede di Porco"] if inv_check.get(s, 0) > 0), None)
         if not strumento_usato:
-            await interaction.followup.send(
+            await interaction.response.send_message(
                 "🔒 Per il furto in villa servono **`Piede di Porco`** o **`Grimaldello`** e **`Sistema di Hacking`**. Acquistali con `/negozio`.", ephemeral=True
             )
             return
-        if inv.get("Sistema di Hacking", 0) <= 0:
-            await interaction.followup.send(
+        if inv_check.get("Sistema di Hacking", 0) <= 0:
+            await interaction.response.send_message(
                 "💻 Hai lo strumento da scasso ma ti manca il **`Sistema di Hacking`** (4.000€). Acquistalo con `/negozio`.", ephemeral=True
             )
             return
     elif tipo_scelto == "casa":
-        inv = get_inventario(uid)
-        strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
+        inv_check = get_inventario(uid)
+        strumento_usato = next((s for s in ["Piede di Porco"] if inv_check.get(s, 0) > 0), None)
         if not strumento_usato:
-            await interaction.followup.send(
+            await interaction.response.send_message(
                 "🔒 Per il furto in casa serve **`1x Piede di Porco`** e **`1x Torcia`**. Acquistali con `/negozio`.", ephemeral=True
             )
             return
-        if inv.get("Torcia", 0) <= 0:
-            await interaction.followup.send(
+        if inv_check.get("Torcia", 0) <= 0:
+            await interaction.response.send_message(
                 "🔦 Hai il Piede di Porco ma ti manca la **`Torcia`** (2.000€). Acquistala con `/negozio`.", ephemeral=True
             )
             return
-    elif preferenza:
-        inv = get_inventario(uid)
-        strumento_usato = next((s for s in preferenza if inv.get(s, 0) > 0), None)
-        if not strumento_usato:
-            nomi = " o ".join(f"`{s}`" for s in preferenza)
-            await interaction.followup.send(
-                f"🔒 Non puoi fare il furto senza strumenti! Hai bisogno di {nomi}. Acquistali con `/negozio`.", ephemeral=True
-            )
-            return
+
+    await interaction.response.defer()  # Pubblico: il risultato del furto è visibile a tutti
 
     ora_attuale = time.time()
     if tipo_scelto != "villa":
