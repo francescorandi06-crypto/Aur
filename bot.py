@@ -8,6 +8,8 @@ import json
 import time
 import signal
 import sys
+import io
+from datetime import date
 import aiohttp
 from flask import Flask
 from threading import Thread
@@ -71,6 +73,7 @@ class TokyoHorizonBot(commands.Bot):
         self.aiohttp_session = aiohttp.ClientSession()
         self.add_view(VeicoloButtons())
         self.add_view(RichiestaPGView())
+        self.add_view(CartaIdentitaView())
         # Re-registra le view di approvazione per gli ordini in_attesa sopravvissuti al restart
         for uid, ordine in list(ordini_pendenti_macchina.items()):
             if ordine.get("in_attesa"):
@@ -1957,6 +1960,7 @@ CANALE_POLIZIA_HARDCODED = 1515439682333180015   # canale #RAPINE (criminale)
 CANALE_FDO               = 1513574802156425267   # canale allerta FDO
 CANALE_STAFF_VEICOLI     = 1515676328622428310   # canale revisione consegna veicoli (staff)
 CANALE_PG                = 1516143484145242253   # canale richiesta personaggio (whitelist)
+CANALE_CARTA             = 1516151385064869928   # canale carta d'identità
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 
 # Tiene traccia di quali uid hanno già un task accredita_bancomat in esecuzione
@@ -3845,6 +3849,347 @@ async def setuppg(interaction: discord.Interaction):
     except discord.Forbidden:
         await interaction.followup.send(
             f"❌ Il bot non ha i permessi per scrivere in <#{CANALE_PG}>.", ephemeral=True
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
+
+
+# =============================================================================
+# MODULO CARTA D'IDENTITÀ
+# =============================================================================
+
+_FONT_REGULAR = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+_FONT_BOLD    = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+# Colori carta
+_C_BG        = (11,  17,  35)   # sfondo carta scuro
+_C_CARD      = (22,  38,  68)   # pannello interno
+_C_GOLD      = (212, 175,  55)  # oro accent
+_C_WHITE     = (240, 240, 240)
+_C_LABEL     = (160, 170, 190)  # testo etichetta
+_C_DIVIDER   = (40,  60,  100)
+
+
+async def _scarica_foto(session: aiohttp.ClientSession, url: str):
+    """Scarica l'immagine dalla URL e la restituisce come oggetto PIL Image, o None."""
+    try:
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            if r.status == 200:
+                data = await r.read()
+                from PIL import Image
+                img = Image.open(io.BytesIO(data)).convert("RGB")
+                return img
+    except Exception as e:
+        print(f"[CARTA] ❌ Download foto fallito: {e}")
+    return None
+
+
+def _tronca(testo: str, font, max_w: int) -> str:
+    """Tronca il testo con '…' se supera max_w pixel."""
+    from PIL import ImageFont
+    while font.getlength(testo) > max_w and len(testo) > 1:
+        testo = testo[:-1]
+    return testo if font.getlength(testo) <= max_w else testo[:-1] + "…"
+
+
+async def _genera_carta_img(
+    nome: str,
+    data_luogo: str,
+    eta_sesso: str,
+    segni: str,
+    foto_url: str | None,
+) -> discord.File:
+    from PIL import Image, ImageDraw, ImageFont
+
+    W, H = 920, 530
+
+    img   = Image.new("RGB", (W, H), _C_BG)
+    draw  = ImageDraw.Draw(img)
+
+    # --- Cornice esterna oro ---
+    draw.rounded_rectangle([4, 4, W - 5, H - 5], radius=18, outline=_C_GOLD, width=3)
+
+    # --- Pannello interno ---
+    draw.rounded_rectangle([14, 14, W - 15, H - 15], radius=14, fill=_C_CARD)
+
+    # --- Header bar ---
+    draw.rounded_rectangle([14, 14, W - 15, 74], radius=14, fill=_C_GOLD)
+    draw.rectangle([14, 50, W - 15, 74], fill=_C_GOLD)  # bottom corners flat
+
+    try:
+        f_header = ImageFont.truetype(_FONT_BOLD, 22)
+        f_sub    = ImageFont.truetype(_FONT_REGULAR, 13)
+        f_label  = ImageFont.truetype(_FONT_REGULAR, 13)
+        f_value  = ImageFont.truetype(_FONT_BOLD,    17)
+        f_small  = ImageFont.truetype(_FONT_REGULAR, 12)
+        f_title  = ImageFont.truetype(_FONT_BOLD,    14)
+    except Exception:
+        f_header = f_sub = f_label = f_value = f_small = f_title = ImageFont.load_default()
+
+    # Testo header
+    draw.text((W // 2, 26), "🪪  CARTA D'IDENTITÀ", font=f_header,
+              fill=_C_BG, anchor="mm")
+    draw.text((W // 2, 57), "TOKYO HORIZON ROLEPLAY", font=f_sub,
+              fill=_C_BG, anchor="mm")
+
+    # --- Sezione foto (sinistra) ---
+    PH_X, PH_Y, PH_W, PH_H = 30, 95, 200, 265
+    # Sfondo grigio placeholder
+    draw.rectangle([PH_X, PH_Y, PH_X + PH_W, PH_Y + PH_H], fill=(30, 45, 75))
+    draw.rectangle([PH_X, PH_Y, PH_X + PH_W, PH_Y + PH_H], outline=_C_GOLD, width=2)
+
+    foto_img = None
+    if foto_url:
+        foto_img = await _scarica_foto(bot.aiohttp_session, foto_url)
+
+    if foto_img:
+        # Ritaglia al centro e ridimensiona
+        ratio = max(PH_W / foto_img.width, PH_H / foto_img.height)
+        new_w = int(foto_img.width * ratio)
+        new_h = int(foto_img.height * ratio)
+        foto_img = foto_img.resize((new_w, new_h), Image.LANCZOS)
+        cx = (new_w - PH_W) // 2
+        cy = (new_h - PH_H) // 2
+        foto_img = foto_img.crop((cx, cy, cx + PH_W, cy + PH_H))
+        img.paste(foto_img, (PH_X, PH_Y))
+        draw.rectangle([PH_X, PH_Y, PH_X + PH_W, PH_Y + PH_H], outline=_C_GOLD, width=2)
+    else:
+        draw.text(
+            (PH_X + PH_W // 2, PH_Y + PH_H // 2),
+            "FOTO\nPERSONAGGIO",
+            font=f_title,
+            fill=_C_LABEL,
+            anchor="mm",
+            align="center",
+        )
+
+    # Timbro sotto foto
+    draw.text(
+        (PH_X + PH_W // 2, PH_Y + PH_H + 14),
+        "TOKYO HORIZON RP",
+        font=f_small,
+        fill=_C_GOLD,
+        anchor="mm",
+    )
+
+    # --- Sezione campi (destra) ---
+    RX = PH_X + PH_W + 28   # x inizio colonna destra
+    RW = W - RX - 20         # larghezza disponibile
+
+    oggi     = date.today()
+    scadenza = oggi.replace(year=oggi.year + 1)
+    rilascio_str = oggi.strftime("%d / %m / %Y")
+    scadenza_str = scadenza.strftime("%d / %m / %Y")
+
+    # Parsing età e sesso dalla stringa "28 / M"
+    eta_val = sesso_val = ""
+    if "/" in eta_sesso:
+        parti = [p.strip() for p in eta_sesso.split("/", 1)]
+        eta_val, sesso_val = parti[0], parti[1]
+    else:
+        eta_val = eta_sesso.strip()
+
+    campi = [
+        ("NOME E COGNOME",          nome),
+        ("DATA E LUOGO DI NASCITA", data_luogo),
+        (None, None),              # separatore età/sesso affiancati
+        ("SEGNI PARTICOLARI",       segni),
+        (None, None),              # separatore date
+    ]
+
+    cy_field = 95
+
+    def draw_field(x, y, label, value, w):
+        draw.text((x, y), label, font=f_label, fill=_C_LABEL)
+        draw.line([x, y + 18, x + w, y + 18], fill=_C_DIVIDER, width=1)
+        v = _tronca(value, f_value, w)
+        draw.text((x, y + 22), v, font=f_value, fill=_C_WHITE)
+        return y + 22 + f_value.size + 10
+
+    # Nome e Cognome
+    cy_field = draw_field(RX, cy_field, "NOME E COGNOME", nome, RW)
+    cy_field += 4
+
+    # Data e Luogo
+    cy_field = draw_field(RX, cy_field, "DATA E LUOGO DI NASCITA", data_luogo, RW)
+    cy_field += 4
+
+    # Età | Sesso affiancati
+    half = (RW - 20) // 2
+    draw_field(RX,           cy_field, "ETÀ",   eta_val,   half)
+    draw_field(RX + half + 20, cy_field, "SESSO", sesso_val, half)
+    cy_field += 55
+
+    # Segni Particolari
+    cy_field = draw_field(RX, cy_field, "SEGNI PARTICOLARI", segni, RW)
+    cy_field += 10
+
+    # Linea divisoria
+    draw.line([RX, cy_field, W - 20, cy_field], fill=_C_DIVIDER, width=1)
+    cy_field += 10
+
+    # Date affiancate
+    dw = (RW - 20) // 2
+    # Rilascio
+    draw.text((RX,              cy_field), "📅 DATA DI RILASCIO", font=f_label, fill=_C_LABEL)
+    draw.text((RX,              cy_field + 20), rilascio_str,      font=f_value, fill=_C_WHITE)
+    # Scadenza
+    draw.text((RX + dw + 20,   cy_field), "⏳ DATA DI SCADENZA", font=f_label, fill=_C_LABEL)
+    draw.text((RX + dw + 20,   cy_field + 20), scadenza_str,      font=f_value, fill=_C_GOLD)
+
+    # --- Footer ---
+    draw.line([20, H - 38, W - 20, H - 38], fill=_C_DIVIDER, width=1)
+    draw.text(
+        (W // 2, H - 22),
+        "Documento ufficiale Tokyo Horizon RP — valido 1 anno dal rilascio",
+        font=f_small,
+        fill=_C_LABEL,
+        anchor="mm",
+    )
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return discord.File(buf, filename="carta_identita.png")
+
+
+class CartaIdentitaModal(discord.ui.Modal, title="🪪 Carta d'Identità — Tokyo Horizon RP"):
+    nome_cognome = discord.ui.TextInput(
+        label="Nome e Cognome del Personaggio",
+        placeholder="Es: Luca Moretti",
+        min_length=3,
+        max_length=80,
+        style=discord.TextStyle.short,
+    )
+    data_luogo = discord.ui.TextInput(
+        label="Data e Luogo di Nascita",
+        placeholder="Es: 15/06/1995, Roma",
+        min_length=3,
+        max_length=80,
+        style=discord.TextStyle.short,
+    )
+    eta_sesso = discord.ui.TextInput(
+        label="Età / Sesso  (formato: 28 / M  oppure  28 / F)",
+        placeholder="Es: 28 / M",
+        min_length=3,
+        max_length=20,
+        style=discord.TextStyle.short,
+    )
+    segni = discord.ui.TextInput(
+        label="Segni Particolari",
+        placeholder="Es: Cicatrice sul sopracciglio sinistro, tatuaggio sul collo",
+        min_length=2,
+        max_length=200,
+        style=discord.TextStyle.short,
+    )
+    foto_url = discord.ui.TextInput(
+        label="URL Foto Personaggio  (carica su Discord → copia link)",
+        placeholder="https://cdn.discordapp.com/... oppure lascia vuoto",
+        required=False,
+        min_length=0,
+        max_length=500,
+        style=discord.TextStyle.short,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        nome      = self.nome_cognome.value.strip()
+        dl        = self.data_luogo.value.strip()
+        es        = self.eta_sesso.value.strip()
+        segni_val = self.segni.value.strip()
+        url       = self.foto_url.value.strip() or None
+
+        try:
+            carta = await _genera_carta_img(nome, dl, es, segni_val, url)
+        except Exception as e:
+            print(f"[CARTA] ❌ Generazione immagine fallita: {e}")
+            await interaction.followup.send(
+                "❌ Errore nella generazione della carta. Riprova o contatta lo staff.",
+                ephemeral=True,
+            )
+            return
+
+        embed = discord.Embed(
+            title="🪪 Carta d'Identità Emessa",
+            description=(
+                f"**{nome}** — la tua Carta d'Identità è stata generata.\n\n"
+                "Conserva questo documento: ti verrà richiesto dalla polizia, "
+                "per l'acquisto di veicoli e per altre attività ufficiali.\n\n"
+                "⚠️ Salva l'immagine — il messaggio è privato e temporaneo."
+            ),
+            color=discord.Color.from_rgb(212, 175, 55),
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Sistema Documenti")
+
+        await interaction.followup.send(embed=embed, file=carta, ephemeral=True)
+        print(f"[CARTA] Carta generata per {interaction.user} (id={interaction.user.id}) — nome PG: {nome}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        print(f"[CARTA MODAL] {type(error).__name__}: {error}")
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
+class CartaIdentitaView(discord.ui.View):
+    """Vista persistente — sopravvive ai riavvii del bot."""
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(
+        label="🪪 Richiedi Carta d'Identità",
+        style=discord.ButtonStyle.primary,
+        custom_id="carta:richiedi",
+    )
+    async def apri_form(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(CartaIdentitaModal())
+
+
+@bot.tree.command(
+    name="setupcarta",
+    description="[MOD] Pubblica il pannello Carta d'Identità nel canale documenti",
+)
+async def setupcarta(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message(
+            "❌ Solo lo staff può usare questo comando.", ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    embed = discord.Embed(
+        title="🪪 Carta d'Identità — Tokyo Horizon RP",
+        description=(
+            "Ogni membro della città deve essere in possesso della propria "
+            "**Carta d'Identità** per svolgere attività ufficiali.\n\n"
+            "📌 **A cosa serve:**\n"
+            "• Identificarti durante i controlli della polizia\n"
+            "• Acquistare veicoli e immobili\n"
+            "• Accedere a servizi della città\n\n"
+            "🖱️ Clicca il bottone qui sotto, compila i dati del tuo personaggio "
+            "e riceverai la carta **istantaneamente** — visibile solo a te.\n\n"
+            "⚠️ **Salva l'immagine generata!** Il messaggio è privato e temporaneo."
+        ),
+        color=discord.Color.from_rgb(212, 175, 55),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Ufficio Anagrafe")
+
+    try:
+        canale = bot.get_channel(CANALE_CARTA) or await bot.fetch_channel(CANALE_CARTA)
+        await canale.send(embed=embed, view=CartaIdentitaView())
+        await interaction.followup.send(
+            f"✅ Pannello Carta d'Identità pubblicato in <#{CANALE_CARTA}>!", ephemeral=True
+        )
+        print(f"[CARTA] Pannello pubblicato da {interaction.user} in #{canale.name}")
+    except discord.Forbidden:
+        await interaction.followup.send(
+            f"❌ Il bot non ha i permessi per scrivere in <#{CANALE_CARTA}>.", ephemeral=True
         )
     except Exception as e:
         await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
