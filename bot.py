@@ -1962,6 +1962,7 @@ CANALE_STAFF_VEICOLI     = 1515676328622428310   # canale revisione consegna vei
 CANALE_PG                = 1516143484145242253   # canale richiesta personaggio (whitelist)
 CANALE_CARTA             = 1516151385064869928   # canale carta d'identità
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
+RUOLO_CITTADINO          = 1513574080232558804   # ruolo assegnato al completamento della carta d'identità
 
 # Tiene traccia di quali uid hanno già un task accredita_bancomat in esecuzione
 # per evitare doppi accrediti in caso di istanze multiple o on_ready duplicati
@@ -4069,7 +4070,7 @@ class CartaIdentitaModal(discord.ui.Modal, title="🪪 Carta d'Identità — Tok
         style=discord.TextStyle.short,
     )
     eta_sesso = discord.ui.TextInput(
-        label="Età / Sesso  (formato: 28 / M  oppure  28 / F)",
+        label="Età / Sesso  (es: 28 / M  oppure  28 / F)",
         placeholder="Es: 28 / M",
         min_length=3,
         max_length=20,
@@ -4083,7 +4084,7 @@ class CartaIdentitaModal(discord.ui.Modal, title="🪪 Carta d'Identità — Tok
         style=discord.TextStyle.short,
     )
     foto_url = discord.ui.TextInput(
-        label="URL Foto Personaggio  (carica su Discord → copia link)",
+        label="URL Foto  (carica su Discord → copia link)",
         placeholder="https://cdn.discordapp.com/... oppure lascia vuoto",
         required=False,
         min_length=0,
@@ -4124,6 +4125,20 @@ class CartaIdentitaModal(discord.ui.Modal, title="🪪 Carta d'Identità — Tok
 
         await interaction.followup.send(embed=embed, file=carta, ephemeral=True)
         print(f"[CARTA] Carta generata per {interaction.user} (id={interaction.user.id}) — nome PG: {nome}")
+
+        # Assegna il ruolo Cittadino Tokyo Horizon
+        try:
+            member = interaction.user
+            ruolo = interaction.guild.get_role(RUOLO_CITTADINO)
+            if ruolo and isinstance(member, discord.Member):
+                await member.add_roles(ruolo, reason="Carta d'identità completata")
+                print(f"[CARTA] Ruolo Cittadino assegnato a {member} (id={member.id})")
+            elif not ruolo:
+                print(f"[CARTA] ⚠️ Ruolo {RUOLO_CITTADINO} non trovato nel server")
+        except discord.Forbidden:
+            print(f"[CARTA] ❌ Permessi insufficienti per assegnare il ruolo a {interaction.user}")
+        except Exception as e:
+            print(f"[CARTA] ❌ Errore assegnazione ruolo: {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         print(f"[CARTA MODAL] {type(error).__name__}: {error}")
