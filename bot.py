@@ -4564,6 +4564,189 @@ async def setuptutorial(interaction: discord.Interaction):
 
 
 # =============================================================================
+# COMANDI SANZIONE (AVVISO / WARN / BAN / SCADENZA)
+# =============================================================================
+
+_CANALE_TICKET_PANNELLO = 1516194247210963015
+
+
+class AvvisoModal(discord.ui.Modal, title="⚠️ Emetti Avviso"):
+    player_id  = discord.ui.TextInput(label="🆔 ID Player",    placeholder="ID Discord o nome personaggio", max_length=100)
+    sanzione   = discord.ui.TextInput(label="📄 Sanzione",     placeholder="Es. AVVISO 1", max_length=100)
+    motivazione = discord.ui.TextInput(
+        label="📝 Motivazione",
+        style=discord.TextStyle.paragraph,
+        placeholder="Descrivi la motivazione della sanzione...",
+        max_length=500,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed = discord.Embed(color=discord.Color.from_rgb(255, 195, 0))
+        embed.description = (
+            "```╔════════════════════╗\n"
+            "        ⚠️ AVVISO ⚠️\n"
+            "╚════════════════════╝```\n"
+            f"👮 **STAFF:**\n⇒ {interaction.user.mention}\n\n"
+            f"🆔 **ID PLAYER:**\n⇒ {self.player_id.value}\n\n"
+            f"📄 **SANZIONE:**\n⇒ {self.sanzione.value}\n\n"
+            f"📝 **MOTIVAZIONE:**\n⇒ {self.motivazione.value}\n\n"
+            "━━━━━━━━━━━━━━━━━━━\n"
+            f"```Se ritieni la sanzione ingiusta o non corretta, puoi aprire un ticket "
+            f"per richiedere spiegazioni o una rivalutazione allo staff.```"
+        )
+        embed.set_footer(
+            text=f"Tokyo Horizon RP | Apri un ticket in #ticket per contestare",
+        )
+        await interaction.response.send_message(embed=embed)
+        print(f"[AVVISO] Emesso da {interaction.user} — player: {self.player_id.value}")
+
+
+class WarnModal(discord.ui.Modal, title="🚨 Emetti Warn"):
+    player_id   = discord.ui.TextInput(label="🆔 ID Player",   placeholder="ID Discord o nome personaggio", max_length=100)
+    sanzione    = discord.ui.TextInput(label="📄 Sanzione",    placeholder="Es. WARN 1", max_length=100)
+    motivazione = discord.ui.TextInput(
+        label="📝 Motivazione",
+        style=discord.TextStyle.paragraph,
+        placeholder="Descrivi la motivazione del warn...",
+        max_length=400,
+    )
+    note = discord.ui.TextInput(
+        label="📌 Note (opzionale)",
+        style=discord.TextStyle.paragraph,
+        placeholder="Eventuali note aggiuntive...",
+        required=False,
+        max_length=300,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        note_line = f"\n📌 **NOTE:**\n⇒ {self.note.value}\n" if self.note.value.strip() else ""
+        embed = discord.Embed(color=discord.Color.from_rgb(230, 80, 0))
+        embed.description = (
+            "```╔════════════════════╗\n"
+            "         🚨 WARN 🚨\n"
+            "╚════════════════════╝```\n"
+            f"👮 **STAFF:**\n⇒ {interaction.user.mention}\n\n"
+            f"🆔 **ID PLAYER:**\n⇒ {self.player_id.value}\n\n"
+            f"📄 **SANZIONE:**\n⇒ {self.sanzione.value}\n\n"
+            f"📝 **MOTIVAZIONE:**\n⇒ {self.motivazione.value}\n"
+            f"{note_line}\n"
+            "⚠️ *Alla ricezione di più warn consecutivi potrebbero essere applicate sanzioni più gravi.*\n\n"
+            "━━━━━━━━━━━━━━━━━━━\n"
+            f"```Se ritieni la sanzione ingiusta o non corretta, puoi aprire un ticket "
+            f"per richiedere spiegazioni o una rivalutazione allo staff.```"
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Apri un ticket per contestare")
+        await interaction.response.send_message(embed=embed)
+        print(f"[WARN] Emesso da {interaction.user} — player: {self.player_id.value}")
+
+
+class BanModal(discord.ui.Modal, title="⛔ Emetti Ban"):
+    player_id   = discord.ui.TextInput(label="🆔 ID Player",   placeholder="ID Discord o nome personaggio", max_length=100)
+    sanzione    = discord.ui.TextInput(label="📄 Sanzione",    placeholder="Es. BAN 24h / BAN PERMANENTE", max_length=100)
+    motivazione = discord.ui.TextInput(
+        label="📝 Motivazione",
+        style=discord.TextStyle.paragraph,
+        placeholder="Descrivi la motivazione del ban...",
+        max_length=400,
+    )
+    consigli = discord.ui.TextInput(
+        label="❓ Consigli (opzionale)",
+        style=discord.TextStyle.paragraph,
+        placeholder="Consigli o indicazioni per il giocatore...",
+        required=False,
+        max_length=300,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        consigli_line = f"\n❓ **CONSIGLI:**\n⇒ {self.consigli.value}\n" if self.consigli.value.strip() else ""
+        embed = discord.Embed(color=discord.Color.from_rgb(180, 0, 0))
+        embed.description = (
+            "```╔════════════════════╗\n"
+            "          ⛔ BAN ⛔\n"
+            "╚════════════════════╝```\n"
+            f"👮 **STAFF:**\n⇒ {interaction.user.mention}\n\n"
+            f"🆔 **ID PLAYER:**\n⇒ {self.player_id.value}\n\n"
+            f"📄 **SANZIONE:**\n⇒ {self.sanzione.value}\n\n"
+            f"📝 **MOTIVAZIONE:**\n⇒ {self.motivazione.value}\n"
+            f"{consigli_line}\n"
+            "━━━━━━━━━━━━━━━━━━━\n"
+            f"```Se ritieni il ban ingiusto, puoi aprire un ticket appeal "
+            f"seguendo le modalità indicate dallo staff.```"
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Apri un ticket appeal per contestare")
+        await interaction.response.send_message(embed=embed)
+        print(f"[BAN] Emesso da {interaction.user} — player: {self.player_id.value}")
+
+
+class ScadenzaWarnModal(discord.ui.Modal, title="🔔 Avviso Scadenza Warn"):
+    id_discord = discord.ui.TextInput(label="👤 ID Discord",  placeholder="ID Discord del giocatore", max_length=100)
+    sanzione   = discord.ui.TextInput(label="📜 Sanzione",    placeholder="Es. WARN 1 — scaduto", max_length=100)
+    motivo     = discord.ui.TextInput(
+        label="⏳ Motivo",
+        style=discord.TextStyle.paragraph,
+        placeholder="Sanzione originale / motivo della scadenza...",
+        max_length=400,
+    )
+    note = discord.ui.TextInput(
+        label="📝 Note (opzionale)",
+        style=discord.TextStyle.paragraph,
+        placeholder="Istruzioni o note per il giocatore...",
+        required=False,
+        max_length=300,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        note_line = f"\n📝 **NOTE:**\n⇒ {self.note.value}" if self.note.value.strip() else ""
+        embed = discord.Embed(color=discord.Color.from_rgb(88, 101, 242))
+        embed.description = (
+            "```╔════════════════════╗\n"
+            "  🚨 AVVISO SCADENZA WARN 🚨\n"
+            "╚════════════════════╝```\n"
+            f">>> 👤 **ID Discord:**\n⇒ {self.id_discord.value}\n\n"
+            f"📜 **Sanzione:**\n⇒ {self.sanzione.value}\n\n"
+            f"⏳ **Motivo:**\n⇒ {self.motivo.value}"
+            f"{note_line}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━\n"
+            f"Per richiedere la rimozione apri un ticket in <#{_CANALE_TICKET_PANNELLO}>."
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Scadenza Sanzione")
+        await interaction.response.send_message(embed=embed)
+        print(f"[SCADENZA] Notifica inviata da {interaction.user} — player: {self.id_discord.value}")
+
+
+@bot.tree.command(name="avviso", description="[MOD] Emetti un avviso formale a un giocatore")
+async def cmd_avviso(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+        return
+    await interaction.response.send_modal(AvvisoModal())
+
+
+@bot.tree.command(name="warn", description="[MOD] Emetti un warn a un giocatore")
+async def cmd_warn(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+        return
+    await interaction.response.send_modal(WarnModal())
+
+
+@bot.tree.command(name="ban", description="[MOD] Emetti un ban a un giocatore")
+async def cmd_ban(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+        return
+    await interaction.response.send_modal(BanModal())
+
+
+@bot.tree.command(name="scadenza", description="[MOD] Notifica la scadenza di un warn a un giocatore")
+async def cmd_scadenza(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+        return
+    await interaction.response.send_modal(ScadenzaWarnModal())
+
+
+# =============================================================================
 # PANNELLO SANZIONI
 # =============================================================================
 
