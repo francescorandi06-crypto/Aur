@@ -4606,8 +4606,7 @@ class AvvisoModal(discord.ui.Modal, title="⚠️ Emetti Avviso"):
         if self.motivazione.value.strip(): righe.append(f"Motivazione: {self.motivazione.value}")
         testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
         await interaction.followup.send(
-            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n⚠️ AVVISO — Tokyo Horizon RP\n{testo_copia}\n```",
-            ephemeral=True
+            f"```\n⚠️ AVVISO — Tokyo Horizon RP\n{testo_copia}\n```"
         )
         print(f"[AVVISO] Emesso da {interaction.user} — player: {self.player_id.value}")
 
@@ -4658,8 +4657,7 @@ class WarnModal(discord.ui.Modal, title="🚨 Emetti Warn"):
         if self.note.value.strip():        righe.append(f"Note: {self.note.value}")
         testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
         await interaction.followup.send(
-            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n🚨 WARN — Tokyo Horizon RP\n{testo_copia}\n```",
-            ephemeral=True
+            f"```\n🚨 WARN — Tokyo Horizon RP\n{testo_copia}\n```"
         )
         print(f"[WARN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
@@ -4710,8 +4708,7 @@ class BanModal(discord.ui.Modal, title="⛔ Emetti Ban"):
         if self.consigli.value.strip():    righe.append(f"Messaggio staff: {self.consigli.value}")
         testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
         await interaction.followup.send(
-            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n⛔ BAN — Tokyo Horizon RP\n{testo_copia}\n```",
-            ephemeral=True
+            f"```\n⛔ BAN — Tokyo Horizon RP\n{testo_copia}\n```"
         )
         print(f"[BAN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
@@ -4761,8 +4758,7 @@ class ScadenzaWarnModal(discord.ui.Modal, title="🔔 Avviso Scadenza Warn"):
         if self.note.value.strip():       righe.append(f"Note: {self.note.value}")
         testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
         await interaction.followup.send(
-            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n🔔 SCADENZA WARN — Tokyo Horizon RP\n{testo_copia}\n```",
-            ephemeral=True
+            f"```\n🔔 SCADENZA WARN — Tokyo Horizon RP\n{testo_copia}\n```"
         )
         print(f"[SCADENZA] Notifica inviata da {interaction.user} — player: {self.id_discord.value}")
 
