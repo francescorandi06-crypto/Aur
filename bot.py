@@ -4583,20 +4583,19 @@ class AvvisoModal(discord.ui.Modal, title="⚠️ Emetti Avviso"):
     async def on_submit(self, interaction: discord.Interaction):
         embed = discord.Embed(color=discord.Color.from_rgb(255, 195, 0))
         embed.description = (
-            "```╔════════════════════╗\n"
-            "        ⚠️ AVVISO ⚠️\n"
-            "╚════════════════════╝```\n"
-            f"👮 **STAFF:**\n⇒ {interaction.user.mention}\n\n"
-            f"🆔 **ID PLAYER:**\n⇒ {self.player_id.value}\n\n"
-            f"📄 **SANZIONE:**\n⇒ {self.sanzione.value}\n\n"
-            f"📝 **MOTIVAZIONE:**\n⇒ {self.motivazione.value}\n\n"
-            "━━━━━━━━━━━━━━━━━━━\n"
-            f"```Se ritieni la sanzione ingiusta o non corretta, puoi aprire un ticket "
-            f"per richiedere spiegazioni o una rivalutazione allo staff.```"
+            "```ansi\n\u001b[1;33m【 ⚠️  COMUNICAZIONE UFFICIALE — AVVISO 】\u001b[0m\n```"
+            f"🗼 **Tokyo Horizon RP** ha registrato una segnalazione a carico del seguente giocatore.\n\n"
+            f"┌─────────────────────────┐\n"
+            f"│  🆔 **Giocatore:** {self.player_id.value}\n"
+            f"│  📋 **Tipo sanzione:** {self.sanzione.value}\n"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
+            f"└─────────────────────────┘\n\n"
+            f"📝 **Motivazione del provvedimento:**\n> {self.motivazione.value}\n\n"
+            f"─────────────────────────────\n"
+            f"*Questo avviso è ufficialmente registrato nel sistema disciplinare di Tokyo Horizon. "
+            f"In caso di contestazione, contatta lo staff tramite ticket.*"
         )
-        embed.set_footer(
-            text=f"Tokyo Horizon RP | Apri un ticket in #ticket per contestare",
-        )
+        embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
         print(f"[AVVISO] Emesso da {interaction.user} — player: {self.player_id.value}")
 
@@ -4619,23 +4618,23 @@ class WarnModal(discord.ui.Modal, title="🚨 Emetti Warn"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        note_line = f"\n📌 **NOTE:**\n⇒ {self.note.value}\n" if self.note.value.strip() else ""
+        note_line = f"\n📌 **Annotazione:**\n> {self.note.value}\n" if self.note.value.strip() else ""
         embed = discord.Embed(color=discord.Color.from_rgb(230, 80, 0))
         embed.description = (
-            "```╔════════════════════╗\n"
-            "         🚨 WARN 🚨\n"
-            "╚════════════════════╝```\n"
-            f"👮 **STAFF:**\n⇒ {interaction.user.mention}\n\n"
-            f"🆔 **ID PLAYER:**\n⇒ {self.player_id.value}\n\n"
-            f"📄 **SANZIONE:**\n⇒ {self.sanzione.value}\n\n"
-            f"📝 **MOTIVAZIONE:**\n⇒ {self.motivazione.value}\n"
+            "```ansi\n\u001b[1;31m【 🚨  PROVVEDIMENTO DISCIPLINARE — WARN 】\u001b[0m\n```"
+            f"Il giocatore indicato ha ricevuto un **Warn ufficiale** da parte dello staff di 🗼 **Tokyo Horizon RP**.\n\n"
+            f"┌─────────────────────────┐\n"
+            f"│  🆔 **Giocatore:** {self.player_id.value}\n"
+            f"│  📋 **Tipo sanzione:** {self.sanzione.value}\n"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
+            f"└─────────────────────────┘\n\n"
+            f"📝 **Motivazione:**\n> {self.motivazione.value}\n"
             f"{note_line}\n"
-            "⚠️ *Alla ricezione di più warn consecutivi potrebbero essere applicate sanzioni più gravi.*\n\n"
-            "━━━━━━━━━━━━━━━━━━━\n"
-            f"```Se ritieni la sanzione ingiusta o non corretta, puoi aprire un ticket "
-            f"per richiedere spiegazioni o una rivalutazione allo staff.```"
+            f"─────────────────────────────\n"
+            f"⚠️ L'accumulo di Warn comporta l'applicazione di sanzioni progressivamente più severe, fino al ban dalla comunità.\n"
+            f"*Per contestare questo provvedimento apri un ticket con lo staff.*"
         )
-        embed.set_footer(text="Tokyo Horizon RP | Apri un ticket per contestare")
+        embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
         print(f"[WARN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
@@ -4658,22 +4657,23 @@ class BanModal(discord.ui.Modal, title="⛔ Emetti Ban"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        consigli_line = f"\n❓ **CONSIGLI:**\n⇒ {self.consigli.value}\n" if self.consigli.value.strip() else ""
+        consigli_line = f"\n💬 **Messaggio dallo staff:**\n> {self.consigli.value}\n" if self.consigli.value.strip() else ""
         embed = discord.Embed(color=discord.Color.from_rgb(180, 0, 0))
         embed.description = (
-            "```╔════════════════════╗\n"
-            "          ⛔ BAN ⛔\n"
-            "╚════════════════════╝```\n"
-            f"👮 **STAFF:**\n⇒ {interaction.user.mention}\n\n"
-            f"🆔 **ID PLAYER:**\n⇒ {self.player_id.value}\n\n"
-            f"📄 **SANZIONE:**\n⇒ {self.sanzione.value}\n\n"
-            f"📝 **MOTIVAZIONE:**\n⇒ {self.motivazione.value}\n"
+            "```ansi\n\u001b[1;31m【 ⛔  ESPULSIONE DALLA COMUNITÀ — BAN 】\u001b[0m\n```"
+            f"Il seguente giocatore è stato **bannato** dalla comunità di 🗼 **Tokyo Horizon RP** per violazione grave del regolamento.\n\n"
+            f"┌─────────────────────────┐\n"
+            f"│  🆔 **Giocatore:** {self.player_id.value}\n"
+            f"│  📋 **Tipo sanzione:** {self.sanzione.value}\n"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
+            f"└─────────────────────────┘\n\n"
+            f"📝 **Motivazione:**\n> {self.motivazione.value}\n"
             f"{consigli_line}\n"
-            "━━━━━━━━━━━━━━━━━━━\n"
-            f"```Se ritieni il ban ingiusto, puoi aprire un ticket appeal "
-            f"seguendo le modalità indicate dallo staff.```"
+            f"─────────────────────────────\n"
+            f"⛔ Questo provvedimento è immediatamente operativo. "
+            f"Se ritieni di poter presentare un ricorso, apri un ticket di **appeal** seguendo le istruzioni dello staff."
         )
-        embed.set_footer(text="Tokyo Horizon RP | Apri un ticket appeal per contestare")
+        embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
         print(f"[BAN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
@@ -4696,20 +4696,22 @@ class ScadenzaWarnModal(discord.ui.Modal, title="🔔 Avviso Scadenza Warn"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        note_line = f"\n📝 **NOTE:**\n⇒ {self.note.value}" if self.note.value.strip() else ""
+        note_line = f"\n📝 **Note aggiuntive:**\n> {self.note.value}" if self.note.value.strip() else ""
         embed = discord.Embed(color=discord.Color.from_rgb(88, 101, 242))
         embed.description = (
-            "```╔════════════════════╗\n"
-            "  🚨 AVVISO SCADENZA WARN 🚨\n"
-            "╚════════════════════╝```\n"
-            f">>> 👤 **ID Discord:**\n⇒ {self.id_discord.value}\n\n"
-            f"📜 **Sanzione:**\n⇒ {self.sanzione.value}\n\n"
-            f"⏳ **Motivo:**\n⇒ {self.motivo.value}"
+            "```ansi\n\u001b[1;34m【 🔔  NOTIFICA SCADENZA — WARN RIMOSSO 】\u001b[0m\n```"
+            f"Lo staff di 🗼 **Tokyo Horizon RP** ti informa che una tua sanzione è giunta a scadenza naturale.\n\n"
+            f"┌─────────────────────────┐\n"
+            f"│  👤 **Giocatore:** {self.id_discord.value}\n"
+            f"│  📜 **Sanzione scaduta:** {self.sanzione.value}\n"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
+            f"└─────────────────────────┘\n\n"
+            f"⏳ **Dettaglio scadenza:**\n> {self.motivo.value}"
             f"{note_line}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━\n"
-            f"Per richiedere la rimozione apri un ticket in <#{_CANALE_TICKET_PANNELLO}>."
+            f"─────────────────────────────\n"
+            f"✅ Per procedere alla rimozione formale del ruolo sanzione, apri un ticket in <#{_CANALE_TICKET_PANNELLO}>."
         )
-        embed.set_footer(text="Tokyo Horizon RP | Scadenza Sanzione")
+        embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
         print(f"[SCADENZA] Notifica inviata da {interaction.user} — player: {self.id_discord.value}")
 
