@@ -40,7 +40,7 @@ def _handle_sigterm(signum, frame):
 
 signal.signal(signal.SIGTERM, _handle_sigterm)
 
-_CONCESSIONARIA_URL = "https://aur--francescorandi4.replit.app/concessionaria"
+_CONCESSIONARIA_URL = "https://tinyurl.com/284wjmmx"
 
 intents = discord.Intents.default()
 intents.message_content = True
