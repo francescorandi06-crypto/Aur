@@ -1475,10 +1475,10 @@ async def paga(interaction: discord.Interaction, utente: discord.Member, importo
 
 @bot.tree.command(name="concessionaria", description="Mostra il link al listino veicoli ufficiale di Tokyo Horizon Motors")
 async def concessionaria_cmd(interaction: discord.Interaction):
-    dominio = (
-        os.environ.get("CONCESSIONARIA_DOMAIN")
-        or os.environ.get("REPLIT_DEV_DOMAIN", "")
-    ).strip()
+    _cd = os.environ.get("CONCESSIONARIA_DOMAIN", "")
+    _rd = os.environ.get("REPLIT_DEV_DOMAIN", "")
+    print(f"[CONCESSIONARIA] CONCESSIONARIA_DOMAIN={repr(_cd)} REPLIT_DEV_DOMAIN={repr(_rd)}")
+    dominio = (_cd or _rd).strip()
     url = f"https://{dominio}/concessionaria" if dominio else None
     embed = discord.Embed(
         title="⬡ HZN Garage — Catalogo Veicoli",
