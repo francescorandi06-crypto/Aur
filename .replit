@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "python-3.11", "web"]
+modules = ["python-3.11", "nodejs-20", "web"]
 
 [deployment]
 router = "application"
@@ -25,12 +25,13 @@ args = "Tokyo Horizon Bot"
 name = "Tokyo Horizon Bot"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 bot.py"
-
-[workflows.workflow.metadata]
-outputType = "console"
+waitForPort = 3000
 
 [agent]
 stack = "FLASK_VANILLA_JS"
@@ -43,10 +44,6 @@ timeoutMs = 20000
 [[ports]]
 localPort = 3000
 externalPort = 3000
-
-[[ports]]
-localPort = 8080
-externalPort = 80
 
 [[ports]]
 localPort = 8081
