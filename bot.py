@@ -11,15 +11,15 @@ import sys
 import io
 from datetime import date
 import aiohttp
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template
 from threading import Thread
 
-# Configurazione mini-server finto per UptimeRobot
+# Mini-server keep-alive (porta 5000)
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return redirect('/concessionaria')
+    return 'Tokyo Horizon RP — Online', 200
 
 @app.route('/concessionaria')
 def concessionaria():
@@ -30,7 +30,7 @@ def run_flask():
 
 def keep_alive():
     t = Thread(target=run_flask)
-    t.daemon = True  # il thread muore con il processo principale — niente istanze zombie
+    t.daemon = True
     t.start()
 
 # Shutdown pulito su SIGTERM (Replit invia SIGTERM per riavviare il workflow)
@@ -40,14 +40,7 @@ def _handle_sigterm(signum, frame):
 
 signal.signal(signal.SIGTERM, _handle_sigterm)
 
-# Dominio pubblico Replit — letto una sola volta all'avvio
-_REPLIT_DOMAIN = (
-    os.environ.get("CONCESSIONARIA_DOMAIN")
-    or os.environ.get("REPLIT_DEV_DOMAIN")
-    or os.environ.get("REPLIT_DOMAINS", "")
-    or "2a8b0747-3044-4dfc-a64e-47201cdbcea0-00-16x7r4xqf3731.kirk.replit.dev"
-).strip()
-print(f"[BOT] Dominio pubblico rilevato: {repr(_REPLIT_DOMAIN)}")
+_CONCESSIONARIA_URL = "https://aur--francescorandi4.replit.app/concessionaria"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -1482,33 +1475,18 @@ async def paga(interaction: discord.Interaction, utente: discord.Member, importo
 # NEGOZIO, INVENTARIO
 # =============================================================================
 
-@bot.tree.command(name="concessionaria", description="Mostra il link al listino veicoli ufficiale di Tokyo Horizon Motors")
+@bot.tree.command(name="concessionaria", description="Apri il catalogo veicoli ufficiale di Tokyo Horizon Motors")
 async def concessionaria_cmd(interaction: discord.Interaction):
-    url = f"https://{_REPLIT_DOMAIN}/concessionaria" if _REPLIT_DOMAIN else None
-    print(f"[CONCESSIONARIA] url={repr(url)}")
     embed = discord.Embed(
-        title="⬡ HZN Garage — Catalogo Veicoli",
+        title="🏮 Tokyo Horizon Motors — 東京ホライズン",
         description=(
-            "Benvenuto nel garage ufficiale di **Tokyo Horizon RP**!\n\n"
-            "🚗 Sfoglia il catalogo completo di oltre **130 modelli** divisi per categoria.\n"
-            "🏷️ Prezzi aggiornati con classificazione **ALTA / MEDIA / BASSA**.\n"
-            "🔍 Cerca per nome o brand con la barra di ricerca.\n\n"
-            f"{'> 👉 **[Apri il catalogo HZN Garage](' + url + ')**' if url else '> ⚠️ Link temporaneamente non disponibile.'}"
+            "Il catalogo ufficiale dei veicoli di **Tokyo Horizon RP**.\n\n"
+            f"👉 **[Apri il catalogo]({_CONCESSIONARIA_URL})**"
         ),
-        color=discord.Color.from_rgb(0, 180, 216)
+        url=_CONCESSIONARIA_URL,
+        color=discord.Color.from_rgb(220, 40, 40)
     )
-    embed.add_field(name="🏎️ Supercar",        value="`25 veicoli`",  inline=True)
-    embed.add_field(name="🚗 Sportive",         value="`23 veicoli`",  inline=True)
-    embed.add_field(name="🏁 Sport Classiche",  value="`11 veicoli`",  inline=True)
-    embed.add_field(name="💪 Muscle",           value="`11 veicoli`",  inline=True)
-    embed.add_field(name="🚙 Coupé",            value="`10 veicoli`",  inline=True)
-    embed.add_field(name="🚘 Berline",          value="`7 veicoli`",   inline=True)
-    embed.add_field(name="🚐 SUV",              value="`8 veicoli`",   inline=True)
-    embed.add_field(name="🏔️ Fuoristrada",     value="`9 veicoli`",   inline=True)
-    embed.add_field(name="🏍️ Moto",            value="`12 veicoli`",  inline=True)
-    if url:
-        embed.url = url
-    embed.set_footer(text="Tokyo Horizon RP | Solo Visualizzazione — nessun acquisto in game dal sito")
+    embed.set_footer(text="Tokyo Horizon RP · Solo visualizzazione · 閲覧専用")
     await interaction.response.send_message(embed=embed)
 
 
