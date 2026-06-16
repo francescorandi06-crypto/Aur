@@ -116,7 +116,11 @@ class TokyoHorizonBot(commands.Bot):
         bot.ready_time = discord.utils.utcnow()  # Timestamp da cui accettare interazioni
         print(f"✅ {self.user} è online e pronto!")
         print(f"   Connesso a {len(self.guilds)} server/i")
-        print("   Comandi globali attivi (sync completata in setup_hook).")
+        # Rimuovi comandi guild-specifici residui (causano duplicati con i globali)
+        for guild in self.guilds:
+            self.tree.clear_commands(guild=guild)
+            await self.tree.sync(guild=guild)
+        print("   Comandi guild-specifici rimossi — nessun duplicato.")
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
