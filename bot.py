@@ -33,6 +33,18 @@ def keep_alive():
     t.daemon = True
     t.start()
 
+async def self_ping_loop():
+    """Pinga il server Flask ogni 4 minuti per tenerlo attivo."""
+    await asyncio.sleep(30)
+    async with aiohttp.ClientSession() as session:
+        while True:
+            try:
+                async with session.get('http://127.0.0.1:5000/', timeout=aiohttp.ClientTimeout(total=10)) as r:
+                    print(f"[PING] Server attivo — status {r.status}")
+            except Exception as e:
+                print(f"[PING] Errore ping: {e}")
+            await asyncio.sleep(240)
+
 # Shutdown pulito su SIGTERM (Replit invia SIGTERM per riavviare il workflow)
 def _handle_sigterm(signum, frame):
     print("[BOT] SIGTERM ricevuto — uscita pulita.")
@@ -101,6 +113,8 @@ class TokyoHorizonBot(commands.Bot):
         # Sync globale — una sola volta all'avvio
         await self.tree.sync()
         print("Tokyo Horizon Bot: setup_hook completato — comandi globali sincronizzati.")
+        # Self-ping per tenere il server Flask attivo
+        asyncio.create_task(self_ping_loop())
 
     async def close(self):
         if self.aiohttp_session and not self.aiohttp_session.closed:
