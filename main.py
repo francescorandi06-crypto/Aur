@@ -1,10 +1,5 @@
-from flask import Flask
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Tokyo Horizon RP — Bot is running!"
+import subprocess
+import sys
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    subprocess.run([sys.executable, "bot.py"])
