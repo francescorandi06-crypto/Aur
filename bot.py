@@ -1475,18 +1475,21 @@ async def paga(interaction: discord.Interaction, utente: discord.Member, importo
 
 @bot.tree.command(name="concessionaria", description="Mostra il link al listino veicoli ufficiale di Tokyo Horizon Motors")
 async def concessionaria_cmd(interaction: discord.Interaction):
-    dominio = os.environ.get("REPLIT_DEV_DOMAIN", "")
+    dominio = (
+        os.environ.get("CONCESSIONARIA_DOMAIN")
+        or os.environ.get("REPLIT_DEV_DOMAIN", "")
+    ).strip()
     url = f"https://{dominio}/concessionaria" if dominio else None
     embed = discord.Embed(
-        title="🏮 Tokyo Horizon Motors — Listino Veicoli",
+        title="⬡ HZN Garage — Catalogo Veicoli",
         description=(
-            "Benvenuto nella concessionaria ufficiale di **Tokyo Horizon RP**!\n\n"
-            "🌸 Sfoglia il catalogo completo di oltre **130 veicoli** divisi per categoria.\n"
+            "Benvenuto nel garage ufficiale di **Tokyo Horizon RP**!\n\n"
+            "🚗 Sfoglia il catalogo completo di oltre **130 modelli** divisi per categoria.\n"
             "🏷️ Prezzi aggiornati con classificazione **ALTA / MEDIA / BASSA**.\n"
             "🔍 Cerca per nome o brand con la barra di ricerca.\n\n"
-            f"{'> 👉 **[Apri il sito della concessionaria](' + url + ')**' if url else '> ⚠️ Link temporaneamente non disponibile.'}"
+            f"{'> 👉 **[Apri il catalogo HZN Garage](' + url + ')**' if url else '> ⚠️ Link temporaneamente non disponibile.'}"
         ),
-        color=discord.Color.from_rgb(230, 57, 70)
+        color=discord.Color.from_rgb(0, 180, 216)
     )
     embed.add_field(name="🏎️ Supercar",        value="`25 veicoli`",  inline=True)
     embed.add_field(name="🚗 Sportive",         value="`23 veicoli`",  inline=True)

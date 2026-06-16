@@ -72,3 +72,4 @@ packages = ["openssl", "postgresql"]
 
 [userenv.shared]
 PORT = "8080"
+CONCESSIONARIA_DOMAIN = "2a8b0747-3044-4dfc-a64e-47201cdbcea0-00-16x7r4xqf3731.kirk.replit.dev"
