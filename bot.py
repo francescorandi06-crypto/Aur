@@ -25,12 +25,14 @@ def home():
 def concessionaria():
     return render_template('concessionaria.html')
 
+_FLASK_PORT = int(os.environ.get('PORT', 10000))
+
 def run_flask():
     while True:
         try:
-            os.system("fuser -k 5000/tcp 2>/dev/null || true")
+            os.system(f"fuser -k {_FLASK_PORT}/tcp 2>/dev/null || true")
             time.sleep(1)
-            app.run(host='0.0.0.0', port=5000, use_reloader=False, threaded=True)
+            app.run(host='0.0.0.0', port=_FLASK_PORT, use_reloader=False, threaded=True)
         except Exception as e:
             print(f"[FLASK] Server crashato: {e} — riavvio tra 5s...")
             time.sleep(5)
@@ -46,7 +48,7 @@ async def self_ping_loop():
     async with aiohttp.ClientSession() as session:
         while True:
             try:
-                async with session.get('http://127.0.0.1:5000/', timeout=aiohttp.ClientTimeout(total=10)) as r:
+                async with session.get(f'http://127.0.0.1:{_FLASK_PORT}/', timeout=aiohttp.ClientTimeout(total=10)) as r:
                     print(f"[PING] Server attivo — status {r.status}")
             except Exception as e:
                 print(f"[PING] Errore ping: {e}")

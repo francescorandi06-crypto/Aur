@@ -73,5 +73,5 @@ packages = ["openssl", "postgresql"]
 [userenv]
 
 [userenv.shared]
-PORT = "8080"
 CONCESSIONARIA_DOMAIN = "aur--francescorandi4.replit.app"
+PORT = "5000"
