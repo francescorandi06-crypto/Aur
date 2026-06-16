@@ -25,13 +25,12 @@ args = "Tokyo Horizon Bot"
 name = "Tokyo Horizon Bot"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "console"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 bot.py"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
+args = "python main.py"
 
 [agent]
 stack = "FLASK_VANILLA_JS"
