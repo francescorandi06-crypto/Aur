@@ -26,7 +26,7 @@ def concessionaria():
     return render_template('concessionaria.html')
 
 def run_flask():
-    app.run(host='0.0.0.0', port=3000)
+    app.run(host='0.0.0.0', port=5000)
 
 def keep_alive():
     t = Thread(target=run_flask)
