@@ -4592,6 +4592,7 @@ class AvvisoModal(discord.ui.Modal, title="⚠️ Emetti Avviso"):
             f"┌─────────────────────────┐\n"
             f"{player_line}"
             f"{sanzione_line}"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
             f"└─────────────────────────┘\n\n"
             f"{motiv_block}"
             f"─────────────────────────────\n"
@@ -4600,14 +4601,6 @@ class AvvisoModal(discord.ui.Modal, title="⚠️ Emetti Avviso"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
-        righe = []
-        if self.player_id.value.strip():   righe.append(f"Giocatore: {self.player_id.value}")
-        if self.sanzione.value.strip():    righe.append(f"Sanzione: {self.sanzione.value}")
-        if self.motivazione.value.strip(): righe.append(f"Motivazione: {self.motivazione.value}")
-        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
-        await interaction.followup.send(
-            f"```\n⚠️ AVVISO — Tokyo Horizon RP\n{testo_copia}\n```"
-        )
         print(f"[AVVISO] Emesso da {interaction.user} — player: {self.player_id.value}")
 
 
@@ -4641,6 +4634,7 @@ class WarnModal(discord.ui.Modal, title="🚨 Emetti Warn"):
             f"┌─────────────────────────┐\n"
             f"{player_line}"
             f"{sanzione_line}"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
             f"└─────────────────────────┘\n\n"
             f"{motiv_block}"
             f"{note_line}\n"
@@ -4650,15 +4644,6 @@ class WarnModal(discord.ui.Modal, title="🚨 Emetti Warn"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
-        righe = []
-        if self.player_id.value.strip():   righe.append(f"Giocatore: {self.player_id.value}")
-        if self.sanzione.value.strip():    righe.append(f"Sanzione: {self.sanzione.value}")
-        if self.motivazione.value.strip(): righe.append(f"Motivazione: {self.motivazione.value}")
-        if self.note.value.strip():        righe.append(f"Note: {self.note.value}")
-        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
-        await interaction.followup.send(
-            f"```\n🚨 WARN — Tokyo Horizon RP\n{testo_copia}\n```"
-        )
         print(f"[WARN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
 
@@ -4692,6 +4677,7 @@ class BanModal(discord.ui.Modal, title="⛔ Emetti Ban"):
             f"┌─────────────────────────┐\n"
             f"{player_line}"
             f"{sanzione_line}"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
             f"└─────────────────────────┘\n\n"
             f"{motiv_block}"
             f"{consigli_line}\n"
@@ -4701,15 +4687,6 @@ class BanModal(discord.ui.Modal, title="⛔ Emetti Ban"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
-        righe = []
-        if self.player_id.value.strip():   righe.append(f"Giocatore: {self.player_id.value}")
-        if self.sanzione.value.strip():    righe.append(f"Sanzione: {self.sanzione.value}")
-        if self.motivazione.value.strip(): righe.append(f"Motivazione: {self.motivazione.value}")
-        if self.consigli.value.strip():    righe.append(f"Messaggio staff: {self.consigli.value}")
-        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
-        await interaction.followup.send(
-            f"```\n⛔ BAN — Tokyo Horizon RP\n{testo_copia}\n```"
-        )
         print(f"[BAN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
 
@@ -4732,10 +4709,10 @@ class ScadenzaWarnModal(discord.ui.Modal, title="🔔 Avviso Scadenza Warn"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        player_line   = f"│  👤 **Giocatore:** {self.id_discord.value}\n"   if self.id_discord.value.strip() else ""
-        sanzione_line = f"│  📜 **Sanzione scaduta:** {self.sanzione.value}\n" if self.sanzione.value.strip() else ""
-        motivo_block  = f"⏳ **Dettaglio scadenza:**\n> {self.motivo.value}\n" if self.motivo.value.strip()   else ""
-        note_line     = f"\n📝 **Note aggiuntive:**\n> {self.note.value}"     if self.note.value.strip()      else ""
+        player_line   = f"│  👤 **Giocatore:** {self.id_discord.value}\n"      if self.id_discord.value.strip() else ""
+        sanzione_line = f"│  📜 **Sanzione scaduta:** {self.sanzione.value}\n" if self.sanzione.value.strip()   else ""
+        motivo_block  = f"⏳ **Dettaglio scadenza:**\n> {self.motivo.value}\n"  if self.motivo.value.strip()     else ""
+        note_line     = f"\n📝 **Note aggiuntive:**\n> {self.note.value}"       if self.note.value.strip()       else ""
         embed = discord.Embed(color=discord.Color.from_rgb(88, 101, 242))
         embed.description = (
             "```ansi\n\u001b[1;34m【 🔔  NOTIFICA SCADENZA — WARN RIMOSSO 】\u001b[0m\n```"
@@ -4743,6 +4720,7 @@ class ScadenzaWarnModal(discord.ui.Modal, title="🔔 Avviso Scadenza Warn"):
             f"┌─────────────────────────┐\n"
             f"{player_line}"
             f"{sanzione_line}"
+            f"│  👮 **Operatore:** {interaction.user.mention}\n"
             f"└─────────────────────────┘\n\n"
             f"{motivo_block}"
             f"{note_line}\n\n"
@@ -4751,15 +4729,6 @@ class ScadenzaWarnModal(discord.ui.Modal, title="🔔 Avviso Scadenza Warn"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
-        righe = []
-        if self.id_discord.value.strip(): righe.append(f"Giocatore: {self.id_discord.value}")
-        if self.sanzione.value.strip():   righe.append(f"Sanzione scaduta: {self.sanzione.value}")
-        if self.motivo.value.strip():     righe.append(f"Motivo: {self.motivo.value}")
-        if self.note.value.strip():       righe.append(f"Note: {self.note.value}")
-        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
-        await interaction.followup.send(
-            f"```\n🔔 SCADENZA WARN — Tokyo Horizon RP\n{testo_copia}\n```"
-        )
         print(f"[SCADENZA] Notifica inviata da {interaction.user} — player: {self.id_discord.value}")
 
 
