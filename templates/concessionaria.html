@@ -426,13 +426,26 @@
   }
 
   .car-svg {
-    font-size: 5rem;
+    font-size: 4.5rem;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8));
-    opacity: 0.9;
-    transition: transform 0.3s;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
   }
 
-  .car-card:hover .car-svg { transform: scale(1.08); }
+  .car-photo {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center 45%;
+    opacity: 0;
+    transition: opacity 0.45s ease, transform 0.3s ease;
+    z-index: 1;
+  }
+
+  .car-photo.loaded  { opacity: 1; }
+  .car-card:hover .car-photo { transform: scale(1.06); }
 
   .tier-badge {
     position: absolute;
@@ -446,14 +459,15 @@
     text-transform: uppercase;
   }
 
-  .tier-badge.alta    { background: rgba(230,57,70,0.25); color: #ff6b6b; border: 1px solid rgba(230,57,70,0.5); }
-  .tier-badge.media   { background: rgba(52,152,219,0.25); color: #74b9ff; border: 1px solid rgba(52,152,219,0.5); }
-  .tier-badge.bassa   { background: rgba(255,255,255,0.1); color: #b2bec3; border: 1px solid rgba(255,255,255,0.2); }
+  .tier-badge.alta    { background: rgba(230,57,70,0.25); color: #ff6b6b; border: 1px solid rgba(230,57,70,0.5); z-index: 2; }
+  .tier-badge.media   { background: rgba(52,152,219,0.25); color: #74b9ff; border: 1px solid rgba(52,152,219,0.5); z-index: 2; }
+  .tier-badge.bassa   { background: rgba(255,255,255,0.1); color: #b2bec3; border: 1px solid rgba(255,255,255,0.2); z-index: 2; }
 
   .price-badge {
     position: absolute;
     bottom: 10px;
     right: 10px;
+    z-index: 2;
     background: rgba(10,10,20,0.85);
     backdrop-filter: blur(4px);
     border: 1px solid rgba(230,57,70,0.3);
@@ -750,6 +764,151 @@ const CATALOGO = [
   { cat: "Commerciali", nome: "Brute Pony",             brand: "Brute",      tier: "bassa", prezzo: 18000,  emoji: "🚛" },
 ];
 
+// ── CAR IMAGES (GTA Fandom Wiki) ──
+const W = 'https://gta.fandom.com/wiki/Special:FilePath/';
+const CAR_IMAGES = {
+  // Supercar
+  "Grotti Itali RSX":        W+'ItaliRSX-GTAO-front.png',
+  "Pegassi Tempesta":        W+'Tempesta-GTAO-front.png',
+  "Ocelot XA-21":            W+'XA21-GTAO-front.png',
+  "Progen Emerus":           W+'Emerus-GTAO-front.png',
+  "Grotti X80 Proto":        W+'X80Proto-GTAO-front.png',
+  "Vapid FMJ":               W+'FMJ-GTAO-front.png',
+  "Benefactor Krieger":      W+'Krieger-GTAO-front.png',
+  "Progen PR4":              W+'PR4-GTAO-front.png',
+  "Ocelot Pariah":           W+'Pariah-GTAO-front.png',
+  "Truffade Thrax":          W+'Thrax-GTAO-front.png',
+  "Pegassi Zentorno":        W+'Zentorno-GTAO-front.png',
+  "Pegassi Osiris":          W+'Osiris-GTAO-front.png',
+  "Grotti Cheetah":          W+'Cheetah-GTAO-front.png',
+  "Dewbauchee Vagner":       W+'Vagner-GTAO-front.png',
+  "Overflöd Autarch":        W+'Autarch-GTAO-front.png',
+  "Truffade Adder":          W+'Adder-GTAV-front.png',
+  "Pfister 811":             W+'Pfister811-GTAO-front.png',
+  "Tyrus":                   W+'Tyrus-GTAO-front.png',
+  "Dewbauchee Entity XF":    W+'EntityXF-GTAV-front.png',
+  "Grotti Turismo R":        W+'TurismoR-GTAO-front.png',
+  "Progen T20":              W+'T20-GTAO-front.png',
+  "Benefactor Vacca":        W+'Vacca-GTAV-front.png',
+  "Coil Voltic":             W+'Voltic-GTAO-front.png',
+  "Deveste Eight":           W+'DevesteEight-GTAO-front.png',
+  "Cyclone":                 W+'Cyclone-GTAO-front.png',
+  // Sportive
+  "Karin Sultan RS":         W+'SultanRS-GTAO-front.png',
+  "Annis Elegy RH8":         W+'ElegyrH8-GTAO-front.png',
+  "Karin Kuruma":            W+'Kuruma-GTAO-front.png',
+  "Pfister Comet S2":        W+'CometS2-GTAO-front.png',
+  "Benefactor Schafter V12": W+'SchafterV12-GTAO-front.png',
+  "Vapid Dominator GTX":     W+'DominatorGTX-GTAO-front.png',
+  "Benefactor Sentinel XS":  W+'SentinelXS-GTAO-front.png',
+  "Annis Elegy Retro":       W+'ElegyrRetroCustom-GTAO-front.png',
+  "Banshee 900R":            W+'Banshee900R-GTAO-front.png',
+  "Bravado Buffalo S":       W+'BuffaloS-GTAO-front.png',
+  "Pfister Comet":           W+'Comet-GTAV-front.png',
+  "Grotti Carbonizzare":     W+'Carbonizzare-GTAV-front.png',
+  "Annis ZR350":             W+'ZR350-GTAO-front.png',
+  "Obey 8F Drafter":         W+'8FDrafter-GTAO-front.png',
+  "Annis Euros":             W+'Euros-GTAO-front.png',
+  "Karin Previon":           W+'Previon-GTAO-front.png',
+  "Annis Calico GTF":        W+'CalicoGTF-GTAO-front.png',
+  "Pfister Growler":         W+'Growler-GTAO-front.png',
+  "Vapid GB200":             W+'GB200-GTAO-front.png',
+  "Dewbauchee Specter":      W+'Specter-GTAO-front.png',
+  "Invetero Coquette":       W+'Coquette-GTAV-front.png',
+  "Imponte Ruiner":          W+'Ruiner-GTAV-front.png',
+  "Obey Tailgater S":        W+'TailgaterS-GTAO-front.png',
+  // Sport Classiche
+  "Grotti Stinger GT":           W+'StingerGT-GTAO-front.png',
+  "Benefactor Stirling GT":      W+'StirlingGT-GTAO-front.png',
+  "Declasse Mamba":              W+'Mamba-GTAO-front.png',
+  "Imponte Deluxo":              W+'Deluxo-GTAO-front.png',
+  "Pfister Comet Retro":         W+'CometRetroCustom-GTAO-front.png',
+  "Invetero Coquette Classic":   W+'CoquetteClassic-GTAO-front.png',
+  "Truffade Nero":               W+'Nero-GTAO-front.png',
+  "Truffade Nero Custom":        W+'NeroCustom-GTAO-front.png',
+  "Progen Itali GTO":            W+'ItaliGTO-GTAO-front.png',
+  "Obey Omnis e-GT":             W+'OmniseGT-GTAO-front.png',
+  // Muscle
+  "Vapid Dominator":             W+'Dominator-GTAV-front.png',
+  "Bravado Gauntlet Hellfire":   W+'GauntletHellfire-GTAO-front.png',
+  "Declasse Sabre Turbo Custom": W+'SabreTurboCustom-GTAO-front.png',
+  "Imponte Phoenix":             W+'Phoenix-GTAV-front.png',
+  "Vapid Ruiner 2000":           W+'Ruiner2000-GTAO-front.png',
+  "Vapid Clique":                W+'Clique-GTAO-front.png',
+  "Declasse Vamos":              W+'Vamos-GTAO-front.png',
+  "Bravado Gauntlet Classic":    W+'GauntletClassic-GTAO-front.png',
+  "Imponte Nightshade":          W+'Nightshade-GTAO-front.png',
+  "Declasse Tampa":              W+'Tampa-GTAV-front.png',
+  // Coupé
+  "Benefactor Schafter LTS":     W+'SchafterLTS-GTAO-front.png',
+  "Ubermacht Zion Cabrio":       W+'ZionCabrio-GTAV-front.png',
+  "Dewbauchee Massacro":         W+'Massacro-GTAO-front.png',
+  "Enus Cognoscenti Cabrio":     W+'CognoscentiCabrio-GTAV-front.png',
+  "Dewbauchee Rapid GT":         W+'RapidGT-GTAV-front.png',
+  "Ubermacht Sentinel":          W+'Sentinel-GTAV-front.png',
+  "Enus Windsor":                W+'Windsor-GTAO-front.png',
+  "Benefactor Schwartzer":       W+'Schwartzer-GTAV-front.png',
+  "Lampadati Felon GT":          W+'FelonGT-GTAV-front.png',
+  "Dewbauchee JB 700W":          W+'JB7001-GTAO-front.png',
+  // Berline
+  "Ubermacht Oracle XS":         W+'OracleXS-GTAV-front.png',
+  "Obey Tailgater":              W+'Tailgater-GTAV-front.png',
+  "Benefactor Schafter":         W+'Schafter-GTAV-front.png',
+  "Enus Cognoscenti":            W+'Cognoscenti-GTAV-front.png',
+  "Lampadati Quattro":           W+'Quattro-GTAV-front.png',
+  "Übermacht Zion":              W+'Zion-GTAV-front.png',
+  "Gallivanter Baller":          W+'Baller-GTAV-front.png',
+  // SUV
+  "Gallivanter Baller LE":       W+'BallerLE-GTAO-front.png',
+  "Vapid Contender":             W+'Contender-GTAO-front.png',
+  "Mammoth Patriot":             W+'Patriot-GTAV-front.png',
+  "Canis Seminole":              W+'Seminole-GTAV-front.png',
+  "Canis Mesa":                  W+'Mesa-GTAV-front.png',
+  "Canis Freecrawler":           W+'Freecrawler-GTAO-front.png',
+  "Obey Granger 3600LX":         W+'Granger3600LX-GTAO-front.png',
+  "Mammoth Patriot Mil-Spec":    W+'PatriotMillspec-GTAO-front.png',
+  // Compatte
+  "Dinka Blista Compact":        W+'BlistaCompact-GTAV-front.png',
+  "Benefactor Panto":            W+'Panto-GTAV-front.png',
+  "Maibatsu Penumbra":           W+'Penumbra-GTAV-front.png',
+  "Weeny Issi Sport":            W+'IssiSport-GTAO-front.png',
+  "Dinka Jester Classic":        W+'JesterClassic-GTAO-front.png',
+  "Karin Futo GTX":              W+'FutoGTX-GTAO-front.png',
+  "Vapid Brioso 300":            W+'Brioso300-GTAO-front.png',
+  "Maibatsu Penumbra FF":        W+'PenumbraFF-GTAO-front.png',
+  "Karin Futo":                  W+'Futo-GTAV-front.png',
+  // Fuoristrada
+  "Canis Mesa Grande":           W+'MesaGrande-GTAO-front.png',
+  "Vapid Caracara 4x4":          W+'Caracara4x4-GTAO-front.png',
+  "BF Injection":                W+'BFInjection-GTAV-front.png',
+  "Canis Kamacho":               W+'Kamacho-GTAO-front.png',
+  "Karin Rebel":                 W+'Rebel-GTAV-front.png',
+  "Nagasaki Outlaw":             W+'Outlaw-GTAO-front.png',
+  "Annis Hellion":               W+'Hellion-GTAO-front.png',
+  "Canis Terminus":              W+'Terminus-GTAO-front.png',
+  "Desert Raid":                 W+'DesertRaid-GTAO-front.png',
+  // Moto
+  "Western Daemon":              W+'Daemon-GTAO-front.png',
+  "Pegassi Ruffian":             W+'Ruffian-GTAV-front.png',
+  "Dinka Akuma":                 W+'Akuma-GTAV-front.png',
+  "Maibatsu Sanchez":            W+'Sanchez-GTAV-front.png',
+  "Western Zombie Bobber":       W+'ZombieBobber-GTAO-front.png',
+  "Pegassi Oppressor Mk II":     W+'OppressorMkII-GTAO-front.png',
+  "Nagasaki Shotaro":            W+'Shotaro-GTAO-front.png',
+  "Shitzu Hakuchou Drag":        W+'HakuchouDrag-GTAO-front.png',
+  "Nagasaki BF400":              W+'BF400-GTAV-front.png',
+  "Principe Lectro":             W+'Lectro-GTAO-front.png',
+  "Dinka Vindicator":            W+'Vindicator-GTAO-front.png',
+  "Shitzu PCJ-600":              W+'PCJ600-GTAV-front.png',
+  // Van & Furgoni
+  "Declasse Burrito":            W+'Burrito-GTAV-front.png',
+  "Vapid Speedo Custom":         W+'SpeedoCustom-GTAO-front.png',
+  "Bravado Paradise":            W+'Paradise-GTAO-front.png',
+  "Vapid Minivan Custom":        W+'MinivanCustom-GTAO-front.png',
+  "Maibatsu Rumpo":              W+'Rumpo-GTAV-front.png',
+  "Declasse Moonbeam":           W+'Moonbeam-GTAV-front.png',
+};
+
 // ── CATEGORIES ORDER ──
 const CAT_ORDER = [
   "Supercar","Sportive","Sport Classiche","Muscle","Coupé",
@@ -863,9 +1022,16 @@ function render() {
     cars.forEach(c => {
       const card = document.createElement('div');
       card.className = 'car-card';
+      const imgUrl = CAR_IMAGES[c.nome] || null;
+      const imgTag = imgUrl
+        ? `<img class="car-photo" src="${imgUrl}" alt="${c.nome}" loading="lazy"
+              onload="this.classList.add('loaded')"
+              onerror="this.remove()">`
+        : '';
       card.innerHTML = `
         <div class="car-img ${c.tier}">
           <span class="car-svg">${c.emoji}</span>
+          ${imgTag}
           <span class="tier-badge ${c.tier}">${c.tier.toUpperCase()}</span>
           <span class="price-badge"><span>$</span> ${(c.prezzo).toLocaleString('it-IT')}</span>
         </div>
