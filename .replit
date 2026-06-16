@@ -2,8 +2,8 @@ modules = ["python-3.11", "nodejs-20", "web"]
 
 [deployment]
 router = "application"
-deploymentTarget = "vm"
-run = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
+deploymentTarget = "autoscale"
+run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
 build = ["echo", "no-build"]
 
 [deployment.postBuild]
