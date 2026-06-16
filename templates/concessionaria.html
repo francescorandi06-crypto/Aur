@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tokyo Horizon Motors — Listino Veicoli</title>
+<title>HZN Garage — Catalogo Veicoli</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700;900&family=Bebas+Neue&family=Orbitron:wght@400;700;900&display=swap');
 
   :root {
-    --red: #e63946;
-    --pink: #ff6b9d;
-    --sakura: #ffb7c5;
-    --gold: #f4d03f;
-    --dark: #0a0a0f;
-    --card-bg: #12121a;
-    --card-border: #1e1e2e;
-    --text: #e8e8f0;
-    --muted: #6b6b8a;
+    --cyan: #00e5ff;
+    --cyan2: #00b4d8;
+    --red: #ff2d55;
+    --gold: #ffd60a;
+    --dark: #060810;
+    --dark2: #0b0e1a;
+    --card-bg: #0e1120;
+    --card-border: #1a1e35;
+    --text: #dde4f0;
+    --muted: #4a5280;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,8 +30,21 @@
     min-height: 100vh;
   }
 
-  /* ── SAKURA PETALS ── */
-  .sakura-container {
+  /* ── GRID BG ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── KANJI RAIN ── */
+  .kanji-container {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
@@ -39,186 +53,160 @@
     overflow: hidden;
   }
 
-  .petal {
+  .kanji {
     position: absolute;
-    top: -30px;
-    width: 12px;
-    height: 12px;
-    background: radial-gradient(ellipse at 30% 30%, #ffcfe0, #ff8fab);
-    border-radius: 50% 0 50% 0;
+    top: -40px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1rem;
+    color: var(--cyan);
     opacity: 0;
-    animation: fall linear infinite;
+    animation: kanjifall linear infinite;
+    user-select: none;
   }
 
-  @keyframes fall {
-    0%   { transform: translateY(-30px) rotate(0deg) translateX(0); opacity: 0; }
-    5%   { opacity: 0.85; }
-    90%  { opacity: 0.6; }
-    100% { transform: translateY(110vh) rotate(720deg) translateX(60px); opacity: 0; }
+  @keyframes kanjifall {
+    0%   { transform: translateY(-40px); opacity: 0; }
+    8%   { opacity: 0.18; }
+    85%  { opacity: 0.10; }
+    100% { transform: translateY(110vh); opacity: 0; }
   }
 
-  /* generate 20 petals via nth-child */
-  .petal:nth-child(1)  { left:  4%; width:10px; height:10px; animation-duration:9s;  animation-delay:0s;   }
-  .petal:nth-child(2)  { left: 10%; width:14px; height:14px; animation-duration:12s; animation-delay:1.5s; }
-  .petal:nth-child(3)  { left: 17%; width: 8px; height: 8px; animation-duration:10s; animation-delay:0.8s; }
-  .petal:nth-child(4)  { left: 24%; width:13px; height:13px; animation-duration:11s; animation-delay:3s;   }
-  .petal:nth-child(5)  { left: 32%; width: 9px; height: 9px; animation-duration:8s;  animation-delay:2s;   }
-  .petal:nth-child(6)  { left: 39%; width:11px; height:11px; animation-duration:13s; animation-delay:4s;   }
-  .petal:nth-child(7)  { left: 46%; width:15px; height:15px; animation-duration:9s;  animation-delay:1s;   }
-  .petal:nth-child(8)  { left: 53%; width: 8px; height: 8px; animation-duration:11s; animation-delay:5s;   }
-  .petal:nth-child(9)  { left: 61%; width:12px; height:12px; animation-duration:10s; animation-delay:2.5s; }
-  .petal:nth-child(10) { left: 68%; width:10px; height:10px; animation-duration:14s; animation-delay:0.5s; }
-  .petal:nth-child(11) { left: 75%; width:13px; height:13px; animation-duration:9s;  animation-delay:3.5s; }
-  .petal:nth-child(12) { left: 82%; width: 9px; height: 9px; animation-duration:12s; animation-delay:1.8s; }
-  .petal:nth-child(13) { left: 88%; width:11px; height:11px; animation-duration:10s; animation-delay:6s;   }
-  .petal:nth-child(14) { left: 94%; width:14px; height:14px; animation-duration:8s;  animation-delay:0.3s; }
-  .petal:nth-child(15) { left:  7%; width: 8px; height: 8px; animation-duration:11s; animation-delay:4.5s; }
-  .petal:nth-child(16) { left: 21%; width:12px; height:12px; animation-duration:13s; animation-delay:7s;   }
-  .petal:nth-child(17) { left: 43%; width:10px; height:10px; animation-duration:9s;  animation-delay:2.8s; }
-  .petal:nth-child(18) { left: 57%; width:16px; height:16px; animation-duration:15s; animation-delay:1.2s; }
-  .petal:nth-child(19) { left: 72%; width: 7px; height: 7px; animation-duration:10s; animation-delay:5.5s; }
-  .petal:nth-child(20) { left: 91%; width:11px; height:11px; animation-duration:12s; animation-delay:3.8s; }
+  .kanji:nth-child(1)  { left:3%;   font-size:0.9rem; animation-duration:14s; animation-delay:0s;   }
+  .kanji:nth-child(2)  { left:9%;   font-size:1.1rem; animation-duration:18s; animation-delay:2s;   }
+  .kanji:nth-child(3)  { left:16%;  font-size:0.8rem; animation-duration:13s; animation-delay:1s;   }
+  .kanji:nth-child(4)  { left:23%;  font-size:1rem;   animation-duration:16s; animation-delay:4s;   }
+  .kanji:nth-child(5)  { left:30%;  font-size:0.9rem; animation-duration:11s; animation-delay:0.5s; }
+  .kanji:nth-child(6)  { left:38%;  font-size:1.2rem; animation-duration:19s; animation-delay:3s;   }
+  .kanji:nth-child(7)  { left:45%;  font-size:0.85rem;animation-duration:15s; animation-delay:6s;   }
+  .kanji:nth-child(8)  { left:52%;  font-size:1rem;   animation-duration:12s; animation-delay:1.5s; }
+  .kanji:nth-child(9)  { left:60%;  font-size:0.9rem; animation-duration:17s; animation-delay:5s;   }
+  .kanji:nth-child(10) { left:67%;  font-size:1.1rem; animation-duration:13s; animation-delay:2.5s; }
+  .kanji:nth-child(11) { left:74%;  font-size:0.8rem; animation-duration:20s; animation-delay:7s;   }
+  .kanji:nth-child(12) { left:81%;  font-size:1rem;   animation-duration:14s; animation-delay:0.8s; }
+  .kanji:nth-child(13) { left:88%;  font-size:0.9rem; animation-duration:16s; animation-delay:3.5s; }
+  .kanji:nth-child(14) { left:94%;  font-size:1.1rem; animation-duration:11s; animation-delay:1.2s; }
+  .kanji:nth-child(15) { left:6%;   font-size:1rem;   animation-duration:18s; animation-delay:8s;   }
+  .kanji:nth-child(16) { left:20%;  font-size:0.85rem;animation-duration:15s; animation-delay:4.5s; }
 
-  /* ── LANTERNS ── */
-  .lantern-row {
+  /* ── NEON TOP BAR ── */
+  .neon-bar {
     position: relative;
     z-index: 2;
-    display: flex;
-    justify-content: center;
-    gap: 0;
-    padding-top: 0;
-    pointer-events: none;
+    width: 100%;
     overflow: hidden;
-  }
-
-  .lantern-wire {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #8b6914, #c8981e, #8b6914, transparent);
-    z-index: 1;
-  }
-
-  .lantern-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-  }
-
-  .lantern-string {
-    width: 1px;
-    height: 28px;
-    background: linear-gradient(to bottom, #8b6914, #6b4f10);
-  }
-
-  .lantern {
-    width: 38px;
-    height: 56px;
-    border-radius: 50% / 40%;
+    height: 44px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    position: relative;
-    animation: lanternSway 4s ease-in-out infinite;
-    box-shadow: 0 0 18px rgba(255,80,80,0.5), 0 0 40px rgba(255,60,60,0.3);
+    background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.05) 50%, transparent 100%);
+    border-bottom: 1px solid rgba(0,229,255,0.15);
   }
 
-  .lantern.red    { background: radial-gradient(ellipse at 35% 30%, #ff6b35, #cc1a00, #8b0000); }
-  .lantern.crimson { background: radial-gradient(ellipse at 35% 30%, #ff4d6d, #c9184a, #800f2f); box-shadow: 0 0 18px rgba(201,24,74,0.6), 0 0 40px rgba(255,77,109,0.3); }
-  .lantern.gold   { background: radial-gradient(ellipse at 35% 30%, #ffd60a, #e09000, #996000); box-shadow: 0 0 18px rgba(230,160,0,0.5), 0 0 40px rgba(255,214,10,0.3); }
-
-  .lantern::before {
-    content: '';
+  .neon-bar-line {
     position: absolute;
-    top: 4px; left: 4px;
-    width: 12px; height: 18px;
-    background: rgba(255,255,255,0.25);
-    border-radius: 50%;
-    transform: rotate(-20deg);
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--cyan) 30%, var(--cyan2) 50%, var(--cyan) 70%, transparent 100%);
+    box-shadow: 0 0 10px var(--cyan), 0 0 24px rgba(0,229,255,0.4);
   }
 
-  .lantern::after {
-    content: '';
-    position: absolute;
-    bottom: -3px;
-    width: 14px;
-    height: 5px;
-    background: #6b4f10;
-    border-radius: 2px;
+  .neon-bar-ticker {
+    display: flex;
+    gap: 60px;
+    white-space: nowrap;
+    animation: ticker 25s linear infinite;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    color: rgba(0,229,255,0.55);
+    font-family: 'Orbitron', sans-serif;
+    padding: 0 20px;
   }
 
-  .lantern-top {
-    width: 16px;
-    height: 6px;
-    background: #6b4f10;
-    border-radius: 2px;
-    margin-bottom: -2px;
-    z-index: 1;
+  @keyframes ticker {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
   }
-
-  @keyframes lanternSway {
-    0%, 100% { transform: rotate(-3deg); }
-    50%       { transform: rotate(3deg); }
-  }
-
-  .lantern-group:nth-child(odd)  .lantern { animation-delay: -2s; }
-  .lantern-group:nth-child(3n)   .lantern { animation-duration: 5s; }
 
   /* ── HERO ── */
   .hero {
     position: relative;
     z-index: 2;
     text-align: center;
-    padding: 16px 20px 32px;
-    background: radial-gradient(ellipse at 50% 0%, rgba(230,57,70,0.12) 0%, transparent 65%);
+    padding: 40px 20px 36px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,229,255,0.07) 0%, transparent 60%);
   }
 
   .badge-veicoli {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: rgba(230,57,70,0.15);
-    border: 1px solid rgba(230,57,70,0.4);
-    color: var(--pink);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.3);
+    color: var(--cyan);
     padding: 6px 18px;
-    border-radius: 999px;
-    font-size: 0.82rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
     font-weight: 700;
-    margin-bottom: 18px;
-    letter-spacing: 0.05em;
+    margin-bottom: 22px;
+    letter-spacing: 0.14em;
+    font-family: 'Orbitron', sans-serif;
+    box-shadow: 0 0 12px rgba(0,229,255,0.15);
   }
 
-  .hero-jp {
-    font-size: 0.95rem;
+  .hero-kana {
+    font-size: 0.82rem;
     color: var(--muted);
-    letter-spacing: 0.3em;
-    margin-bottom: 6px;
+    letter-spacing: 0.35em;
+    margin-bottom: 10px;
     font-weight: 300;
   }
 
   .hero-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(3.5rem, 10vw, 7rem);
-    line-height: 0.95;
-    letter-spacing: 0.04em;
-    margin-bottom: 6px;
+    font-size: clamp(3.2rem, 9.5vw, 6.5rem);
+    line-height: 0.92;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
   }
 
-  .hero-title .line1 { color: #ffffff; display: block; }
+  .hero-title .line1 {
+    display: block;
+    color: #ffffff;
+    text-shadow: 0 0 30px rgba(255,255,255,0.15);
+  }
+
   .hero-title .line2 {
     display: block;
-    background: linear-gradient(135deg, var(--red), var(--pink), var(--sakura));
+    background: linear-gradient(90deg, var(--cyan), var(--cyan2), #0077b6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(0,229,255,0.4));
+  }
+
+  .hero-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 14px auto 0;
+    max-width: 480px;
+  }
+
+  .hero-divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,229,255,0.3));
+  }
+
+  .hero-divider-line.r {
+    background: linear-gradient(270deg, transparent, rgba(0,229,255,0.3));
   }
 
   .hero-sub {
     color: var(--muted);
-    font-size: 0.9rem;
-    margin-top: 10px;
-    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
   }
 
   /* ── SEARCH ── */
@@ -226,35 +214,36 @@
     position: relative;
     z-index: 2;
     max-width: 520px;
-    margin: 18px auto 0;
+    margin: 24px auto 0;
   }
 
   .search-wrap input {
     width: 100%;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
-    padding: 14px 20px 14px 48px;
+    background: rgba(0,229,255,0.04);
+    border: 1px solid rgba(0,229,255,0.18);
+    border-radius: 6px;
+    padding: 13px 20px 13px 46px;
     color: var(--text);
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-family: inherit;
     outline: none;
-    transition: border-color 0.2s, background 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
 
   .search-wrap input::placeholder { color: var(--muted); }
+
   .search-wrap input:focus {
-    border-color: rgba(230,57,70,0.5);
-    background: rgba(255,255,255,0.1);
+    border-color: rgba(0,229,255,0.45);
+    box-shadow: 0 0 16px rgba(0,229,255,0.12);
   }
 
   .search-icon {
     position: absolute;
-    left: 16px;
+    left: 15px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--muted);
-    font-size: 1.1rem;
+    font-size: 1.05rem;
   }
 
   /* ── STATS ── */
@@ -263,9 +252,9 @@
     z-index: 2;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    gap: 10px;
     max-width: 900px;
-    margin: 32px auto;
+    margin: 36px auto;
     padding: 0 20px;
   }
 
@@ -274,27 +263,38 @@
   .stat-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: 14px;
-    padding: 18px;
+    border-radius: 8px;
+    padding: 18px 14px;
     text-align: center;
+    position: relative;
+    overflow: hidden;
   }
 
-  .stat-icon { font-size: 1.5rem; margin-bottom: 6px; }
-  .stat-value { font-size: 1.5rem; font-weight: 900; font-family: 'Orbitron', sans-serif; }
-  .stat-value.red  { color: var(--red); }
-  .stat-value.green { color: #2ecc71; }
-  .stat-value.orange { color: #e67e22; }
-  .stat-value.gold  { color: var(--gold); }
-  .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.4;
+  }
+
+  .stat-icon { font-size: 1.3rem; margin-bottom: 6px; }
+  .stat-value { font-size: 1.35rem; font-weight: 900; font-family: 'Orbitron', sans-serif; }
+  .stat-value.cyan   { color: var(--cyan); text-shadow: 0 0 14px rgba(0,229,255,0.4); }
+  .stat-value.green  { color: #00f593; }
+  .stat-value.red    { color: var(--red); }
+  .stat-value.gold   { color: var(--gold); }
+  .stat-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 5px; }
 
   /* ── CATEGORY TABS ── */
   .tabs-wrapper {
     position: sticky;
     top: 0;
     z-index: 50;
-    background: rgba(10,10,15,0.92);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--card-border);
+    background: rgba(6,8,16,0.94);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(0,229,255,0.1);
     padding: 0 16px;
   }
 
@@ -302,7 +302,7 @@
     display: flex;
     gap: 6px;
     overflow-x: auto;
-    padding: 12px 0;
+    padding: 10px 0;
     scrollbar-width: none;
   }
 
@@ -313,12 +313,12 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
-    border-radius: 999px;
+    padding: 7px 15px;
+    border-radius: 4px;
     border: 1px solid var(--card-border);
     background: var(--card-bg);
     color: var(--muted);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -326,23 +326,22 @@
     white-space: nowrap;
   }
 
-  .tab:hover { border-color: var(--red); color: var(--text); }
+  .tab:hover { border-color: rgba(0,229,255,0.35); color: var(--text); }
 
   .tab.active {
-    background: var(--red);
-    border-color: var(--red);
-    color: #fff;
-    box-shadow: 0 0 16px rgba(230,57,70,0.4);
+    background: rgba(0,229,255,0.1);
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 14px rgba(0,229,255,0.2);
   }
 
   .tab .count {
-    background: rgba(0,0,0,0.25);
-    border-radius: 999px;
-    padding: 1px 7px;
-    font-size: 0.72rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-family: 'Orbitron', sans-serif;
   }
-
-  .tab.active .count { background: rgba(0,0,0,0.3); }
 
   /* ── MAIN CONTENT ── */
   .content {
@@ -354,55 +353,59 @@
   }
 
   /* ── CATEGORY SECTION ── */
-  .cat-section { margin-bottom: 48px; }
+  .cat-section { margin-bottom: 52px; }
 
   .cat-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
   }
 
   .cat-title {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 700;
+    letter-spacing: 0.05em;
   }
 
-  .cat-emoji { font-size: 1.4rem; }
+  .cat-emoji { font-size: 1.3rem; }
 
   .cat-count {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 4px 12px;
-    border-radius: 999px;
+    background: rgba(0,229,255,0.07);
+    border: 1px solid rgba(0,229,255,0.18);
+    color: var(--cyan);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 12px;
+    border-radius: 3px;
+    font-family: 'Orbitron', sans-serif;
   }
 
   /* ── CAR GRID ── */
   .car-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 16px;
+    gap: 14px;
   }
 
   .car-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: 16px;
+    border-radius: 10px;
     overflow: hidden;
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, border-color 0.25s, box-shadow 0.25s;
     cursor: default;
   }
 
   .car-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(230,57,70,0.4);
-    box-shadow: 0 8px 32px rgba(230,57,70,0.12);
+    transform: translateY(-5px);
+    border-color: rgba(0,229,255,0.3);
+    box-shadow: 0 8px 32px rgba(0,229,255,0.08), 0 0 0 1px rgba(0,229,255,0.08);
   }
 
   .car-img {
@@ -414,21 +417,14 @@
     overflow: hidden;
   }
 
-  /* tier-based gradients */
-  .car-img.alta {
-    background: linear-gradient(135deg, #1a0a1a 0%, #2d0b2d 40%, #1a0520 100%);
-  }
-  .car-img.media {
-    background: linear-gradient(135deg, #0a0f1a 0%, #0b1f3a 40%, #051020 100%);
-  }
-  .car-img.bassa {
-    background: linear-gradient(135deg, #0a0a0a 0%, #141420 40%, #0a0a14 100%);
-  }
+  .car-img.alta  { background: linear-gradient(135deg, #080e1e 0%, #0e1a30 40%, #06101a 100%); }
+  .car-img.media { background: linear-gradient(135deg, #0a0a1a 0%, #0d1228 40%, #080e18 100%); }
+  .car-img.bassa { background: linear-gradient(135deg, #090909 0%, #101018 40%, #0a0a10 100%); }
 
   .car-svg {
     font-size: 4.5rem;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8));
-    opacity: 0.5;
+    opacity: 0.35;
     z-index: 0;
     pointer-events: none;
   }
@@ -451,51 +447,55 @@
     position: absolute;
     top: 10px;
     left: 10px;
-    font-size: 0.68rem;
+    font-size: 0.64rem;
     font-weight: 800;
-    padding: 3px 10px;
-    border-radius: 999px;
-    letter-spacing: 0.08em;
+    padding: 3px 9px;
+    border-radius: 3px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+    z-index: 2;
   }
 
-  .tier-badge.alta    { background: rgba(230,57,70,0.25); color: #ff6b6b; border: 1px solid rgba(230,57,70,0.5); z-index: 2; }
-  .tier-badge.media   { background: rgba(52,152,219,0.25); color: #74b9ff; border: 1px solid rgba(52,152,219,0.5); z-index: 2; }
-  .tier-badge.bassa   { background: rgba(255,255,255,0.1); color: #b2bec3; border: 1px solid rgba(255,255,255,0.2); z-index: 2; }
+  .tier-badge.alta  { background: rgba(255,45,85,0.2);   color: #ff6b88; border: 1px solid rgba(255,45,85,0.45); }
+  .tier-badge.media { background: rgba(0,229,255,0.12);  color: var(--cyan); border: 1px solid rgba(0,229,255,0.3); }
+  .tier-badge.bassa { background: rgba(255,255,255,0.06); color: #8899bb; border: 1px solid rgba(255,255,255,0.15); }
 
   .price-badge {
     position: absolute;
     bottom: 10px;
     right: 10px;
     z-index: 2;
-    background: rgba(10,10,20,0.85);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(230,57,70,0.3);
-    border-radius: 8px;
+    background: rgba(6,8,16,0.88);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(0,229,255,0.25);
+    border-radius: 4px;
     padding: 4px 10px;
     font-family: 'Orbitron', sans-serif;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    color: var(--red);
+    color: var(--cyan);
   }
 
-  .price-badge span { color: var(--pink); }
+  .price-badge span { color: #0099bb; }
 
   .car-info {
-    padding: 14px 16px;
+    padding: 13px 15px;
     border-top: 1px solid var(--card-border);
   }
 
   .car-name {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 2px;
+    margin-bottom: 3px;
   }
 
   .car-brand {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
   /* ── FOOTER ── */
@@ -503,13 +503,27 @@
     position: relative;
     z-index: 2;
     text-align: center;
-    padding: 32px 20px;
-    border-top: 1px solid var(--card-border);
+    padding: 36px 20px;
+    border-top: 1px solid rgba(0,229,255,0.08);
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
   }
 
-  .footer .jp { font-size: 1.2rem; letter-spacing: 0.3em; color: var(--red); margin-bottom: 8px; }
+  .footer-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.3em;
+    color: rgba(0,229,255,0.5);
+    margin-bottom: 10px;
+    text-shadow: 0 0 16px rgba(0,229,255,0.3);
+  }
+
+  .footer-jp {
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    color: rgba(0,229,255,0.25);
+    margin-bottom: 10px;
+  }
 
   /* ── HIDDEN ── */
   .cat-section.hidden { display: none; }
@@ -521,63 +535,79 @@
     padding: 60px 20px;
     color: var(--muted);
     display: none;
+    letter-spacing: 0.08em;
   }
   .no-results.visible { display: block; }
 </style>
 </head>
 <body>
 
-<!-- Sakura Petals -->
-<div class="sakura-container">
-  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
-  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
-  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
-  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
-  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
-  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
-  <div class="petal"></div><div class="petal"></div>
+<!-- Kanji Rain -->
+<div class="kanji-container">
+  <span class="kanji">速</span><span class="kanji">車</span><span class="kanji">走</span>
+  <span class="kanji">道</span><span class="kanji">力</span><span class="kanji">夜</span>
+  <span class="kanji">東</span><span class="kanji">京</span><span class="kanji">鋼</span>
+  <span class="kanji">炎</span><span class="kanji">翔</span><span class="kanji">地</span>
+  <span class="kanji">光</span><span class="kanji">影</span><span class="kanji">輝</span>
+  <span class="kanji">極</span>
 </div>
 
-<!-- Japanese Lanterns Row -->
-<div class="lantern-row" id="lanternRow"></div>
+<!-- Neon Top Bar -->
+<div class="neon-bar">
+  <div class="neon-bar-line"></div>
+  <div class="neon-bar-ticker">
+    <span>HZN GARAGE · 車両カタログ</span>
+    <span>TOKYO HORIZON RP · LISTINO UFFICIALE</span>
+    <span>地平線 · 東京 · GTA RP</span>
+    <span>SOLO VISUALIZZAZIONE · 閲覧専用</span>
+    <span>HZN GARAGE · 車両カタログ</span>
+    <span>TOKYO HORIZON RP · LISTINO UFFICIALE</span>
+    <span>地平線 · 東京 · GTA RP</span>
+    <span>SOLO VISUALIZZAZIONE · 閲覧専用</span>
+  </div>
+</div>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="badge-veicoli">🚗 <span id="totalCount">0</span> VEICOLI DISPONIBILI</div>
-  <p class="hero-jp">東京ホライズン・モーターズ</p>
+  <div class="badge-veicoli">⬡ &nbsp;<span id="totalCount">0</span> MODELLI IN CATALOGO</div>
+  <p class="hero-kana">地 平 線 ガ レ ー ジ</p>
   <h1 class="hero-title">
-    <span class="line1">TOKYO HORIZON</span>
-    <span class="line2">MOTORS</span>
+    <span class="line1">HZN</span>
+    <span class="line2">GARAGE</span>
   </h1>
-  <p class="hero-sub">Listino Veicoli Ufficiale del Server RP &nbsp;·&nbsp; Solo Visualizzazione</p>
+  <div class="hero-divider">
+    <div class="hero-divider-line"></div>
+    <div class="hero-sub">Listino Ufficiale &nbsp;·&nbsp; Tokyo Horizon RP</div>
+    <div class="hero-divider-line r"></div>
+  </div>
 
   <div class="search-wrap">
-    <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="Cerca un veicolo..." autocomplete="off">
+    <span class="search-icon">🔎</span>
+    <input type="text" id="searchInput" placeholder="Cerca modello o brand..." autocomplete="off">
   </div>
 </section>
 
 <!-- STATS -->
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="stat-icon">🚗</div>
-    <div class="stat-value red" id="statTotal">0</div>
-    <div class="stat-label">Veicoli Totali</div>
+    <div class="stat-icon">🔑</div>
+    <div class="stat-value cyan" id="statTotal">0</div>
+    <div class="stat-label">Modelli Disponibili</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">📉</div>
+    <div class="stat-icon">💹</div>
     <div class="stat-value green" id="statMin">—</div>
-    <div class="stat-label">Più Economico</div>
+    <div class="stat-label">Prezzo Minimo</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">📈</div>
-    <div class="stat-value orange" id="statMax">—</div>
-    <div class="stat-label">Più Costoso</div>
+    <div class="stat-icon">🏆</div>
+    <div class="stat-value red" id="statMax">—</div>
+    <div class="stat-label">Top di Gamma</div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon">💴</div>
+    <div class="stat-icon">⚡</div>
     <div class="stat-value gold" id="statAvg">—</div>
-    <div class="stat-label">Prezzo Medio</div>
+    <div class="stat-label">Media di Mercato</div>
   </div>
 </div>
 
@@ -589,15 +619,16 @@
 <!-- CONTENT -->
 <div class="content" id="mainContent">
   <div class="no-results" id="noResults">
-    🌸 Nessun veicolo trovato per la tua ricerca.
+    車 — Nessun modello trovato per questa ricerca.
   </div>
 </div>
 
 <!-- FOOTER -->
 <footer class="footer">
-  <div class="jp">東京 · 東京 · 東京</div>
-  <p>Tokyo Horizon Motors &copy; 2025 — Listino prezzi aggiornato. Solo visualizzazione.</p>
-  <p style="margin-top:6px; color: #3a3a55;">I prezzi sono espressi in $ del server GTA RP.</p>
+  <div class="footer-logo">HZN GARAGE</div>
+  <div class="footer-jp">東京地平線 · 車両カタログ · 閲覧専用</div>
+  <p>Tokyo Horizon RP &copy; 2025 &nbsp;—&nbsp; Listino aggiornato, solo visualizzazione.</p>
+  <p style="margin-top:6px; color:#1e2540;">I prezzi sono espressi in $ virtuali del server GTA RP.</p>
 </footer>
 
 <script>
@@ -922,32 +953,6 @@ const CAT_EMOJI = {
   "Van & Furgoni":"🚐", "Commerciali":"🚛"
 };
 
-// ── BUILD LANTERNS ──
-function buildLanterns() {
-  const row = document.getElementById('lanternRow');
-  const wire = document.createElement('div');
-  wire.className = 'lantern-wire';
-  row.appendChild(wire);
-
-  const types = ['red','crimson','gold','red','crimson','red','gold','crimson','red','gold','crimson','gold','red','crimson','red','gold'];
-  const count = Math.ceil(window.innerWidth / 80) + 2;
-  for (let i = 0; i < count; i++) {
-    const g = document.createElement('div');
-    g.className = 'lantern-group';
-    const top = document.createElement('div');
-    top.className = 'lantern-top';
-    const str = document.createElement('div');
-    str.className = 'lantern-string';
-    str.style.height = (22 + (i % 3)*12) + 'px';
-    const l = document.createElement('div');
-    l.className = 'lantern ' + types[i % types.length];
-    l.style.animationDelay = (i * 0.3) + 's';
-    g.appendChild(top);
-    g.appendChild(str);
-    g.appendChild(l);
-    row.appendChild(g);
-  }
-}
 
 // ── FORMAT PRICE ──
 function fmt(n) {
@@ -1037,7 +1042,7 @@ function render() {
         </div>
         <div class="car-info">
           <div class="car-name">${c.nome}</div>
-          <div class="car-brand">Tokyo Horizon Motors</div>
+          <div class="car-brand">HZN Garage · Tokyo Horizon RP</div>
         </div>`;
       grid.appendChild(card);
     });
@@ -1083,7 +1088,6 @@ document.getElementById('searchInput').addEventListener('input', e => {
 });
 
 // ── INIT ──
-buildLanterns();
 buildTabs();
 render();
 </script>
