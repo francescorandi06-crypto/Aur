@@ -3,7 +3,7 @@ modules = ["python-3.11", "nodejs-20", "web"]
 [deployment]
 router = "application"
 deploymentTarget = "vm"
-run = ["python", "main.py"]
+run = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 build = ["echo", "no-build"]
 
 [deployment.postBuild]
