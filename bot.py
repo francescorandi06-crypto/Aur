@@ -26,7 +26,12 @@ def concessionaria():
     return render_template('concessionaria.html')
 
 def run_flask():
-    app.run(host='0.0.0.0', port=5000)
+    while True:
+        try:
+            app.run(host='0.0.0.0', port=5000, use_reloader=False, threaded=True)
+        except Exception as e:
+            print(f"[FLASK] Server crashato: {e} — riavvio tra 5s...")
+            time.sleep(5)
 
 def keep_alive():
     t = Thread(target=run_flask)
