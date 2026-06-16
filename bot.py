@@ -4600,6 +4600,15 @@ class AvvisoModal(discord.ui.Modal, title="⚠️ Emetti Avviso"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
+        righe = []
+        if self.player_id.value.strip():   righe.append(f"Giocatore: {self.player_id.value}")
+        if self.sanzione.value.strip():    righe.append(f"Sanzione: {self.sanzione.value}")
+        if self.motivazione.value.strip(): righe.append(f"Motivazione: {self.motivazione.value}")
+        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
+        await interaction.followup.send(
+            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n⚠️ AVVISO — Tokyo Horizon RP\n{testo_copia}\n```",
+            ephemeral=True
+        )
         print(f"[AVVISO] Emesso da {interaction.user} — player: {self.player_id.value}")
 
 
@@ -4642,6 +4651,16 @@ class WarnModal(discord.ui.Modal, title="🚨 Emetti Warn"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
+        righe = []
+        if self.player_id.value.strip():   righe.append(f"Giocatore: {self.player_id.value}")
+        if self.sanzione.value.strip():    righe.append(f"Sanzione: {self.sanzione.value}")
+        if self.motivazione.value.strip(): righe.append(f"Motivazione: {self.motivazione.value}")
+        if self.note.value.strip():        righe.append(f"Note: {self.note.value}")
+        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
+        await interaction.followup.send(
+            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n🚨 WARN — Tokyo Horizon RP\n{testo_copia}\n```",
+            ephemeral=True
+        )
         print(f"[WARN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
 
@@ -4684,6 +4703,16 @@ class BanModal(discord.ui.Modal, title="⛔ Emetti Ban"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
+        righe = []
+        if self.player_id.value.strip():   righe.append(f"Giocatore: {self.player_id.value}")
+        if self.sanzione.value.strip():    righe.append(f"Sanzione: {self.sanzione.value}")
+        if self.motivazione.value.strip(): righe.append(f"Motivazione: {self.motivazione.value}")
+        if self.consigli.value.strip():    righe.append(f"Messaggio staff: {self.consigli.value}")
+        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
+        await interaction.followup.send(
+            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n⛔ BAN — Tokyo Horizon RP\n{testo_copia}\n```",
+            ephemeral=True
+        )
         print(f"[BAN] Emesso da {interaction.user} — player: {self.player_id.value}")
 
 
@@ -4725,6 +4754,16 @@ class ScadenzaWarnModal(discord.ui.Modal, title="🔔 Avviso Scadenza Warn"):
         )
         embed.set_footer(text="🗼 Tokyo Horizon RP  ·  Sistema Disciplinare Ufficiale")
         await interaction.response.send_message(embed=embed)
+        righe = []
+        if self.id_discord.value.strip(): righe.append(f"Giocatore: {self.id_discord.value}")
+        if self.sanzione.value.strip():   righe.append(f"Sanzione scaduta: {self.sanzione.value}")
+        if self.motivo.value.strip():     righe.append(f"Motivo: {self.motivo.value}")
+        if self.note.value.strip():       righe.append(f"Note: {self.note.value}")
+        testo_copia = "\n".join(righe) if righe else "(nessun campo compilato)"
+        await interaction.followup.send(
+            f"📋 **Testo copiabile — solo tu vedi questo:**\n```\n🔔 SCADENZA WARN — Tokyo Horizon RP\n{testo_copia}\n```",
+            ephemeral=True
+        )
         print(f"[SCADENZA] Notifica inviata da {interaction.user} — player: {self.id_discord.value}")
 
 
