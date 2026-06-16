@@ -11,7 +11,7 @@ import sys
 import io
 from datetime import date
 import aiohttp
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect
 from threading import Thread
 
 # Configurazione mini-server finto per UptimeRobot
@@ -19,7 +19,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Il bot è vivo!"
+    return redirect('/concessionaria')
 
 @app.route('/concessionaria')
 def concessionaria():
