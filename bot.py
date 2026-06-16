@@ -45,6 +45,7 @@ _REPLIT_DOMAIN = (
     os.environ.get("CONCESSIONARIA_DOMAIN")
     or os.environ.get("REPLIT_DEV_DOMAIN")
     or os.environ.get("REPLIT_DOMAINS", "")
+    or "2a8b0747-3044-4dfc-a64e-47201cdbcea0-00-16x7r4xqf3731.kirk.replit.dev"
 ).strip()
 print(f"[BOT] Dominio pubblico rilevato: {repr(_REPLIT_DOMAIN)}")
 
@@ -115,11 +116,11 @@ class TokyoHorizonBot(commands.Bot):
         bot.ready_time = discord.utils.utcnow()  # Timestamp da cui accettare interazioni
         print(f"✅ {self.user} è online e pronto!")
         print(f"   Connesso a {len(self.guilds)} server/i")
-        # Rimuove i comandi guild-specifici duplicati lasciati da vecchie istanze
+        # Sync guild-specifico immediato (non aspetta la propagazione globale di 1h)
         for guild in self.guilds:
-            self.tree.clear_commands(guild=guild)
+            self.tree.copy_global_to(guild=guild)
             await self.tree.sync(guild=guild)
-        print("   Comandi guild-specifici rimossi (nessun duplicato).")
+        print("   Comandi sincronizzati su tutte le guild (istantaneo).")
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
