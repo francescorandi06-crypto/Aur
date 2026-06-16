@@ -42,6 +42,7 @@ signal.signal(signal.SIGTERM, _handle_sigterm)
 
 _DEV_DOMAIN = os.environ.get("REPLIT_DEV_DOMAIN", "")
 _CONCESSIONARIA_URL = f"https://{_DEV_DOMAIN}/concessionaria" if _DEV_DOMAIN else "https://tinyurl.com/284wjmmx"
+print(f"[CONCESSIONARIA] URL configurato: {_CONCESSIONARIA_URL}")
 
 intents = discord.Intents.default()
 intents.message_content = True
