@@ -28,6 +28,8 @@ def concessionaria():
 def run_flask():
     while True:
         try:
+            os.system("fuser -k 5000/tcp 2>/dev/null || true")
+            time.sleep(1)
             app.run(host='0.0.0.0', port=5000, use_reloader=False, threaded=True)
         except Exception as e:
             print(f"[FLASK] Server crashato: {e} — riavvio tra 5s...")
