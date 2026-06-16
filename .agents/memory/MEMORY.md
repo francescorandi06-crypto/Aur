@@ -1,0 +1,1 @@
+- [Concessionaria layout](concessionaria-layout.md) — page uses sidebar+poster-card layout; sakura/lanterns aesthetic; GTA wiki images hotlink OK with onerror fallback.

@@ -3,799 +3,792 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HZN Garage — Catalogo Veicoli</title>
+<title>Tokyo Horizon Motors — Listino Veicoli</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700;900&family=Bebas+Neue&family=Orbitron:wght@400;700;900&display=swap');
 
   :root {
-    --cyan: #00e5ff;
-    --cyan2: #00b4d8;
-    --red: #ff2d55;
-    --gold: #ffd60a;
-    --dark: #060810;
-    --dark2: #0b0e1a;
-    --card-bg: #0e1120;
-    --card-border: #1a1e35;
-    --text: #dde4f0;
-    --muted: #4a5280;
+    --red:    #e63946;
+    --pink:   #ff6b9d;
+    --sakura: #ffb7c5;
+    --gold:   #f4d03f;
+    --dark:   #0a0a0f;
+    --dark2:  #0e0e16;
+    --card-bg: #111118;
+    --card-border: #1e1e2e;
+    --text:   #e8e8f0;
+    --muted:  #6b6b8a;
+    --sidebar-w: 260px;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; }
 
   body {
-    background-color: var(--dark);
+    background: var(--dark);
     color: var(--text);
     font-family: 'Noto Sans JP', sans-serif;
     overflow-x: hidden;
     min-height: 100vh;
   }
 
-  /* ── GRID BG ── */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-    background-size: 48px 48px;
-    z-index: 0;
-    pointer-events: none;
+  /* ── SAKURA PETALS ── */
+  .sakura-container {
+    position: fixed; top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none; z-index:0; overflow:hidden;
   }
-
-  /* ── KANJI RAIN ── */
-  .kanji-container {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
+  .petal {
+    position:absolute; top:-30px;
+    width:12px; height:12px;
+    background: radial-gradient(ellipse at 30% 30%, #ffcfe0, #ff8fab);
+    border-radius: 50% 0 50% 0;
+    opacity:0;
+    animation: fall linear infinite;
   }
-
-  .kanji {
-    position: absolute;
-    top: -40px;
-    font-family: 'Noto Sans JP', sans-serif;
-    font-size: 1rem;
-    color: var(--cyan);
-    opacity: 0;
-    animation: kanjifall linear infinite;
-    user-select: none;
+  @keyframes fall {
+    0%   { transform:translateY(-30px) rotate(0deg) translateX(0); opacity:0; }
+    5%   { opacity:.8; }
+    90%  { opacity:.5; }
+    100% { transform:translateY(110vh) rotate(720deg) translateX(60px); opacity:0; }
   }
-
-  @keyframes kanjifall {
-    0%   { transform: translateY(-40px); opacity: 0; }
-    8%   { opacity: 0.18; }
-    85%  { opacity: 0.10; }
-    100% { transform: translateY(110vh); opacity: 0; }
-  }
-
-  .kanji:nth-child(1)  { left:3%;   font-size:0.9rem; animation-duration:14s; animation-delay:0s;   }
-  .kanji:nth-child(2)  { left:9%;   font-size:1.1rem; animation-duration:18s; animation-delay:2s;   }
-  .kanji:nth-child(3)  { left:16%;  font-size:0.8rem; animation-duration:13s; animation-delay:1s;   }
-  .kanji:nth-child(4)  { left:23%;  font-size:1rem;   animation-duration:16s; animation-delay:4s;   }
-  .kanji:nth-child(5)  { left:30%;  font-size:0.9rem; animation-duration:11s; animation-delay:0.5s; }
-  .kanji:nth-child(6)  { left:38%;  font-size:1.2rem; animation-duration:19s; animation-delay:3s;   }
-  .kanji:nth-child(7)  { left:45%;  font-size:0.85rem;animation-duration:15s; animation-delay:6s;   }
-  .kanji:nth-child(8)  { left:52%;  font-size:1rem;   animation-duration:12s; animation-delay:1.5s; }
-  .kanji:nth-child(9)  { left:60%;  font-size:0.9rem; animation-duration:17s; animation-delay:5s;   }
-  .kanji:nth-child(10) { left:67%;  font-size:1.1rem; animation-duration:13s; animation-delay:2.5s; }
-  .kanji:nth-child(11) { left:74%;  font-size:0.8rem; animation-duration:20s; animation-delay:7s;   }
-  .kanji:nth-child(12) { left:81%;  font-size:1rem;   animation-duration:14s; animation-delay:0.8s; }
-  .kanji:nth-child(13) { left:88%;  font-size:0.9rem; animation-duration:16s; animation-delay:3.5s; }
-  .kanji:nth-child(14) { left:94%;  font-size:1.1rem; animation-duration:11s; animation-delay:1.2s; }
-  .kanji:nth-child(15) { left:6%;   font-size:1rem;   animation-duration:18s; animation-delay:8s;   }
-  .kanji:nth-child(16) { left:20%;  font-size:0.85rem;animation-duration:15s; animation-delay:4.5s; }
-
-  /* ── NEON TOP BAR ── */
-  .neon-bar {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    overflow: hidden;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.05) 50%, transparent 100%);
-    border-bottom: 1px solid rgba(0,229,255,0.15);
-  }
-
-  .neon-bar-line {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, var(--cyan) 30%, var(--cyan2) 50%, var(--cyan) 70%, transparent 100%);
-    box-shadow: 0 0 10px var(--cyan), 0 0 24px rgba(0,229,255,0.4);
-  }
-
-  .neon-bar-ticker {
-    display: flex;
-    gap: 60px;
-    white-space: nowrap;
-    animation: ticker 25s linear infinite;
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    color: rgba(0,229,255,0.55);
-    font-family: 'Orbitron', sans-serif;
-    padding: 0 20px;
-  }
-
-  @keyframes ticker {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
+  .petal:nth-child(1)  { left:4%;  width:10px;height:10px; animation-duration:9s;  animation-delay:0s;   }
+  .petal:nth-child(2)  { left:10%; width:14px;height:14px; animation-duration:12s; animation-delay:1.5s; }
+  .petal:nth-child(3)  { left:17%; width:8px; height:8px;  animation-duration:10s; animation-delay:0.8s; }
+  .petal:nth-child(4)  { left:24%; width:13px;height:13px; animation-duration:11s; animation-delay:3s;   }
+  .petal:nth-child(5)  { left:32%; width:9px; height:9px;  animation-duration:8s;  animation-delay:2s;   }
+  .petal:nth-child(6)  { left:39%; width:11px;height:11px; animation-duration:13s; animation-delay:4s;   }
+  .petal:nth-child(7)  { left:46%; width:15px;height:15px; animation-duration:9s;  animation-delay:1s;   }
+  .petal:nth-child(8)  { left:53%; width:8px; height:8px;  animation-duration:11s; animation-delay:5s;   }
+  .petal:nth-child(9)  { left:61%; width:12px;height:12px; animation-duration:10s; animation-delay:2.5s; }
+  .petal:nth-child(10) { left:68%; width:10px;height:10px; animation-duration:14s; animation-delay:0.5s; }
+  .petal:nth-child(11) { left:75%; width:13px;height:13px; animation-duration:9s;  animation-delay:3.5s; }
+  .petal:nth-child(12) { left:82%; width:9px; height:9px;  animation-duration:12s; animation-delay:1.8s; }
+  .petal:nth-child(13) { left:88%; width:11px;height:11px; animation-duration:10s; animation-delay:6s;   }
+  .petal:nth-child(14) { left:94%; width:14px;height:14px; animation-duration:8s;  animation-delay:0.3s; }
+  .petal:nth-child(15) { left:7%;  width:8px; height:8px;  animation-duration:11s; animation-delay:4.5s; }
+  .petal:nth-child(16) { left:21%; width:12px;height:12px; animation-duration:13s; animation-delay:7s;   }
+  .petal:nth-child(17) { left:43%; width:10px;height:10px; animation-duration:9s;  animation-delay:2.8s; }
+  .petal:nth-child(18) { left:57%; width:16px;height:16px; animation-duration:15s; animation-delay:1.2s; }
+  .petal:nth-child(19) { left:72%; width:7px; height:7px;  animation-duration:10s; animation-delay:5.5s; }
+  .petal:nth-child(20) { left:91%; width:11px;height:11px; animation-duration:12s; animation-delay:3.8s; }
 
   /* ── HERO ── */
   .hero {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    padding: 40px 20px 36px;
-    background: radial-gradient(ellipse at 50% 0%, rgba(0,229,255,0.07) 0%, transparent 60%);
+    position:relative; z-index:2;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 44px 40px 36px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(230,57,70,0.14) 0%, transparent 60%);
+    border-bottom: 1px solid var(--card-border);
+    gap: 24px;
   }
 
-  .badge-veicoli {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(0,229,255,0.08);
-    border: 1px solid rgba(0,229,255,0.3);
-    color: var(--cyan);
-    padding: 6px 18px;
-    border-radius: 4px;
-    font-size: 0.78rem;
+  .hero-left {
+    display:flex; flex-direction:column; align-items:flex-start; gap:8px;
+  }
+
+  .hero-jp-vert {
+    writing-mode: vertical-rl;
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .hero-badge {
+    display:inline-flex; align-items:center; gap:7px;
+    background: rgba(230,57,70,0.12);
+    border: 1px solid rgba(230,57,70,0.35);
+    color: var(--pink);
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 0.76rem;
     font-weight: 700;
-    margin-bottom: 22px;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.06em;
+  }
+
+  .hero-stats-mini {
+    display:flex; flex-direction:column; gap:10px;
+    margin-top: 8px;
+  }
+
+  .hero-stat {
+    display:flex; align-items:center; gap:8px;
+  }
+
+  .hero-stat-icon { font-size:1rem; }
+
+  .hero-stat-info {}
+  .hero-stat-val {
     font-family: 'Orbitron', sans-serif;
-    box-shadow: 0 0 12px rgba(0,229,255,0.15);
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .hero-stat-val.red   { color:var(--red); }
+  .hero-stat-val.green { color:#2ecc71; }
+  .hero-stat-val.orange{ color:#e67e22; }
+  .hero-stat-val.gold  { color:var(--gold); }
+  .hero-stat-lbl {
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .hero-center {
+    text-align:center;
   }
 
   .hero-kana {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: var(--muted);
-    letter-spacing: 0.35em;
-    margin-bottom: 10px;
+    letter-spacing: 0.4em;
+    margin-bottom: 4px;
     font-weight: 300;
   }
 
   .hero-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(3.2rem, 9.5vw, 6.5rem);
+    font-size: clamp(3rem, 8vw, 6rem);
     line-height: 0.92;
-    letter-spacing: 0.06em;
-    margin-bottom: 10px;
-  }
-
-  .hero-title .line1 {
-    display: block;
-    color: #ffffff;
-    text-shadow: 0 0 30px rgba(255,255,255,0.15);
-  }
-
-  .hero-title .line2 {
-    display: block;
-    background: linear-gradient(90deg, var(--cyan), var(--cyan2), #0077b6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    filter: drop-shadow(0 0 20px rgba(0,229,255,0.4));
-  }
-
-  .hero-divider {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    margin: 14px auto 0;
-    max-width: 480px;
-  }
-
-  .hero-divider-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0,229,255,0.3));
-  }
-
-  .hero-divider-line.r {
-    background: linear-gradient(270deg, transparent, rgba(0,229,255,0.3));
-  }
-
-  .hero-sub {
-    color: var(--muted);
-    font-size: 0.78rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
-  /* ── SEARCH ── */
-  .search-wrap {
-    position: relative;
-    z-index: 2;
-    max-width: 520px;
-    margin: 24px auto 0;
-  }
-
-  .search-wrap input {
-    width: 100%;
-    background: rgba(0,229,255,0.04);
-    border: 1px solid rgba(0,229,255,0.18);
-    border-radius: 6px;
-    padding: 13px 20px 13px 46px;
-    color: var(--text);
-    font-size: 0.95rem;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-
-  .search-wrap input::placeholder { color: var(--muted); }
-
-  .search-wrap input:focus {
-    border-color: rgba(0,229,255,0.45);
-    box-shadow: 0 0 16px rgba(0,229,255,0.12);
-  }
-
-  .search-icon {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    font-size: 1.05rem;
-  }
-
-  /* ── STATS ── */
-  .stats-grid {
-    position: relative;
-    z-index: 2;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    max-width: 900px;
-    margin: 36px auto;
-    padding: 0 20px;
-  }
-
-  @media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(2,1fr); } }
-
-  .stat-card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 8px;
-    padding: 18px 14px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-    opacity: 0.4;
-  }
-
-  .stat-icon { font-size: 1.3rem; margin-bottom: 6px; }
-  .stat-value { font-size: 1.35rem; font-weight: 900; font-family: 'Orbitron', sans-serif; }
-  .stat-value.cyan   { color: var(--cyan); text-shadow: 0 0 14px rgba(0,229,255,0.4); }
-  .stat-value.green  { color: #00f593; }
-  .stat-value.red    { color: var(--red); }
-  .stat-value.gold   { color: var(--gold); }
-  .stat-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-top: 5px; }
-
-  /* ── CATEGORY TABS ── */
-  .tabs-wrapper {
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    background: rgba(6,8,16,0.94);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid rgba(0,229,255,0.1);
-    padding: 0 16px;
-  }
-
-  .tabs {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding: 10px 0;
-    scrollbar-width: none;
-  }
-
-  .tabs::-webkit-scrollbar { display: none; }
-
-  .tab {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 15px;
-    border-radius: 4px;
-    border: 1px solid var(--card-border);
-    background: var(--card-bg);
-    color: var(--muted);
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: inherit;
-    white-space: nowrap;
-  }
-
-  .tab:hover { border-color: rgba(0,229,255,0.35); color: var(--text); }
-
-  .tab.active {
-    background: rgba(0,229,255,0.1);
-    border-color: var(--cyan);
-    color: var(--cyan);
-    box-shadow: 0 0 14px rgba(0,229,255,0.2);
-  }
-
-  .tab .count {
-    background: rgba(0,0,0,0.3);
-    border-radius: 3px;
-    padding: 1px 6px;
-    font-size: 0.7rem;
-    font-family: 'Orbitron', sans-serif;
-  }
-
-  /* ── MAIN CONTENT ── */
-  .content {
-    position: relative;
-    z-index: 2;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 32px 20px 60px;
-  }
-
-  /* ── CATEGORY SECTION ── */
-  .cat-section { margin-bottom: 52px; }
-
-  .cat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--card-border);
-  }
-
-  .cat-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.1rem;
-    font-weight: 700;
     letter-spacing: 0.05em;
   }
 
-  .cat-emoji { font-size: 1.3rem; }
-
-  .cat-count {
-    background: rgba(0,229,255,0.07);
-    border: 1px solid rgba(0,229,255,0.18);
-    color: var(--cyan);
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 3px 12px;
-    border-radius: 3px;
-    font-family: 'Orbitron', sans-serif;
+  .hero-title .t1 { display:block; color:#fff; }
+  .hero-title .t2 {
+    display:block;
+    background: linear-gradient(135deg, var(--red), var(--pink), var(--sakura));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
   }
 
-  /* ── CAR GRID ── */
-  .car-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px;
+  .hero-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    margin-top: 8px;
+    text-transform: uppercase;
   }
 
-  .car-card {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
+  .hero-right {
+    display:flex; flex-direction:column; align-items:flex-end; gap:12px;
+  }
+
+  .hero-search {
+    position:relative; width:220px;
+  }
+
+  .hero-search input {
+    width:100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 10px;
-    overflow: hidden;
-    transition: transform 0.2s, border-color 0.25s, box-shadow 0.25s;
-    cursor: default;
-  }
-
-  .car-card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(0,229,255,0.3);
-    box-shadow: 0 8px 32px rgba(0,229,255,0.08), 0 0 0 1px rgba(0,229,255,0.08);
-  }
-
-  .car-img {
-    position: relative;
-    height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-
-  .car-img.alta  { background: linear-gradient(135deg, #080e1e 0%, #0e1a30 40%, #06101a 100%); }
-  .car-img.media { background: linear-gradient(135deg, #0a0a1a 0%, #0d1228 40%, #080e18 100%); }
-  .car-img.bassa { background: linear-gradient(135deg, #090909 0%, #101018 40%, #0a0a10 100%); }
-
-  .car-svg {
-    font-size: 4.5rem;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8));
-    opacity: 0.35;
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  .car-photo {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    object-position: center 45%;
-    opacity: 0;
-    transition: opacity 0.45s ease, transform 0.3s ease;
-    z-index: 1;
-  }
-
-  .car-photo.loaded  { opacity: 1; }
-  .car-card:hover .car-photo { transform: scale(1.06); }
-
-  .tier-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: 0.64rem;
-    font-weight: 800;
-    padding: 3px 9px;
-    border-radius: 3px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    font-family: 'Orbitron', sans-serif;
-    z-index: 2;
-  }
-
-  .tier-badge.alta  { background: rgba(255,45,85,0.2);   color: #ff6b88; border: 1px solid rgba(255,45,85,0.45); }
-  .tier-badge.media { background: rgba(0,229,255,0.12);  color: var(--cyan); border: 1px solid rgba(0,229,255,0.3); }
-  .tier-badge.bassa { background: rgba(255,255,255,0.06); color: #8899bb; border: 1px solid rgba(255,255,255,0.15); }
-
-  .price-badge {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    z-index: 2;
-    background: rgba(6,8,16,0.88);
-    backdrop-filter: blur(6px);
-    border: 1px solid rgba(0,229,255,0.25);
-    border-radius: 4px;
-    padding: 4px 10px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--cyan);
-  }
-
-  .price-badge span { color: #0099bb; }
-
-  .car-info {
-    padding: 13px 15px;
-    border-top: 1px solid var(--card-border);
-  }
-
-  .car-name {
-    font-size: 0.95rem;
-    font-weight: 700;
+    padding: 11px 16px 11px 40px;
     color: var(--text);
-    margin-bottom: 3px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .hero-search input::placeholder { color:var(--muted); }
+  .hero-search input:focus { border-color: rgba(230,57,70,0.4); }
+  .hero-search-icon {
+    position:absolute; left:13px; top:50%; transform:translateY(-50%);
+    color:var(--muted); font-size:1rem;
   }
 
-  .car-brand {
-    font-size: 0.7rem;
-    color: var(--muted);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+  .hero-deco {
+    display:flex; flex-direction:column; align-items:flex-end; gap:4px;
+  }
+  .hero-deco-line {
+    height:2px; border-radius:999px;
+    background: linear-gradient(90deg, transparent, var(--red));
   }
 
-  /* ── FOOTER ── */
-  .footer {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    padding: 36px 20px;
-    border-top: 1px solid rgba(0,229,255,0.08);
-    color: var(--muted);
-    font-size: 0.78rem;
+  /* ── LANTERNS ── */
+  .lantern-row {
+    position:relative; z-index:2;
+    display:flex; justify-content:center;
+    overflow:hidden;
+    background: linear-gradient(to bottom, rgba(10,10,15,0.6), transparent);
+  }
+  .lantern-wire {
+    position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, transparent, #8b6914, #c8981e, #8b6914, transparent);
+  }
+  .lantern-group { display:flex; flex-direction:column; align-items:center; }
+  .lantern-string { width:1px; height:28px; background:linear-gradient(to bottom,#8b6914,#6b4f10); }
+  .lantern {
+    width:36px; height:54px; border-radius:50% / 40%;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+    animation: lanternSway 4s ease-in-out infinite;
+    box-shadow:0 0 18px rgba(255,80,80,.5), 0 0 40px rgba(255,60,60,.3);
+  }
+  .lantern.red     { background:radial-gradient(ellipse at 35% 30%,#ff6b35,#cc1a00,#8b0000); }
+  .lantern.crimson { background:radial-gradient(ellipse at 35% 30%,#ff4d6d,#c9184a,#800f2f); box-shadow:0 0 18px rgba(201,24,74,.6); }
+  .lantern.gold    { background:radial-gradient(ellipse at 35% 30%,#ffd60a,#e09000,#996000); box-shadow:0 0 18px rgba(230,160,0,.5); }
+  .lantern::before { content:''; position:absolute; top:4px; left:4px; width:12px; height:18px; background:rgba(255,255,255,.25); border-radius:50%; transform:rotate(-20deg); }
+  .lantern::after  { content:''; position:absolute; bottom:-3px; width:14px; height:5px; background:#6b4f10; border-radius:2px; }
+  .lantern-top { width:16px; height:6px; background:#6b4f10; border-radius:2px; margin-bottom:-2px; z-index:1; }
+  @keyframes lanternSway { 0%,100%{transform:rotate(-3deg);} 50%{transform:rotate(3deg);} }
+  .lantern-group:nth-child(odd) .lantern { animation-delay:-2s; }
+  .lantern-group:nth-child(3n)  .lantern { animation-duration:5s; }
+
+  /* ── MAIN LAYOUT ── */
+  .main-layout {
+    position:relative; z-index:2;
+    display:grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    max-width:1400px;
+    margin:0 auto;
+    min-height:80vh;
   }
 
-  .footer-logo {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1rem;
-    letter-spacing: 0.3em;
-    color: rgba(0,229,255,0.5);
-    margin-bottom: 10px;
-    text-shadow: 0 0 16px rgba(0,229,255,0.3);
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position:sticky;
+    top:0;
+    height:100vh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    background: var(--dark2);
+    border-right:1px solid var(--card-border);
+    padding:24px 16px;
+    scrollbar-width:thin;
+    scrollbar-color: var(--card-border) transparent;
+    display:flex; flex-direction:column; gap:24px;
   }
 
-  .footer-jp {
-    font-size: 0.72rem;
-    letter-spacing: 0.25em;
-    color: rgba(0,229,255,0.25);
-    margin-bottom: 10px;
+  .sidebar-logo {
+    text-align:center;
+    padding-bottom:18px;
+    border-bottom:1px solid var(--card-border);
+  }
+  .sidebar-logo-jp {
+    font-size:0.7rem; letter-spacing:.4em; color:var(--muted); margin-bottom:4px;
+  }
+  .sidebar-logo-main {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:1.6rem; letter-spacing:.1em;
+    background:linear-gradient(135deg,var(--red),var(--pink));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
   }
 
-  /* ── HIDDEN ── */
-  .cat-section.hidden { display: none; }
-  .car-card.hidden    { display: none; }
+  .sidebar-section-title {
+    font-size:0.64rem; font-weight:700; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--muted);
+    margin-bottom:8px;
+  }
+
+  /* sidebar stats */
+  .sidebar-stats {
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .sstat {
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius:8px;
+    padding:8px 12px;
+  }
+  .sstat-label { font-size:0.7rem; color:var(--muted); }
+  .sstat-val   { font-family:'Orbitron',sans-serif; font-size:0.82rem; font-weight:700; }
+  .sstat-val.red   { color:var(--red); }
+  .sstat-val.green { color:#2ecc71; }
+  .sstat-val.orange{ color:#e67e22; }
+  .sstat-val.gold  { color:var(--gold); }
+
+  /* sidebar categories */
+  .sidebar-cats { display:flex; flex-direction:column; gap:4px; }
+
+  .sidebar-cat-btn {
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%;
+    padding:9px 12px;
+    border-radius:8px;
+    border:1px solid transparent;
+    background:transparent;
+    color:var(--muted);
+    font-family:inherit;
+    font-size:0.82rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .18s;
+    text-align:left;
+  }
+  .sidebar-cat-btn:hover {
+    background:rgba(230,57,70,.08);
+    border-color:rgba(230,57,70,.2);
+    color:var(--text);
+  }
+  .sidebar-cat-btn.active {
+    background:rgba(230,57,70,.15);
+    border-color:rgba(230,57,70,.4);
+    color:var(--pink);
+    box-shadow:0 0 12px rgba(230,57,70,.1);
+  }
+  .sidebar-cat-left { display:flex; align-items:center; gap:7px; }
+  .sidebar-cat-count {
+    font-size:0.65rem; font-family:'Orbitron',sans-serif;
+    background:rgba(0,0,0,.3);
+    padding:1px 6px; border-radius:999px;
+  }
+
+  /* ── CONTENT AREA ── */
+  .content-area {
+    padding:32px 24px 60px;
+    min-width:0;
+  }
+
+  /* ── CATEGORY SECTION ── */
+  .cat-section { margin-bottom:52px; }
+
+  .cat-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:22px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--card-border);
+  }
+  .cat-title  { display:flex; align-items:center; gap:10px; font-size:1.15rem; font-weight:700; }
+  .cat-emoji  { font-size:1.4rem; }
+  .cat-count  {
+    background:rgba(230,57,70,.12); border:1px solid rgba(230,57,70,.3);
+    color:var(--pink); font-size:0.72rem; font-weight:700;
+    padding:3px 12px; border-radius:999px;
+  }
+
+  /* ── POSTER CAR GRID ── */
+  .car-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px,1fr));
+    gap:16px;
+  }
+
+  /* POSTER CARD — image fills full card, info as glass overlay at bottom */
+  .car-card {
+    position:relative;
+    border-radius:14px;
+    overflow:hidden;
+    height:280px;
+    background:var(--card-bg);
+    border:1px solid var(--card-border);
+    cursor:default;
+    transition:transform .22s, box-shadow .22s, border-color .22s;
+  }
+  .car-card:hover {
+    transform:translateY(-6px);
+    box-shadow:0 16px 40px rgba(230,57,70,.18), 0 0 0 1px rgba(230,57,70,.25);
+    border-color:rgba(230,57,70,.4);
+  }
+
+  /* full-bleed background image */
+  .car-poster-bg {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .car-poster-bg.alta   { background:linear-gradient(160deg,#1a0a1a,#2d0b2d,#1a0520); }
+  .car-poster-bg.media  { background:linear-gradient(160deg,#0a0f1a,#0b1f3a,#051020); }
+  .car-poster-bg.bassa  { background:linear-gradient(160deg,#0a0a0a,#141420,#0a0a14); }
+
+  .car-poster-emoji {
+    font-size:5.5rem;
+    opacity:.18;
+    pointer-events:none;
+    user-select:none;
+    filter:drop-shadow(0 4px 16px rgba(0,0,0,.8));
+  }
+
+  .car-poster-photo {
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:cover;
+    object-position:center 40%;
+    opacity:0;
+    transition:opacity .4s ease, transform .3s ease;
+  }
+  .car-poster-photo.loaded { opacity:1; }
+  .car-card:hover .car-poster-photo { transform:scale(1.07); }
+
+  /* gradient overlay so text is readable */
+  .car-poster-overlay {
+    position:absolute; inset:0;
+    background:linear-gradient(to top,
+      rgba(8,8,12,.92) 0%,
+      rgba(8,8,12,.55) 45%,
+      rgba(8,8,12,.1)  70%,
+      transparent 100%);
+    transition:background .22s;
+  }
+  .car-card:hover .car-poster-overlay {
+    background:linear-gradient(to top,
+      rgba(8,8,12,.97) 0%,
+      rgba(8,8,12,.65) 50%,
+      rgba(8,8,12,.2)  75%,
+      transparent 100%);
+  }
+
+  /* tier badge — top left */
+  .tier-badge {
+    position:absolute; top:12px; left:12px; z-index:3;
+    font-size:0.62rem; font-weight:800;
+    padding:3px 9px; border-radius:999px;
+    letter-spacing:.1em; text-transform:uppercase;
+  }
+  .tier-badge.alta  { background:rgba(230,57,70,.25);  color:#ff8080; border:1px solid rgba(230,57,70,.5); }
+  .tier-badge.media { background:rgba(52,152,219,.2);  color:#74b9ff; border:1px solid rgba(52,152,219,.5); }
+  .tier-badge.bassa { background:rgba(255,255,255,.08); color:#aaa;   border:1px solid rgba(255,255,255,.18); }
+
+  /* info — bottom of card */
+  .car-poster-info {
+    position:absolute; bottom:0; left:0; right:0; z-index:3;
+    padding:14px 14px 16px;
+  }
+  .car-poster-name {
+    font-size:0.95rem; font-weight:700; color:#fff;
+    margin-bottom:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .car-poster-brand {
+    font-size:0.65rem; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+  .car-poster-price {
+    display:inline-block;
+    background:rgba(230,57,70,.18);
+    border:1px solid rgba(230,57,70,.4);
+    border-radius:6px;
+    padding:3px 10px;
+    font-family:'Orbitron',sans-serif;
+    font-size:0.85rem; font-weight:700;
+    color:var(--red);
+  }
+  .car-poster-price span { color:var(--pink); }
 
   /* ── NO RESULTS ── */
-  .no-results {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--muted);
-    display: none;
-    letter-spacing: 0.08em;
+  .no-results { text-align:center; padding:80px 20px; color:var(--muted); display:none; }
+  .no-results.visible { display:block; }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    position:relative; z-index:2;
+    text-align:center;
+    padding:36px 20px;
+    border-top:1px solid var(--card-border);
+    color:var(--muted);
+    font-size:0.78rem;
   }
-  .no-results.visible { display: block; }
+  .site-footer .jp { font-size:1.1rem; letter-spacing:.3em; color:var(--red); margin-bottom:8px; }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:900px) {
+    .main-layout { grid-template-columns:1fr; }
+    .sidebar { position:static; height:auto; flex-direction:row; flex-wrap:wrap; padding:16px; }
+    .hero { grid-template-columns:1fr; text-align:center; }
+    .hero-left,.hero-right { align-items:center; }
+    .hero-search { width:100%; }
+  }
 </style>
 </head>
 <body>
 
-<!-- Kanji Rain -->
-<div class="kanji-container">
-  <span class="kanji">速</span><span class="kanji">車</span><span class="kanji">走</span>
-  <span class="kanji">道</span><span class="kanji">力</span><span class="kanji">夜</span>
-  <span class="kanji">東</span><span class="kanji">京</span><span class="kanji">鋼</span>
-  <span class="kanji">炎</span><span class="kanji">翔</span><span class="kanji">地</span>
-  <span class="kanji">光</span><span class="kanji">影</span><span class="kanji">輝</span>
-  <span class="kanji">極</span>
-</div>
-
-<!-- Neon Top Bar -->
-<div class="neon-bar">
-  <div class="neon-bar-line"></div>
-  <div class="neon-bar-ticker">
-    <span>HZN GARAGE · 車両カタログ</span>
-    <span>TOKYO HORIZON RP · LISTINO UFFICIALE</span>
-    <span>地平線 · 東京 · GTA RP</span>
-    <span>SOLO VISUALIZZAZIONE · 閲覧専用</span>
-    <span>HZN GARAGE · 車両カタログ</span>
-    <span>TOKYO HORIZON RP · LISTINO UFFICIALE</span>
-    <span>地平線 · 東京 · GTA RP</span>
-    <span>SOLO VISUALIZZAZIONE · 閲覧専用</span>
-  </div>
+<!-- Sakura Petals -->
+<div class="sakura-container">
+  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+  <div class="petal"></div><div class="petal"></div><div class="petal"></div>
+  <div class="petal"></div><div class="petal"></div>
 </div>
 
 <!-- HERO -->
-<section class="hero">
-  <div class="badge-veicoli">⬡ &nbsp;<span id="totalCount">0</span> MODELLI IN CATALOGO</div>
-  <p class="hero-kana">地 平 線 ガ レ ー ジ</p>
-  <h1 class="hero-title">
-    <span class="line1">HZN</span>
-    <span class="line2">GARAGE</span>
-  </h1>
-  <div class="hero-divider">
-    <div class="hero-divider-line"></div>
-    <div class="hero-sub">Listino Ufficiale &nbsp;·&nbsp; Tokyo Horizon RP</div>
-    <div class="hero-divider-line r"></div>
+<header class="hero">
+  <!-- Left: badge + mini stats -->
+  <div class="hero-left">
+    <div class="hero-jp-vert">東京ホライズン・モーターズ</div>
+    <div class="hero-badge">🚗 <span id="totalCount">0</span> VEICOLI</div>
+    <div class="hero-stats-mini">
+      <div class="hero-stat">
+        <span class="hero-stat-icon">📉</span>
+        <div class="hero-stat-info">
+          <div class="hero-stat-val green" id="statMin">—</div>
+          <div class="hero-stat-lbl">Minimo</div>
+        </div>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-icon">📈</span>
+        <div class="hero-stat-info">
+          <div class="hero-stat-val orange" id="statMax">—</div>
+          <div class="hero-stat-lbl">Massimo</div>
+        </div>
+      </div>
+      <div class="hero-stat">
+        <span class="hero-stat-icon">💴</span>
+        <div class="hero-stat-info">
+          <div class="hero-stat-val gold" id="statAvg">—</div>
+          <div class="hero-stat-lbl">Media</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="search-wrap">
-    <span class="search-icon">🔎</span>
-    <input type="text" id="searchInput" placeholder="Cerca modello o brand..." autocomplete="off">
+  <!-- Center: main title -->
+  <div class="hero-center">
+    <p class="hero-kana">東 京 ・ ホ ラ イ ズ ン</p>
+    <h1 class="hero-title">
+      <span class="t1">TOKYO HORIZON</span>
+      <span class="t2">MOTORS</span>
+    </h1>
+    <p class="hero-sub">Listino Ufficiale &nbsp;·&nbsp; GTA Roleplay</p>
   </div>
-</section>
 
-<!-- STATS -->
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-icon">🔑</div>
-    <div class="stat-value cyan" id="statTotal">0</div>
-    <div class="stat-label">Modelli Disponibili</div>
+  <!-- Right: search + deco -->
+  <div class="hero-right">
+    <div class="hero-search">
+      <span class="hero-search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Cerca modello..." autocomplete="off">
+    </div>
+    <div class="hero-deco">
+      <div class="hero-deco-line" style="width:140px;opacity:.6;"></div>
+      <div class="hero-deco-line" style="width:90px;opacity:.35;"></div>
+      <div class="hero-deco-line" style="width:50px;opacity:.2;"></div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:.65rem;color:var(--muted);letter-spacing:.12em;">SOLO VISUALIZZAZIONE</div>
+      <div style="font-size:.65rem;color:var(--muted);letter-spacing:.08em;">閲覧専用</div>
+    </div>
   </div>
-  <div class="stat-card">
-    <div class="stat-icon">💹</div>
-    <div class="stat-value green" id="statMin">—</div>
-    <div class="stat-label">Prezzo Minimo</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon">🏆</div>
-    <div class="stat-value red" id="statMax">—</div>
-    <div class="stat-label">Top di Gamma</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-icon">⚡</div>
-    <div class="stat-value gold" id="statAvg">—</div>
-    <div class="stat-label">Media di Mercato</div>
-  </div>
-</div>
+</header>
 
-<!-- TABS -->
-<div class="tabs-wrapper">
-  <div class="tabs" id="tabsContainer"></div>
-</div>
+<!-- Lanterns -->
+<div class="lantern-row" id="lanternRow"></div>
 
-<!-- CONTENT -->
-<div class="content" id="mainContent">
-  <div class="no-results" id="noResults">
-    車 — Nessun modello trovato per questa ricerca.
-  </div>
+<!-- MAIN -->
+<div class="main-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-jp">東京ホライズン</div>
+      <div class="sidebar-logo-main">THM</div>
+    </div>
+
+    <!-- Stats -->
+    <div>
+      <div class="sidebar-section-title">📊 Statistiche</div>
+      <div class="sidebar-stats">
+        <div class="sstat">
+          <span class="sstat-label">Totale</span>
+          <span class="sstat-val red" id="statTotal">0</span>
+        </div>
+        <div class="sstat">
+          <span class="sstat-label">Più economico</span>
+          <span class="sstat-val green" id="sideMin">—</span>
+        </div>
+        <div class="sstat">
+          <span class="sstat-label">Più costoso</span>
+          <span class="sstat-val orange" id="sideMax">—</span>
+        </div>
+        <div class="sstat">
+          <span class="sstat-label">Prezzo medio</span>
+          <span class="sstat-val gold" id="sideAvg">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div>
+      <div class="sidebar-section-title">🗂️ Categorie</div>
+      <div class="sidebar-cats" id="sidebarCats"></div>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content-area" id="mainContent">
+    <div class="no-results" id="noResults">
+      🌸 Nessun veicolo trovato per questa ricerca.
+    </div>
+  </main>
+
 </div>
 
 <!-- FOOTER -->
-<footer class="footer">
-  <div class="footer-logo">HZN GARAGE</div>
-  <div class="footer-jp">東京地平線 · 車両カタログ · 閲覧専用</div>
-  <p>Tokyo Horizon RP &copy; 2025 &nbsp;—&nbsp; Listino aggiornato, solo visualizzazione.</p>
-  <p style="margin-top:6px; color:#1e2540;">I prezzi sono espressi in $ virtuali del server GTA RP.</p>
+<footer class="site-footer">
+  <div class="jp">東京 · ホライズン · モーターズ</div>
+  <p>Tokyo Horizon Motors &copy; 2025 — Listino prezzi aggiornato. Solo visualizzazione.</p>
+  <p style="margin-top:6px;color:#2a2a40;">I prezzi sono espressi in $ del server GTA RP.</p>
 </footer>
 
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const CATALOGO = [
   // ═══════════════════════════ SUPERCAR ════════════════════════════════════
-  { cat: "Supercar", nome: "Grotti Itali RSX",       brand: "Grotti",       tier: "alta", prezzo: 485000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Pegassi Tempesta",        brand: "Pegassi",      tier: "alta", prezzo: 399000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Ocelot XA-21",            brand: "Ocelot",       tier: "alta", prezzo: 389000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Progen Emerus",           brand: "Progen",       tier: "alta", prezzo: 450000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Grotti X80 Proto",        brand: "Grotti",       tier: "alta", prezzo: 499000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Vapid FMJ",               brand: "Vapid",        tier: "alta", prezzo: 359000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Benefactor Krieger",      brand: "Benefactor",   tier: "alta", prezzo: 475000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Progen PR4",              brand: "Progen",       tier: "alta", prezzo: 445000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Ocelot Pariah",           brand: "Ocelot",       tier: "alta", prezzo: 375000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Truffade Thrax",          brand: "Truffade",     tier: "alta", prezzo: 440000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Pegassi Zentorno",        brand: "Pegassi",      tier: "alta", prezzo: 280000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Pegassi Osiris",          brand: "Pegassi",      tier: "alta", prezzo: 295000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Grotti Cheetah",          brand: "Grotti",       tier: "alta", prezzo: 265000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Dewbauchee Vagner",       brand: "Dewbauchee",   tier: "alta", prezzo: 345000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Overflöd Autarch",        brand: "Overflöd",     tier: "alta", prezzo: 385000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Truffade Adder",          brand: "Truffade",     tier: "alta", prezzo: 290000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Pfister 811",             brand: "Pfister",      tier: "alta", prezzo: 310000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Tyrus",                   brand: "Vapid",        tier: "alta", prezzo: 360000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Dewbauchee Entity XF",    brand: "Dewbauchee",   tier: "alta", prezzo: 240000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Grotti Turismo R",        brand: "Grotti",       tier: "alta", prezzo: 250000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Progen T20",              brand: "Progen",       tier: "alta", prezzo: 320000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Benefactor Vacca",        brand: "Benefactor",   tier: "alta", prezzo: 230000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Coil Voltic",             brand: "Coil",         tier: "alta", prezzo: 180000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Deveste Eight",           brand: "Deveste",      tier: "alta", prezzo: 420000, emoji: "🏎️" },
-  { cat: "Supercar", nome: "Cyclone",                 brand: "Coil",         tier: "alta", prezzo: 395000, emoji: "🏎️" },
+  { cat:"Supercar", nome:"Grotti Itali RSX",       brand:"Grotti",       tier:"alta",  prezzo:485000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Pegassi Tempesta",        brand:"Pegassi",      tier:"alta",  prezzo:399000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Ocelot XA-21",            brand:"Ocelot",       tier:"alta",  prezzo:389000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Progen Emerus",           brand:"Progen",       tier:"alta",  prezzo:450000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Grotti X80 Proto",        brand:"Grotti",       tier:"alta",  prezzo:499000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Vapid FMJ",               brand:"Vapid",        tier:"alta",  prezzo:359000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Benefactor Krieger",      brand:"Benefactor",   tier:"alta",  prezzo:475000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Progen PR4",              brand:"Progen",       tier:"alta",  prezzo:445000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Ocelot Pariah",           brand:"Ocelot",       tier:"alta",  prezzo:375000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Truffade Thrax",          brand:"Truffade",     tier:"alta",  prezzo:440000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Pegassi Zentorno",        brand:"Pegassi",      tier:"alta",  prezzo:280000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Pegassi Osiris",          brand:"Pegassi",      tier:"alta",  prezzo:295000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Grotti Cheetah",          brand:"Grotti",       tier:"alta",  prezzo:265000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Dewbauchee Vagner",       brand:"Dewbauchee",   tier:"alta",  prezzo:345000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Overflöd Autarch",        brand:"Overflöd",     tier:"alta",  prezzo:385000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Truffade Adder",          brand:"Truffade",     tier:"alta",  prezzo:290000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Pfister 811",             brand:"Pfister",      tier:"alta",  prezzo:310000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Tyrus",                   brand:"Vapid",        tier:"alta",  prezzo:360000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Dewbauchee Entity XF",    brand:"Dewbauchee",   tier:"alta",  prezzo:240000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Grotti Turismo R",        brand:"Grotti",       tier:"alta",  prezzo:250000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Progen T20",              brand:"Progen",       tier:"alta",  prezzo:320000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Benefactor Vacca",        brand:"Benefactor",   tier:"alta",  prezzo:230000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Coil Voltic",             brand:"Coil",         tier:"alta",  prezzo:180000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Deveste Eight",           brand:"Deveste",      tier:"alta",  prezzo:420000, emoji:"🏎️" },
+  { cat:"Supercar", nome:"Cyclone",                 brand:"Coil",         tier:"alta",  prezzo:395000, emoji:"🏎️" },
 
   // ═══════════════════════════ SPORTIVE ════════════════════════════════════
-  { cat: "Sportive", nome: "Karin Sultan RS",         brand: "Karin",        tier: "alta", prezzo: 80000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Annis Elegy RH8",         brand: "Annis",        tier: "media", prezzo: 75000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Karin Kuruma",            brand: "Karin",        tier: "media", prezzo: 70000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Pfister Comet S2",        brand: "Pfister",      tier: "alta", prezzo: 165000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Benefactor Schafter V12", brand: "Benefactor",   tier: "alta", prezzo: 88000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Vapid Dominator GTX",     brand: "Vapid",        tier: "media", prezzo: 95000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Benefactor Sentinel XS",  brand: "Benefactor",   tier: "media", prezzo: 72000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Annis Elegy Retro",       brand: "Annis",        tier: "media", prezzo: 90000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Banshee 900R",            brand: "Bravado",      tier: "alta", prezzo: 120000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Bravado Buffalo S",       brand: "Bravado",      tier: "media", prezzo: 55000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Pfister Comet",           brand: "Pfister",      tier: "media", prezzo: 65000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Grotti Carbonizzare",     brand: "Grotti",       tier: "alta", prezzo: 145000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Annis ZR350",             brand: "Annis",        tier: "alta", prezzo: 110000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Obey 8F Drafter",        brand: "Obey",         tier: "alta", prezzo: 125000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Annis Euros",             brand: "Annis",        tier: "alta", prezzo: 95000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Karin Previon",           brand: "Karin",        tier: "media", prezzo: 78000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Annis Calico GTF",        brand: "Annis",        tier: "alta", prezzo: 105000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Pfister Growler",         brand: "Pfister",      tier: "alta", prezzo: 135000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Vapid GB200",             brand: "Vapid",        tier: "media", prezzo: 80000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Dewbauchee Specter",      brand: "Dewbauchee",   tier: "alta", prezzo: 118000, emoji: "🚗" },
-  { cat: "Sportive", nome: "Invetero Coquette",       brand: "Invetero",     tier: "media", prezzo: 85000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Imponte Ruiner",          brand: "Imponte",      tier: "media", prezzo: 45000,  emoji: "🚗" },
-  { cat: "Sportive", nome: "Obey Tailgater S",        brand: "Obey",         tier: "media", prezzo: 68000,  emoji: "🚗" },
+  { cat:"Sportive", nome:"Karin Sultan RS",         brand:"Karin",        tier:"alta",  prezzo:80000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Annis Elegy RH8",         brand:"Annis",        tier:"media", prezzo:75000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Karin Kuruma",            brand:"Karin",        tier:"media", prezzo:70000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Pfister Comet S2",        brand:"Pfister",      tier:"alta",  prezzo:165000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Benefactor Schafter V12", brand:"Benefactor",   tier:"alta",  prezzo:88000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Vapid Dominator GTX",     brand:"Vapid",        tier:"media", prezzo:95000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Benefactor Sentinel XS",  brand:"Benefactor",   tier:"media", prezzo:72000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Annis Elegy Retro",       brand:"Annis",        tier:"media", prezzo:90000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Banshee 900R",            brand:"Bravado",      tier:"alta",  prezzo:120000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Bravado Buffalo S",       brand:"Bravado",      tier:"media", prezzo:55000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Pfister Comet",           brand:"Pfister",      tier:"media", prezzo:65000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Grotti Carbonizzare",     brand:"Grotti",       tier:"alta",  prezzo:145000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Annis ZR350",             brand:"Annis",        tier:"alta",  prezzo:110000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Obey 8F Drafter",         brand:"Obey",         tier:"alta",  prezzo:125000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Annis Euros",             brand:"Annis",        tier:"alta",  prezzo:95000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Karin Previon",           brand:"Karin",        tier:"media", prezzo:78000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Annis Calico GTF",        brand:"Annis",        tier:"alta",  prezzo:105000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Pfister Growler",         brand:"Pfister",      tier:"alta",  prezzo:135000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Vapid GB200",             brand:"Vapid",        tier:"media", prezzo:80000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Dewbauchee Specter",      brand:"Dewbauchee",   tier:"alta",  prezzo:118000, emoji:"🚗" },
+  { cat:"Sportive", nome:"Invetero Coquette",       brand:"Invetero",     tier:"media", prezzo:85000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Imponte Ruiner",          brand:"Imponte",      tier:"media", prezzo:45000,  emoji:"🚗" },
+  { cat:"Sportive", nome:"Obey Tailgater S",        brand:"Obey",         tier:"media", prezzo:68000,  emoji:"🚗" },
 
   // ═══════════════════════ SPORT CLASSICHE ══════════════════════════════════
-  { cat: "Sport Classiche", nome: "Grotti Stinger GT",       brand: "Grotti",     tier: "alta", prezzo: 185000, emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Benefactor Stirling GT",  brand: "Benefactor", tier: "alta", prezzo: 175000, emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Declasse Mamba",          brand: "Declasse",   tier: "media", prezzo: 85000,  emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Imponte Deluxo",          brand: "Imponte",    tier: "alta", prezzo: 220000, emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Grotti Turismo Classic",  brand: "Grotti",     tier: "alta", prezzo: 195000, emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Pfister Comet Retro",     brand: "Pfister",    tier: "media", prezzo: 95000,  emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Invetero Coquette Classic", brand: "Invetero", tier: "media", prezzo: 75000,  emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Truffade Nero",           brand: "Truffade",   tier: "alta", prezzo: 360000, emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Truffade Nero Custom",    brand: "Truffade",   tier: "alta", prezzo: 440000, emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Progen Itali GTO",        brand: "Progen",     tier: "alta", prezzo: 295000, emoji: "🏁" },
-  { cat: "Sport Classiche", nome: "Obey Omnis e-GT",         brand: "Obey",       tier: "alta", prezzo: 180000, emoji: "🏁" },
+  { cat:"Sport Classiche", nome:"Grotti Stinger GT",        brand:"Grotti",     tier:"alta",  prezzo:185000, emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Benefactor Stirling GT",   brand:"Benefactor", tier:"alta",  prezzo:175000, emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Declasse Mamba",           brand:"Declasse",   tier:"media", prezzo:85000,  emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Imponte Deluxo",           brand:"Imponte",    tier:"alta",  prezzo:220000, emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Grotti Turismo Classic",   brand:"Grotti",     tier:"alta",  prezzo:195000, emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Pfister Comet Retro",      brand:"Pfister",    tier:"media", prezzo:95000,  emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Invetero Coquette Classic",brand:"Invetero",   tier:"media", prezzo:75000,  emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Truffade Nero",            brand:"Truffade",   tier:"alta",  prezzo:360000, emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Truffade Nero Custom",     brand:"Truffade",   tier:"alta",  prezzo:440000, emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Progen Itali GTO",         brand:"Progen",     tier:"alta",  prezzo:295000, emoji:"🏁" },
+  { cat:"Sport Classiche", nome:"Obey Omnis e-GT",          brand:"Obey",       tier:"alta",  prezzo:180000, emoji:"🏁" },
 
   // ════════════════════════════ MUSCLE ══════════════════════════════════════
-  { cat: "Muscle", nome: "Vapid Dominator",             brand: "Vapid",      tier: "media", prezzo: 45000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Bravado Gauntlet Hellfire",   brand: "Bravado",    tier: "alta", prezzo: 52000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Declasse Sabre Turbo Custom", brand: "Declasse",   tier: "media", prezzo: 48000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Imponte Phoenix",             brand: "Imponte",    tier: "media", prezzo: 35000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Vapid Ruiner 2000",           brand: "Vapid",      tier: "alta", prezzo: 85000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Vapid Clique",                brand: "Vapid",      tier: "media", prezzo: 38000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Declasse Vamos",              brand: "Declasse",   tier: "media", prezzo: 40000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Bravado Gauntlet Classic",    brand: "Bravado",    tier: "media", prezzo: 42000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Vapid Pisswasser Dominator",  brand: "Vapid",      tier: "media", prezzo: 44000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Imponte Nightshade",          brand: "Imponte",    tier: "alta", prezzo: 58000,  emoji: "💪" },
-  { cat: "Muscle", nome: "Declasse Tampa",              brand: "Declasse",   tier: "media", prezzo: 36000,  emoji: "💪" },
+  { cat:"Muscle", nome:"Vapid Dominator",             brand:"Vapid",      tier:"media", prezzo:45000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Bravado Gauntlet Hellfire",   brand:"Bravado",    tier:"alta",  prezzo:52000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Declasse Sabre Turbo Custom", brand:"Declasse",   tier:"media", prezzo:48000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Imponte Phoenix",             brand:"Imponte",    tier:"media", prezzo:35000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Vapid Ruiner 2000",           brand:"Vapid",      tier:"alta",  prezzo:85000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Vapid Clique",                brand:"Vapid",      tier:"media", prezzo:38000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Declasse Vamos",              brand:"Declasse",   tier:"media", prezzo:40000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Bravado Gauntlet Classic",    brand:"Bravado",    tier:"media", prezzo:42000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Vapid Pisswasser Dominator",  brand:"Vapid",      tier:"media", prezzo:44000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Imponte Nightshade",          brand:"Imponte",    tier:"alta",  prezzo:58000,  emoji:"💪" },
+  { cat:"Muscle", nome:"Declasse Tampa",              brand:"Declasse",   tier:"media", prezzo:36000,  emoji:"💪" },
 
   // ════════════════════════════ COUPÉ ═══════════════════════════════════════
-  { cat: "Coupé", nome: "Benefactor Schafter LTS",      brand: "Benefactor", tier: "alta", prezzo: 88000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Ubermacht Zion Cabrio",        brand: "Ubermacht",  tier: "media", prezzo: 55000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Dewbauchee Massacro",          brand: "Dewbauchee", tier: "alta", prezzo: 135000, emoji: "🚙" },
-  { cat: "Coupé", nome: "Enus Cognoscenti Cabrio",      brand: "Enus",       tier: "media", prezzo: 75000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Dewbauchee Rapid GT",          brand: "Dewbauchee", tier: "alta", prezzo: 92000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Ubermacht Sentinel",           brand: "Ubermacht",  tier: "media", prezzo: 48000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Enus Windsor",                 brand: "Enus",       tier: "alta", prezzo: 95000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Benefactor Schwartzer",        brand: "Benefactor", tier: "media", prezzo: 55000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Lampadati Felon GT",           brand: "Lampadati",  tier: "media", prezzo: 60000,  emoji: "🚙" },
-  { cat: "Coupé", nome: "Dewbauchee JB 700W",           brand: "Dewbauchee", tier: "alta", prezzo: 145000, emoji: "🚙" },
+  { cat:"Coupé", nome:"Benefactor Schafter LTS",      brand:"Benefactor", tier:"alta",  prezzo:88000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Ubermacht Zion Cabrio",        brand:"Ubermacht",  tier:"media", prezzo:55000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Dewbauchee Massacro",          brand:"Dewbauchee", tier:"alta",  prezzo:135000, emoji:"🚙" },
+  { cat:"Coupé", nome:"Enus Cognoscenti Cabrio",      brand:"Enus",       tier:"media", prezzo:75000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Dewbauchee Rapid GT",          brand:"Dewbauchee", tier:"alta",  prezzo:92000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Ubermacht Sentinel",           brand:"Ubermacht",  tier:"media", prezzo:48000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Enus Windsor",                 brand:"Enus",       tier:"alta",  prezzo:95000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Benefactor Schwartzer",        brand:"Benefactor", tier:"media", prezzo:55000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Lampadati Felon GT",           brand:"Lampadati",  tier:"media", prezzo:60000,  emoji:"🚙" },
+  { cat:"Coupé", nome:"Dewbauchee JB 700W",           brand:"Dewbauchee", tier:"alta",  prezzo:145000, emoji:"🚙" },
 
   // ════════════════════════════ BERLINE ═════════════════════════════════════
-  { cat: "Berline", nome: "Ubermacht Oracle XS",        brand: "Ubermacht",  tier: "media", prezzo: 45000,  emoji: "🚘" },
-  { cat: "Berline", nome: "Obey Tailgater",             brand: "Obey",       tier: "media", prezzo: 38000,  emoji: "🚘" },
-  { cat: "Berline", nome: "Benefactor Schafter",        brand: "Benefactor", tier: "media", prezzo: 42000,  emoji: "🚘" },
-  { cat: "Berline", nome: "Enus Cognoscenti",           brand: "Enus",       tier: "alta", prezzo: 68000,  emoji: "🚘" },
-  { cat: "Berline", nome: "Lampadati Quattro",          brand: "Lampadati",  tier: "media", prezzo: 35000,  emoji: "🚘" },
-  { cat: "Berline", nome: "Übermacht Zion",             brand: "Übermacht",  tier: "media", prezzo: 40000,  emoji: "🚘" },
-  { cat: "Berline", nome: "Gallivanter Baller",         brand: "Gallivanter",tier: "media", prezzo: 38000,  emoji: "🚘" },
+  { cat:"Berline", nome:"Ubermacht Oracle XS",        brand:"Ubermacht",   tier:"media", prezzo:45000, emoji:"🚘" },
+  { cat:"Berline", nome:"Obey Tailgater",             brand:"Obey",        tier:"media", prezzo:38000, emoji:"🚘" },
+  { cat:"Berline", nome:"Benefactor Schafter",        brand:"Benefactor",  tier:"media", prezzo:42000, emoji:"🚘" },
+  { cat:"Berline", nome:"Enus Cognoscenti",           brand:"Enus",        tier:"alta",  prezzo:68000, emoji:"🚘" },
+  { cat:"Berline", nome:"Lampadati Quattro",          brand:"Lampadati",   tier:"media", prezzo:35000, emoji:"🚘" },
+  { cat:"Berline", nome:"Übermacht Zion",             brand:"Übermacht",   tier:"media", prezzo:40000, emoji:"🚘" },
+  { cat:"Berline", nome:"Gallivanter Baller",         brand:"Gallivanter", tier:"media", prezzo:38000, emoji:"🚘" },
 
   // ═════════════════════════════ SUV ════════════════════════════════════════
-  { cat: "SUV", nome: "Gallivanter Baller LE",          brand: "Gallivanter",tier: "alta", prezzo: 65000,  emoji: "🚐" },
-  { cat: "SUV", nome: "Vapid Contender",                brand: "Vapid",      tier: "media", prezzo: 40000,  emoji: "🚐" },
-  { cat: "SUV", nome: "Mammoth Patriot",                brand: "Mammoth",    tier: "bassa", prezzo: 35000,  emoji: "🚐" },
-  { cat: "SUV", nome: "Canis Seminole",                 brand: "Canis",      tier: "bassa", prezzo: 28000,  emoji: "🚐" },
-  { cat: "SUV", nome: "Canis Mesa",                     brand: "Canis",      tier: "media", prezzo: 45000,  emoji: "🚐" },
-  { cat: "SUV", nome: "Canis Freecrawler",              brand: "Canis",      tier: "media", prezzo: 52000,  emoji: "🚐" },
-  { cat: "SUV", nome: "Obey Granger 3600LX",           brand: "Obey",       tier: "alta", prezzo: 78000,  emoji: "🚐" },
-  { cat: "SUV", nome: "Mammoth Patriot Mil-Spec",       brand: "Mammoth",    tier: "alta", prezzo: 88000,  emoji: "🚐" },
+  { cat:"SUV", nome:"Gallivanter Baller LE",          brand:"Gallivanter", tier:"alta",  prezzo:65000, emoji:"🚐" },
+  { cat:"SUV", nome:"Vapid Contender",                brand:"Vapid",       tier:"media", prezzo:40000, emoji:"🚐" },
+  { cat:"SUV", nome:"Mammoth Patriot",                brand:"Mammoth",     tier:"bassa", prezzo:35000, emoji:"🚐" },
+  { cat:"SUV", nome:"Canis Seminole",                 brand:"Canis",       tier:"bassa", prezzo:28000, emoji:"🚐" },
+  { cat:"SUV", nome:"Canis Mesa",                     brand:"Canis",       tier:"media", prezzo:45000, emoji:"🚐" },
+  { cat:"SUV", nome:"Canis Freecrawler",              brand:"Canis",       tier:"media", prezzo:52000, emoji:"🚐" },
+  { cat:"SUV", nome:"Obey Granger 3600LX",            brand:"Obey",        tier:"alta",  prezzo:78000, emoji:"🚐" },
+  { cat:"SUV", nome:"Mammoth Patriot Mil-Spec",       brand:"Mammoth",     tier:"alta",  prezzo:88000, emoji:"🚐" },
 
   // ══════════════════════════ COMPATTE ══════════════════════════════════════
-  { cat: "Compatte", nome: "Dinka Blista Compact",      brand: "Dinka",      tier: "bassa", prezzo: 12000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Benefactor Panto",          brand: "Benefactor", tier: "bassa", prezzo: 15000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Maibatsu Penumbra",         brand: "Maibatsu",   tier: "media", prezzo: 22000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Weeny Issi Sport",          brand: "Weeny",      tier: "media", prezzo: 28000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Dinka Jester Classic",      brand: "Dinka",      tier: "media", prezzo: 30000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Karin Futo GTX",            brand: "Karin",      tier: "media", prezzo: 26000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Vapid Brioso 300",          brand: "Vapid",      tier: "bassa", prezzo: 14000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Maibatsu Penumbra FF",      brand: "Maibatsu",   tier: "media", prezzo: 24000,  emoji: "🚗" },
-  { cat: "Compatte", nome: "Karin Futo",                brand: "Karin",      tier: "bassa", prezzo: 18000,  emoji: "🚗" },
+  { cat:"Compatte", nome:"Dinka Blista Compact",      brand:"Dinka",      tier:"bassa", prezzo:12000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Benefactor Panto",          brand:"Benefactor", tier:"bassa", prezzo:15000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Maibatsu Penumbra",         brand:"Maibatsu",   tier:"media", prezzo:22000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Weeny Issi Sport",          brand:"Weeny",      tier:"media", prezzo:28000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Dinka Jester Classic",      brand:"Dinka",      tier:"media", prezzo:30000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Karin Futo GTX",            brand:"Karin",      tier:"media", prezzo:26000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Vapid Brioso 300",          brand:"Vapid",      tier:"bassa", prezzo:14000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Maibatsu Penumbra FF",      brand:"Maibatsu",   tier:"media", prezzo:24000, emoji:"🚗" },
+  { cat:"Compatte", nome:"Karin Futo",                brand:"Karin",      tier:"bassa", prezzo:18000, emoji:"🚗" },
 
   // ══════════════════════════ FUORISTRADA ═══════════════════════════════════
-  { cat: "Fuoristrada", nome: "Canis Mesa Grande",      brand: "Canis",      tier: "alta", prezzo: 55000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "Vapid Caracara 4x4",     brand: "Vapid",      tier: "alta", prezzo: 60000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "BF Injection",           brand: "BF",         tier: "bassa", prezzo: 25000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "Canis Kamacho",          brand: "Canis",      tier: "media", prezzo: 48000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "Karin Rebel",            brand: "Karin",      tier: "bassa", prezzo: 22000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "Nagasaki Outlaw",        brand: "Nagasaki",   tier: "media", prezzo: 35000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "Annis Hellion",          brand: "Annis",      tier: "media", prezzo: 40000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "Canis Terminus",         brand: "Canis",      tier: "alta", prezzo: 65000,  emoji: "🏔️" },
-  { cat: "Fuoristrada", nome: "Desert Raid",            brand: "BF",         tier: "media", prezzo: 38000,  emoji: "🏔️" },
+  { cat:"Fuoristrada", nome:"Canis Mesa Grande",      brand:"Canis",      tier:"alta",  prezzo:55000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"Vapid Caracara 4x4",     brand:"Vapid",      tier:"alta",  prezzo:60000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"BF Injection",           brand:"BF",         tier:"bassa", prezzo:25000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"Canis Kamacho",          brand:"Canis",      tier:"media", prezzo:48000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"Karin Rebel",            brand:"Karin",      tier:"bassa", prezzo:22000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"Nagasaki Outlaw",        brand:"Nagasaki",   tier:"media", prezzo:35000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"Annis Hellion",          brand:"Annis",      tier:"media", prezzo:40000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"Canis Terminus",         brand:"Canis",      tier:"alta",  prezzo:65000, emoji:"🏔️" },
+  { cat:"Fuoristrada", nome:"Desert Raid",            brand:"BF",         tier:"media", prezzo:38000, emoji:"🏔️" },
 
   // ════════════════════════════ MOTO ════════════════════════════════════════
-  { cat: "Moto", nome: "Western Daemon",                brand: "Western",    tier: "media", prezzo: 20000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Pegassi Ruffian",               brand: "Pegassi",    tier: "media", prezzo: 25000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Dinka Akuma",                   brand: "Dinka",      tier: "bassa", prezzo: 18000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Maibatsu Sanchez",              brand: "Maibatsu",   tier: "bassa", prezzo: 15000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Western Zombie Bobber",         brand: "Western",    tier: "media", prezzo: 22000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Pegassi Oppressor Mk II",       brand: "Pegassi",    tier: "alta", prezzo: 380000, emoji: "🏍️" },
-  { cat: "Moto", nome: "Nagasaki Shotaro",              brand: "Nagasaki",   tier: "alta", prezzo: 85000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Shitzu Hakuchou Drag",          brand: "Shitzu",     tier: "alta", prezzo: 95000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Nagasaki BF400",                brand: "Nagasaki",   tier: "media", prezzo: 30000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Principe Lectro",               brand: "Principe",   tier: "media", prezzo: 35000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Dinka Vindicator",              brand: "Dinka",      tier: "alta", prezzo: 55000,  emoji: "🏍️" },
-  { cat: "Moto", nome: "Shitzu PCJ-600",                brand: "Shitzu",     tier: "bassa", prezzo: 12000,  emoji: "🏍️" },
+  { cat:"Moto", nome:"Western Daemon",                brand:"Western",    tier:"media", prezzo:20000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Pegassi Ruffian",               brand:"Pegassi",    tier:"media", prezzo:25000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Dinka Akuma",                   brand:"Dinka",      tier:"bassa", prezzo:18000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Maibatsu Sanchez",              brand:"Maibatsu",   tier:"bassa", prezzo:15000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Western Zombie Bobber",         brand:"Western",    tier:"media", prezzo:22000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Pegassi Oppressor Mk II",       brand:"Pegassi",    tier:"alta",  prezzo:380000, emoji:"🏍️" },
+  { cat:"Moto", nome:"Nagasaki Shotaro",              brand:"Nagasaki",   tier:"alta",  prezzo:85000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Shitzu Hakuchou Drag",          brand:"Shitzu",     tier:"alta",  prezzo:95000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Nagasaki BF400",                brand:"Nagasaki",   tier:"media", prezzo:30000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Principe Lectro",               brand:"Principe",   tier:"media", prezzo:35000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Dinka Vindicator",              brand:"Dinka",      tier:"alta",  prezzo:55000,  emoji:"🏍️" },
+  { cat:"Moto", nome:"Shitzu PCJ-600",                brand:"Shitzu",     tier:"bassa", prezzo:12000,  emoji:"🏍️" },
 
   // ════════════════════════ VAN & FURGONI ═══════════════════════════════════
-  { cat: "Van & Furgoni", nome: "Declasse Burrito",     brand: "Declasse",   tier: "bassa", prezzo: 28000,  emoji: "🚐" },
-  { cat: "Van & Furgoni", nome: "Vapid Speedo Custom",  brand: "Vapid",      tier: "media", prezzo: 42000,  emoji: "🚐" },
-  { cat: "Van & Furgoni", nome: "Bravado Paradise",     brand: "Bravado",    tier: "bassa", prezzo: 20000,  emoji: "🚐" },
-  { cat: "Van & Furgoni", nome: "Vapid Minivan Custom", brand: "Vapid",      tier: "media", prezzo: 35000,  emoji: "🚐" },
-  { cat: "Van & Furgoni", nome: "Maibatsu Rumpo",       brand: "Maibatsu",   tier: "bassa", prezzo: 22000,  emoji: "🚐" },
-  { cat: "Van & Furgoni", nome: "Declasse Moonbeam",    brand: "Declasse",   tier: "bassa", prezzo: 25000,  emoji: "🚐" },
+  { cat:"Van & Furgoni", nome:"Declasse Burrito",     brand:"Declasse",   tier:"bassa", prezzo:28000, emoji:"🚐" },
+  { cat:"Van & Furgoni", nome:"Vapid Speedo Custom",  brand:"Vapid",      tier:"media", prezzo:42000, emoji:"🚐" },
+  { cat:"Van & Furgoni", nome:"Bravado Paradise",     brand:"Bravado",    tier:"bassa", prezzo:20000, emoji:"🚐" },
+  { cat:"Van & Furgoni", nome:"Vapid Minivan Custom", brand:"Vapid",      tier:"media", prezzo:35000, emoji:"🚐" },
+  { cat:"Van & Furgoni", nome:"Maibatsu Rumpo",       brand:"Maibatsu",   tier:"bassa", prezzo:22000, emoji:"🚐" },
+  { cat:"Van & Furgoni", nome:"Declasse Moonbeam",    brand:"Declasse",   tier:"bassa", prezzo:25000, emoji:"🚐" },
 
   // ════════════════════════ COMMERCIALI ═════════════════════════════════════
-  { cat: "Commerciali", nome: "Brute Stockade",         brand: "Brute",      tier: "media", prezzo: 55000,  emoji: "🚛" },
-  { cat: "Commerciali", nome: "Brute Tipper",           brand: "Brute",      tier: "bassa", prezzo: 30000,  emoji: "🚛" },
-  { cat: "Commerciali", nome: "HVY Mixer",              brand: "HVY",        tier: "bassa", prezzo: 28000,  emoji: "🚛" },
-  { cat: "Commerciali", nome: "MTL Flatbed",            brand: "MTL",        tier: "bassa", prezzo: 25000,  emoji: "🚛" },
-  { cat: "Commerciali", nome: "Brute Pony",             brand: "Brute",      tier: "bassa", prezzo: 18000,  emoji: "🚛" },
+  { cat:"Commerciali", nome:"Brute Stockade",         brand:"Brute",      tier:"media", prezzo:55000, emoji:"🚛" },
+  { cat:"Commerciali", nome:"Brute Tipper",           brand:"Brute",      tier:"bassa", prezzo:30000, emoji:"🚛" },
+  { cat:"Commerciali", nome:"HVY Mixer",              brand:"HVY",        tier:"bassa", prezzo:28000, emoji:"🚛" },
+  { cat:"Commerciali", nome:"MTL Flatbed",            brand:"MTL",        tier:"bassa", prezzo:25000, emoji:"🚛" },
+  { cat:"Commerciali", nome:"Brute Pony",             brand:"Brute",      tier:"bassa", prezzo:18000, emoji:"🚛" },
 ];
 
-// ── CAR IMAGES (GTA Fandom Wiki) ──
+// ── CAR IMAGES ──
 const W = 'https://gta.fandom.com/wiki/Special:FilePath/';
 const CAR_IMAGES = {
   // Supercar
@@ -853,6 +846,7 @@ const CAR_IMAGES = {
   "Benefactor Stirling GT":      W+'StirlingGT-GTAO-front.png',
   "Declasse Mamba":              W+'Mamba-GTAO-front.png',
   "Imponte Deluxo":              W+'Deluxo-GTAO-front.png',
+  "Grotti Turismo Classic":      W+'TurismoClassic-GTAO-front.png',
   "Pfister Comet Retro":         W+'CometRetroCustom-GTAO-front.png',
   "Invetero Coquette Classic":   W+'CoquetteClassic-GTAO-front.png',
   "Truffade Nero":               W+'Nero-GTAO-front.png',
@@ -868,6 +862,7 @@ const CAR_IMAGES = {
   "Vapid Clique":                W+'Clique-GTAO-front.png',
   "Declasse Vamos":              W+'Vamos-GTAO-front.png',
   "Bravado Gauntlet Classic":    W+'GauntletClassic-GTAO-front.png',
+  "Vapid Pisswasser Dominator":  W+'PisswasserDominator-GTAO-front.png',
   "Imponte Nightshade":          W+'Nightshade-GTAO-front.png',
   "Declasse Tampa":              W+'Tampa-GTAV-front.png',
   // Coupé
@@ -938,67 +933,63 @@ const CAR_IMAGES = {
   "Vapid Minivan Custom":        W+'MinivanCustom-GTAO-front.png',
   "Maibatsu Rumpo":              W+'Rumpo-GTAV-front.png',
   "Declasse Moonbeam":           W+'Moonbeam-GTAV-front.png',
+  // Commerciali
+  "Brute Stockade":              W+'Stockade-GTAV-front.png',
+  "Brute Tipper":                W+'Tipper-GTAV-front.png',
+  "HVY Mixer":                   W+'Mixer-GTAV-front.png',
+  "MTL Flatbed":                 W+'Flatbed-GTAV-front.png',
+  "Brute Pony":                  W+'Pony-GTAV-front.png',
 };
 
-// ── CATEGORIES ORDER ──
-const CAT_ORDER = [
-  "Supercar","Sportive","Sport Classiche","Muscle","Coupé",
-  "Berline","SUV","Compatte","Fuoristrada","Moto","Van & Furgoni","Commerciali"
-];
-
+const CAT_ORDER = ["Supercar","Sportive","Sport Classiche","Muscle","Coupé","Berline","SUV","Compatte","Fuoristrada","Moto","Van & Furgoni","Commerciali"];
 const CAT_EMOJI = {
-  "Supercar":"🏎️", "Sportive":"🚗", "Sport Classiche":"🏁",
-  "Muscle":"💪", "Coupé":"🚙", "Berline":"🚘", "SUV":"🚐",
-  "Compatte":"🚗", "Fuoristrada":"🏔️", "Moto":"🏍️",
-  "Van & Furgoni":"🚐", "Commerciali":"🚛"
+  "Supercar":"🏎️","Sportive":"🚗","Sport Classiche":"🏁","Muscle":"💪",
+  "Coupé":"🚙","Berline":"🚘","SUV":"🚐","Compatte":"🚗",
+  "Fuoristrada":"🏔️","Moto":"🏍️","Van & Furgoni":"🚐","Commerciali":"🚛"
 };
 
-
-// ── FORMAT PRICE ──
+// ── FORMAT ──
 function fmt(n) {
-  if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M';
-  if (n >= 1000)    return '$' + (n/1000).toFixed(0) + '.000';
+  if (n >= 1000) return '$' + (n/1000).toFixed(0) + '.000';
   return '$' + n;
 }
+
+// ── STATE ──
+let activeTab = 'Tutti';
+let searchVal = '';
 
 // ── STATS ──
 function updateStats(list) {
   const prices = list.map(c => c.prezzo);
-  document.getElementById('statTotal').textContent = list.length;
-  document.getElementById('totalCount').textContent = list.length;
-  if (prices.length) {
-    document.getElementById('statMin').textContent = fmt(Math.min(...prices));
-    document.getElementById('statMax').textContent = fmt(Math.max(...prices));
-    const avg = Math.round(prices.reduce((a,b)=>a+b,0)/prices.length);
-    document.getElementById('statAvg').textContent = fmt(avg);
-  }
+  const total = list.length;
+  document.getElementById('statTotal').textContent  = total;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('sideMin').textContent    = prices.length ? fmt(Math.min(...prices)) : '—';
+  document.getElementById('sideMax').textContent    = prices.length ? fmt(Math.max(...prices)) : '—';
+  document.getElementById('sideAvg').textContent    = prices.length ? fmt(Math.round(prices.reduce((a,b)=>a+b,0)/prices.length)) : '—';
+  document.getElementById('statMin').textContent    = prices.length ? fmt(Math.min(...prices)) : '—';
+  document.getElementById('statMax').textContent    = prices.length ? fmt(Math.max(...prices)) : '—';
+  document.getElementById('statAvg').textContent    = prices.length ? fmt(Math.round(prices.reduce((a,b)=>a+b,0)/prices.length)) : '—';
 }
 
 // ── RENDER ──
-let activeTab = 'Tutti';
-let searchVal = '';
-
 function render() {
-  const content = document.getElementById('mainContent');
+  const content   = document.getElementById('mainContent');
   const noResults = document.getElementById('noResults');
 
-  // filter
   let filtered = CATALOGO.filter(c => {
-    const matchTab = activeTab === 'Tutti' || c.cat === activeTab;
-    const q = searchVal.toLowerCase();
+    const matchTab    = activeTab === 'Tutti' || c.cat === activeTab;
+    const q           = searchVal.toLowerCase();
     const matchSearch = !q || c.nome.toLowerCase().includes(q) || c.brand.toLowerCase().includes(q);
     return matchTab && matchSearch;
   });
 
-  // update stats
   updateStats(filtered);
 
-  // group by category
   const bycat = {};
   CAT_ORDER.forEach(cat => { bycat[cat] = []; });
   filtered.forEach(c => { if (bycat[c.cat]) bycat[c.cat].push(c); });
 
-  // clear old sections (keep no-results)
   Array.from(content.querySelectorAll('.cat-section')).forEach(el => el.remove());
 
   let hasAny = false;
@@ -1025,24 +1016,21 @@ function render() {
     grid.className = 'car-grid';
 
     cars.forEach(c => {
-      const card = document.createElement('div');
-      card.className = 'car-card';
       const imgUrl = CAR_IMAGES[c.nome] || null;
-      const imgTag = imgUrl
-        ? `<img class="car-photo" src="${imgUrl}" alt="${c.nome}" loading="lazy"
-              onload="this.classList.add('loaded')"
-              onerror="this.remove()">`
-        : '';
+      const card   = document.createElement('div');
+      card.className = 'car-card';
       card.innerHTML = `
-        <div class="car-img ${c.tier}">
-          <span class="car-svg">${c.emoji}</span>
-          ${imgTag}
-          <span class="tier-badge ${c.tier}">${c.tier.toUpperCase()}</span>
-          <span class="price-badge"><span>$</span> ${(c.prezzo).toLocaleString('it-IT')}</span>
+        <div class="car-poster-bg ${c.tier}">
+          <span class="car-poster-emoji">${c.emoji}</span>
         </div>
-        <div class="car-info">
-          <div class="car-name">${c.nome}</div>
-          <div class="car-brand">HZN Garage · Tokyo Horizon RP</div>
+        ${imgUrl ? `<img class="car-poster-photo" src="${imgUrl}" alt="${c.nome}" loading="lazy"
+            onload="this.classList.add('loaded')" onerror="this.remove()">` : ''}
+        <div class="car-poster-overlay"></div>
+        <span class="tier-badge ${c.tier}">${c.tier.toUpperCase()}</span>
+        <div class="car-poster-info">
+          <div class="car-poster-name">${c.nome}</div>
+          <div class="car-poster-brand">${c.brand} · Tokyo Horizon</div>
+          <span class="car-poster-price"><span>$</span> ${c.prezzo.toLocaleString('it-IT')}</span>
         </div>`;
       grid.appendChild(card);
     });
@@ -1054,31 +1042,56 @@ function render() {
   noResults.classList.toggle('visible', !hasAny);
 }
 
-// ── TABS ──
-function buildTabs() {
-  const container = document.getElementById('tabsContainer');
-  const allCount = CATALOGO.length;
+// ── SIDEBAR CATEGORIES ──
+function buildSidebar() {
+  const container = document.getElementById('sidebarCats');
+  const defs = [
+    { label:'Tutti', count: CATALOGO.length },
+    ...CAT_ORDER.map(cat => ({ label:cat, count: CATALOGO.filter(c=>c.cat===cat).length })).filter(t=>t.count>0)
+  ];
 
-  const tabDefs = [{ label: 'Tutti', count: allCount }, ...CAT_ORDER.map(cat => ({
-    label: cat,
-    count: CATALOGO.filter(c => c.cat === cat).length
-  })).filter(t => t.count > 0)];
-
-  tabDefs.forEach(t => {
+  defs.forEach(t => {
     const btn = document.createElement('button');
-    btn.className = 'tab' + (t.label === 'Tutti' ? ' active' : '');
-    btn.innerHTML = `${CAT_EMOJI[t.label] || '🚗'} ${t.label} <span class="count">${t.count}</span>`;
-    if (t.label === 'Tutti') btn.innerHTML = `🗼 Tutti <span class="count">${t.count}</span>`;
+    btn.className = 'sidebar-cat-btn' + (t.label === 'Tutti' ? ' active' : '');
+    btn.innerHTML = `
+      <span class="sidebar-cat-left">
+        <span>${CAT_EMOJI[t.label] || '🗼'}</span>
+        <span>${t.label}</span>
+      </span>
+      <span class="sidebar-cat-count">${t.count}</span>`;
     btn.addEventListener('click', () => {
       activeTab = t.label;
-      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sidebar-cat-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       render();
-      // scroll to top of content
-      document.querySelector('.content').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('mainContent').scrollIntoView({ behavior:'smooth', block:'start' });
     });
     container.appendChild(btn);
   });
+}
+
+// ── LANTERNS ──
+function buildLanterns() {
+  const row   = document.getElementById('lanternRow');
+  const wire  = document.createElement('div');
+  wire.className = 'lantern-wire';
+  row.appendChild(wire);
+  const types = ['red','crimson','gold','red','crimson','red','gold','crimson','red','gold','crimson','gold'];
+  const count = Math.ceil(window.innerWidth / 72) + 2;
+  for (let i = 0; i < count; i++) {
+    const g   = document.createElement('div');
+    g.className = 'lantern-group';
+    const top = document.createElement('div');
+    top.className = 'lantern-top';
+    const str = document.createElement('div');
+    str.className = 'lantern-string';
+    str.style.height = (20 + (i % 3)*10) + 'px';
+    const l   = document.createElement('div');
+    l.className = 'lantern ' + types[i % types.length];
+    l.style.animationDelay = (i * 0.28) + 's';
+    g.appendChild(top); g.appendChild(str); g.appendChild(l);
+    row.appendChild(g);
+  }
 }
 
 // ── SEARCH ──
@@ -1088,7 +1101,8 @@ document.getElementById('searchInput').addEventListener('input', e => {
 });
 
 // ── INIT ──
-buildTabs();
+buildLanterns();
+buildSidebar();
 render();
 </script>
 </body>
