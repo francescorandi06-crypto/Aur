@@ -4,6 +4,7 @@ modules = ["python-3.11", "nodejs-20", "web"]
 router = "application"
 deploymentTarget = "vm"
 run = ["python", "main.py"]
+build = ["echo", "no-build"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
