@@ -116,11 +116,7 @@ class TokyoHorizonBot(commands.Bot):
         bot.ready_time = discord.utils.utcnow()  # Timestamp da cui accettare interazioni
         print(f"✅ {self.user} è online e pronto!")
         print(f"   Connesso a {len(self.guilds)} server/i")
-        # Sync guild-specifico immediato (non aspetta la propagazione globale di 1h)
-        for guild in self.guilds:
-            self.tree.copy_global_to(guild=guild)
-            await self.tree.sync(guild=guild)
-        print("   Comandi sincronizzati su tutte le guild (istantaneo).")
+        print("   Comandi globali attivi (sync completata in setup_hook).")
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
