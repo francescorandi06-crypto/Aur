@@ -25,13 +25,13 @@ args = "Tokyo Horizon Bot"
 name = "Tokyo Horizon Bot"
 author = "agent"
 
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 bot.py"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 stack = "FLASK_VANILLA_JS"
@@ -47,11 +47,7 @@ externalPort = 3000
 
 [[ports]]
 localPort = 5000
-externalPort = 5000
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
+externalPort = 80
 
 [[ports]]
 localPort = 8082
