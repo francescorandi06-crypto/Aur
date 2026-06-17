@@ -5409,6 +5409,46 @@ _CATALOGO_DEFAULT = [
             {"nome": "Declasse Impaler",  "prezzo": "€ 420.000",   "img": _STATIC + "berlina4.webp"},
         ],
     },
+    {
+        "categoria": "🚙 SUV",
+        "colore": (80, 120, 200),
+        "auto": [
+            {"nome": "Ubermacht Rebla GTS",       "prezzo": "€ 1.250.000", "img": _STATIC + "suv1.webp"},
+            {"nome": "Gallivanter Baller ST-D",   "prezzo": "€ 1.495.000", "img": _STATIC + "suv2.webp"},
+            {"nome": "Canis Seminole Frontier",   "prezzo": "€ 995.000",   "img": _STATIC + "suv3.webp"},
+            {"nome": "Pegassi Toros",             "prezzo": "€ 498.000",   "img": _STATIC + "suv4.webp"},
+        ],
+    },
+    {
+        "categoria": "🚗 COMPATTE",
+        "colore": (160, 90, 200),
+        "auto": [
+            {"nome": "Karin Futo GTX",    "prezzo": "€ 1.590.000", "img": _STATIC + "compatta1.webp"},
+            {"nome": "Grotti Brioso R/A", "prezzo": "€ 145.000",   "img": _STATIC + "compatta2.webp"},
+            {"nome": "Declasse Rhapsody", "prezzo": "€ 200.000",   "img": _STATIC + "compatta3.webp"},
+            {"nome": "Weeny Issi Custom", "prezzo": "€ 1.765.000", "img": _STATIC + "compatta4.webp"},
+        ],
+    },
+    {
+        "categoria": "🛤️ FUORISTRADA",
+        "colore": (130, 90, 50),
+        "auto": [
+            {"nome": "Vapid Riata",     "prezzo": "€ 745.000",   "img": _STATIC + "offroad1.webp"},
+            {"nome": "Canis Kamacho",   "prezzo": "€ 550.000",   "img": _STATIC + "offroad2.webp"},
+            {"nome": "Canis Mesa",      "prezzo": "€ 225.000",   "img": _STATIC + "offroad3.webp"},
+            {"nome": "Declasse Yosemite","prezzo": "€ 165.000",   "img": _STATIC + "offroad4.webp"},
+        ],
+    },
+    {
+        "categoria": "🏍️ MOTO",
+        "colore": (200, 50, 150),
+        "auto": [
+            {"nome": "Dinka Vindicator",    "prezzo": "€ 270.000", "img": _STATIC + "moto1.webp"},
+            {"nome": "Western Gargoyle",    "prezzo": "€ 120.000", "img": _STATIC + "moto2.webp"},
+            {"nome": "Pegassi Faggio",      "prezzo": "€ 30.000",  "img": _STATIC + "moto3.webp"},
+            {"nome": "LCC Innovation",      "prezzo": "€ 255.000", "img": _STATIC + "moto4.webp"},
+        ],
+    },
 ]
 
 def _carica_catalogo() -> list:
