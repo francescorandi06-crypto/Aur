@@ -5550,6 +5550,8 @@ async def pubblicaconcessionaria(interaction: discord.Interaction):
             title="🗼 TOKYO HORIZON MOTORS",
             description=(
                 "東京ホライズン · カーディーラー\n\n"
+                "📅 **Ogni settimana verrà aggiunto un nuovo veicolo per ogni categoria!**\n"
+                "🌐 **Sito web:** attualmente in fase di sviluppo — disponibile prossimamente.\n\n"
                 "Benvenuto nel catalogo ufficiale della concessionaria.\n"
                 "Tutti i prezzi sono in valuta RP · Contatta uno staff per acquistare.\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
