@@ -1502,7 +1502,11 @@ async def paga(interaction: discord.Interaction, utente: discord.Member, importo
 
 @bot.tree.command(name="concessionaria", description="Informazioni sulla concessionaria di Tokyo Horizon Motors")
 async def concessionaria_cmd(interaction: discord.Interaction):
-    await interaction.response.defer()
+    try:
+        await interaction.response.defer()
+    except Exception as e:
+        print(f"[CONCESSIONARIA] defer() fallito: {e}")
+        return
     try:
         embed = discord.Embed(
             title="🏮 Tokyo Horizon Motors — 東京ホライズン",
@@ -1519,8 +1523,11 @@ async def concessionaria_cmd(interaction: discord.Interaction):
         embed.set_footer(text="Tokyo Horizon RP · Catalogo Ufficiale · 公式ディーラー")
         await interaction.followup.send(embed=embed)
     except Exception as e:
-        await interaction.followup.send("❌ Errore nel caricamento. Riprova più tardi.", ephemeral=True)
         print(f"[CONCESSIONARIA] Errore in /concessionaria: {e}")
+        try:
+            await interaction.followup.send("❌ Errore nel caricamento. Riprova più tardi.", ephemeral=True)
+        except Exception:
+            pass
 
 
 @bot.tree.command(name="negozio", description="Visualizza gli articoli disponibili nel negozio")
@@ -5577,9 +5584,24 @@ async def pubblicaconcessionaria(interaction: discord.Interaction):
                 color=discord.Color.from_rgb(r, g, b),
             )
             await interaction.channel.send(embed=sep)
-            # Un embed per auto con foto
+            # Un embed per auto — immagine allegata direttamente (CDN Discord)
             for auto in cat["auto"]:
-                await interaction.channel.send(embed=_embed_auto(auto, cat))
+                img_url = auto.get("img", "")
+                filename = img_url.split("/")[-1] if img_url else ""
+                filepath = f"static/cars/{filename}"
+                embed = discord.Embed(
+                    title=auto["nome"],
+                    color=discord.Color.from_rgb(r, g, b),
+                )
+                embed.add_field(name="💰 Prezzo", value=f"**{auto['prezzo']}**", inline=True)
+                embed.add_field(name="🏷️ Categoria", value=cat["categoria"], inline=True)
+                embed.set_footer(text="📩 Per acquistare apri un ticket o contatta uno staff · Tokyo Horizon RP")
+                if filename and os.path.exists(filepath):
+                    file = discord.File(filepath, filename=filename)
+                    embed.set_image(url=f"attachment://{filename}")
+                    await interaction.channel.send(embed=embed, file=file)
+                else:
+                    await interaction.channel.send(embed=embed)
 
         chiusura = discord.Embed(
             description=(
