@@ -5354,6 +5354,136 @@ async def setupticket(interaction: discord.Interaction):
 
 
 # =============================================================================
+# CONCESSIONARIA DISCORD
+# =============================================================================
+
+CATALOGO_DS = [
+    {
+        "categoria": "🏎️ SUPER CAR",
+        "colore": discord.Color.from_rgb(220, 40, 40),
+        "auto": [
+            ("Grotti Itali RSX",         "€ 3.465.000"),
+            ("Pegassi Zorrusso",          "€ 2.700.000"),
+            ("Overflod Entity XXR",       "€ 2.305.600"),
+            ("Vapid FMJ",                 "€ 1.750.000"),
+            ("Truffade Thrax",            "€ 2.325.000"),
+            ("Progen Emerus",             "€ 2.750.000"),
+            ("Dewbauchee Vagner",         "€ 1.535.000"),
+            ("Annis S80RR",               "€ 2.575.000"),
+        ],
+    },
+    {
+        "categoria": "🚗 SPORTIVE",
+        "colore": discord.Color.from_rgb(201, 168, 76),
+        "auto": [
+            ("Pfister Comet S2",          "€ 1.878.000"),
+            ("Annis Euros",               "€ 1.350.000"),
+            ("Ubermacht Cypher",          "€ 1.595.000"),
+            ("Obey 10F",                  "€ 1.995.000"),
+            ("Karin Calico GTF",          "€ 1.995.000"),
+            ("Annis Remus",               "€ 1.390.000"),
+            ("Dinka Jester RR",           "€ 1.965.000"),
+            ("Benefactor Schafter V12",   "€ 1.395.000"),
+        ],
+    },
+    {
+        "categoria": "💪 MUSCLE",
+        "colore": discord.Color.from_rgb(180, 80, 20),
+        "auto": [
+            ("Bravado Gauntlet Hellfire",  "€ 875.000"),
+            ("Bravado Greenwood",          "€ 1.900.000"),
+            ("Vapid Dominator GTX",        "€ 315.000"),
+            ("Albany Hermes",              "€ 325.000"),
+            ("Vapid Pisswasser Dominator", "€ 315.000"),
+            ("Imponte Ruiner 2000",        "€ 3.750.000"),
+        ],
+    },
+    {
+        "categoria": "🏛️ SPORTIVE CLASSICHE",
+        "colore": discord.Color.from_rgb(100, 100, 200),
+        "auto": [
+            ("Grotti Stinger GT",          "€ 995.000"),
+            ("Grotti Turismo Classic",     "€ 650.000"),
+            ("Benefactor Stirling GT",     "€ 975.000"),
+            ("Grotti Cheetah Classic",     "€ 695.000"),
+            ("Lampadati Tropos Rallye",    "€ 527.000"),
+            ("Pfister Comet Classic",      "€ 595.000"),
+        ],
+    },
+    {
+        "categoria": "🚙 BERLINE & SUV",
+        "colore": discord.Color.from_rgb(60, 160, 80),
+        "auto": [
+            ("Ubermacht Oracle XS",        "€ 445.000"),
+            ("Enus Deity",                 "€ 1.895.000"),
+            ("Karin Sultan RS",            "€ 278.000"),
+            ("Albany Emperor",             "€ 195.000"),
+            ("Benefactor Dubsta",          "€ 375.000"),
+            ("Gallivanter Baller ST",      "€ 1.250.000"),
+        ],
+    },
+]
+
+@bot.tree.command(name="pubblicaconcessionaria", description="[STAFF] Pubblica il catalogo veicoli nel canale corrente")
+@app_commands.checks.has_permissions(manage_channels=True)
+async def pubblicaconcessionaria(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    try:
+        # Messaggio intestazione
+        intestazione = discord.Embed(
+            title="🗼 TOKYO HORIZON MOTORS",
+            description=(
+                "東京ホライズン · カーディーラー\n\n"
+                "Benvenuto nel catalogo ufficiale della concessionaria.\n"
+                "Tutti i prezzi sono in valuta RP. Contatta uno staff per acquistare.\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            ),
+            color=discord.Color.from_rgb(220, 40, 40),
+        )
+        intestazione.set_footer(text="Tokyo Horizon RP · Catalogo Ufficiale · 公式ディーラー")
+        await interaction.channel.send(embed=intestazione)
+
+        # Un embed per categoria
+        for cat in CATALOGO_DS:
+            embed = discord.Embed(
+                title=cat["categoria"],
+                color=cat["colore"],
+            )
+            righe = "\n".join(
+                f"**{nome}** — `{prezzo}`"
+                for nome, prezzo in cat["auto"]
+            )
+            embed.description = righe
+            embed.set_footer(text="Per acquistare apri un ticket o contatta uno staff")
+            await interaction.channel.send(embed=embed)
+
+        # Messaggio chiusura
+        chiusura = discord.Embed(
+            description=(
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "📩 **Come acquistare:** apri un ticket o contatta uno staff\n"
+                "⏱️ Il catalogo viene aggiornato periodicamente"
+            ),
+            color=discord.Color.from_rgb(30, 30, 40),
+        )
+        await interaction.channel.send(embed=chiusura)
+
+        await interaction.followup.send("✅ Catalogo pubblicato!", ephemeral=True)
+        print(f"[CONCESSIONARIA] Catalogo pubblicato da {interaction.user} in #{interaction.channel.name}")
+
+    except discord.Forbidden:
+        await interaction.followup.send("❌ Il bot non ha i permessi per scrivere in questo canale.", ephemeral=True)
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
+
+
+@pubblicaconcessionaria.error
+async def pubblicaconcessionaria_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+
+
+# =============================================================================
 # AVVIO BOT
 # =============================================================================
 token = os.environ.get("DISCORD_TOKEN", "").strip()
