@@ -64,5 +64,192 @@
       "processata": true
     }
   },
-  "categoria_ticket_id": 1514405053354741760
+  "categoria_ticket_id": 1514405053354741760,
+  "catalogo_auto": [
+    {
+      "categoria": "\ud83c\udfce\ufe0f SUPER CAR",
+      "auto": [
+        {
+          "nome": "Grotti Itali RSX",
+          "prezzo": "\u20ac 3.465.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/ItaliRSX-GTAO-front.png"
+        },
+        {
+          "nome": "Pegassi Zorrusso",
+          "prezzo": "10000000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Zorrusso-GTAO-front.png"
+        },
+        {
+          "nome": "Overflod Entity XXR",
+          "prezzo": "\u20ac 2.305.600",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/EntityXXR-GTAO-front.png"
+        },
+        {
+          "nome": "Vapid FMJ",
+          "prezzo": "\u20ac 1.750.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/FMJ-GTAO-front.png"
+        },
+        {
+          "nome": "Truffade Thrax",
+          "prezzo": "\u20ac 2.325.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Thrax-GTAO-front.png"
+        },
+        {
+          "nome": "Progen Emerus",
+          "prezzo": "\u20ac 2.750.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Emerus-GTAO-front.png"
+        },
+        {
+          "nome": "Dewbauchee Vagner",
+          "prezzo": "\u20ac 1.535.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Vagner-GTAO-front.png"
+        },
+        {
+          "nome": "Annis S80RR",
+          "prezzo": "\u20ac 2.575.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/S80RR-GTAO-front.png"
+        }
+      ]
+    },
+    {
+      "categoria": "\ud83d\ude97 SPORTIVE",
+      "auto": [
+        {
+          "nome": "Pfister Comet S2",
+          "prezzo": "\u20ac 1.878.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/CometS2-GTAO-front.png"
+        },
+        {
+          "nome": "Annis Euros",
+          "prezzo": "\u20ac 1.350.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Euros-GTAO-front.png"
+        },
+        {
+          "nome": "Ubermacht Cypher",
+          "prezzo": "\u20ac 1.595.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Cypher-GTAO-front.png"
+        },
+        {
+          "nome": "Obey 10F",
+          "prezzo": "\u20ac 1.995.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/10F-GTAO-front.png"
+        },
+        {
+          "nome": "Karin Calico GTF",
+          "prezzo": "\u20ac 1.995.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/CalicoGTF-GTAO-front.png"
+        },
+        {
+          "nome": "Annis Remus",
+          "prezzo": "\u20ac 1.390.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Remus-GTAO-front.png"
+        },
+        {
+          "nome": "Dinka Jester RR",
+          "prezzo": "\u20ac 1.965.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/JesterRR-GTAO-front.png"
+        },
+        {
+          "nome": "Benefactor Schafter V12",
+          "prezzo": "\u20ac 1.395.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/SchafterV12-GTAO-front.png"
+        }
+      ]
+    },
+    {
+      "categoria": "\ud83d\udcaa MUSCLE",
+      "auto": [
+        {
+          "nome": "Bravado Gauntlet Hellfire",
+          "prezzo": "\u20ac 875.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/GauntletHellfire-GTAO-front.png"
+        },
+        {
+          "nome": "Bravado Greenwood",
+          "prezzo": "\u20ac 1.900.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Greenwood-GTAO-front.png"
+        },
+        {
+          "nome": "Vapid Dominator GTX",
+          "prezzo": "\u20ac 315.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/DominatorGTX-GTAO-front.png"
+        },
+        {
+          "nome": "Albany Hermes",
+          "prezzo": "\u20ac 325.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Hermes-GTAO-front.png"
+        },
+        {
+          "nome": "Imponte Ruiner 2000",
+          "prezzo": "\u20ac 3.750.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Ruiner2000-GTAO-front.png"
+        }
+      ]
+    },
+    {
+      "categoria": "\ud83c\udfdb\ufe0f SPORTIVE CLASSICHE",
+      "auto": [
+        {
+          "nome": "Grotti Stinger GT",
+          "prezzo": "\u20ac 995.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/StingerGT-GTAO-front.png"
+        },
+        {
+          "nome": "Grotti Turismo Classic",
+          "prezzo": "\u20ac 650.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/TurismoClassico-GTAO-front.png"
+        },
+        {
+          "nome": "Benefactor Stirling GT",
+          "prezzo": "\u20ac 975.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/StirlingGT-GTA5-front.png"
+        },
+        {
+          "nome": "Grotti Cheetah Classic",
+          "prezzo": "\u20ac 695.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/CheetahClassic-GTAO-front.png"
+        },
+        {
+          "nome": "Lampadati Tropos Rallye",
+          "prezzo": "\u20ac 527.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/TroposRallye-GTAO-front.png"
+        }
+      ]
+    },
+    {
+      "categoria": "\ud83d\ude99 BERLINE & SUV",
+      "auto": [
+        {
+          "nome": "Ubermacht Oracle XS",
+          "prezzo": "\u20ac 445.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/OracleXS-GTAO-front.png"
+        },
+        {
+          "nome": "Enus Deity",
+          "prezzo": "\u20ac 1.895.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Deity-GTAO-front.png"
+        },
+        {
+          "nome": "Karin Sultan RS",
+          "prezzo": "\u20ac 278.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/SultanRS-GTAO-front.png"
+        },
+        {
+          "nome": "Albany Emperor",
+          "prezzo": "\u20ac 195.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Emperor-GTA5-front.png"
+        },
+        {
+          "nome": "Benefactor Dubsta",
+          "prezzo": "\u20ac 375.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/Dubsta-GTAO-front.png"
+        },
+        {
+          "nome": "Gallivanter Baller ST",
+          "prezzo": "\u20ac 1.250.000",
+          "img": "https://gta.fandom.com/wiki/Special:FilePath/BallerST-GTAO-front.png"
+        }
+      ]
+    }
+  ]
 }
