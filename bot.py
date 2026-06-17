@@ -5357,69 +5357,56 @@ async def setupticket(interaction: discord.Interaction):
 # CONCESSIONARIA DISCORD
 # =============================================================================
 
-_WIKI = "https://gta.fandom.com/wiki/Special:FilePath/"
+_STATIC = f"https://{_DEV_DOMAIN}/static/cars/" if _DEV_DOMAIN else ""
 
 _CATALOGO_DEFAULT = [
     {
         "categoria": "🏎️ SUPER CAR",
         "colore": (220, 40, 40),
         "auto": [
-            {"nome": "Grotti Itali RSX",       "prezzo": "€ 3.465.000", "img": _WIKI + "ItaliRSX-GTAO-front.png"},
-            {"nome": "Pegassi Zorrusso",        "prezzo": "€ 2.700.000", "img": _WIKI + "Zorrusso-GTAO-front.png"},
-            {"nome": "Overflod Entity XXR",     "prezzo": "€ 2.305.600", "img": _WIKI + "EntityXXR-GTAO-front.png"},
-            {"nome": "Vapid FMJ",               "prezzo": "€ 1.750.000", "img": _WIKI + "FMJ-GTAO-front.png"},
-            {"nome": "Truffade Thrax",          "prezzo": "€ 2.325.000", "img": _WIKI + "Thrax-GTAO-front.png"},
-            {"nome": "Progen Emerus",           "prezzo": "€ 2.750.000", "img": _WIKI + "Emerus-GTAO-front.png"},
-            {"nome": "Dewbauchee Vagner",       "prezzo": "€ 1.535.000", "img": _WIKI + "Vagner-GTAO-front.png"},
-            {"nome": "Annis S80RR",             "prezzo": "€ 2.575.000", "img": _WIKI + "S80RR-GTAO-front.png"},
+            {"nome": "Grotti Itali RSX",    "prezzo": "€ 3.465.000", "img": _STATIC + "supercar1.jpeg"},
+            {"nome": "Pegassi Tempesta",    "prezzo": "€ 2.175.000", "img": _STATIC + "supercar2.webp"},
+            {"nome": "Overflod Entity XXR", "prezzo": "€ 2.305.600", "img": _STATIC + "supercar3.webp"},
+            {"nome": "Vapid FMJ",           "prezzo": "€ 1.750.000", "img": _STATIC + "supercar4.webp"},
         ],
     },
     {
         "categoria": "🚗 SPORTIVE",
         "colore": (201, 168, 76),
         "auto": [
-            {"nome": "Pfister Comet S2",        "prezzo": "€ 1.878.000", "img": _WIKI + "CometS2-GTAO-front.png"},
-            {"nome": "Annis Euros",             "prezzo": "€ 1.350.000", "img": _WIKI + "Euros-GTAO-front.png"},
-            {"nome": "Ubermacht Cypher",        "prezzo": "€ 1.595.000", "img": _WIKI + "Cypher-GTAO-front.png"},
-            {"nome": "Obey 10F",                "prezzo": "€ 1.995.000", "img": _WIKI + "10F-GTAO-front.png"},
-            {"nome": "Karin Calico GTF",        "prezzo": "€ 1.995.000", "img": _WIKI + "CalicoGTF-GTAO-front.png"},
-            {"nome": "Annis Remus",             "prezzo": "€ 1.390.000", "img": _WIKI + "Remus-GTAO-front.png"},
-            {"nome": "Dinka Jester RR",         "prezzo": "€ 1.965.000", "img": _WIKI + "JesterRR-GTAO-front.png"},
-            {"nome": "Benefactor Schafter V12", "prezzo": "€ 1.395.000", "img": _WIKI + "SchafterV12-GTAO-front.png"},
+            {"nome": "Pfister Comet S2",  "prezzo": "€ 1.878.000", "img": _STATIC + "sport1.jpeg"},
+            {"nome": "Karin Calico GTF",  "prezzo": "€ 1.995.000", "img": _STATIC + "sport2.webp"},
+            {"nome": "Annis Remus",       "prezzo": "€ 1.390.000", "img": _STATIC + "sport3.webp"},
         ],
     },
     {
         "categoria": "💪 MUSCLE",
         "colore": (180, 80, 20),
         "auto": [
-            {"nome": "Bravado Gauntlet Hellfire",  "prezzo": "€ 875.000",   "img": _WIKI + "GauntletHellfire-GTAO-front.png"},
-            {"nome": "Bravado Greenwood",           "prezzo": "€ 1.900.000", "img": _WIKI + "Greenwood-GTAO-front.png"},
-            {"nome": "Vapid Dominator GTX",         "prezzo": "€ 315.000",   "img": _WIKI + "DominatorGTX-GTAO-front.png"},
-            {"nome": "Albany Hermes",               "prezzo": "€ 325.000",   "img": _WIKI + "Hermes-GTAO-front.png"},
-            {"nome": "Imponte Ruiner 2000",         "prezzo": "€ 3.750.000", "img": _WIKI + "Ruiner2000-GTAO-front.png"},
+            {"nome": "Bravado Gauntlet Hellfire", "prezzo": "€ 875.000",   "img": _STATIC + "muscle1.webp"},
+            {"nome": "Bravado Buffalo STX",       "prezzo": "€ 1.190.000", "img": _STATIC + "muscle2.webp"},
+            {"nome": "Vapid Dominator GTT",       "prezzo": "€ 1.295.000", "img": _STATIC + "muscle3.webp"},
+            {"nome": "Annis Euros",               "prezzo": "€ 1.350.000", "img": _STATIC + "muscle4.webp"},
         ],
     },
     {
         "categoria": "🏛️ SPORTIVE CLASSICHE",
         "colore": (100, 100, 200),
         "auto": [
-            {"nome": "Grotti Stinger GT",       "prezzo": "€ 995.000", "img": _WIKI + "StingerGT-GTAO-front.png"},
-            {"nome": "Grotti Turismo Classic",  "prezzo": "€ 650.000", "img": _WIKI + "TurismoClassico-GTAO-front.png"},
-            {"nome": "Benefactor Stirling GT",  "prezzo": "€ 975.000", "img": _WIKI + "StirlingGT-GTA5-front.png"},
-            {"nome": "Grotti Cheetah Classic",  "prezzo": "€ 695.000", "img": _WIKI + "CheetahClassic-GTAO-front.png"},
-            {"nome": "Lampadati Tropos Rallye", "prezzo": "€ 527.000", "img": _WIKI + "TroposRallye-GTAO-front.png"},
+            {"nome": "Grotti Stinger GT",      "prezzo": "€ 995.000", "img": _STATIC + "classic1.webp"},
+            {"nome": "Grotti Turismo Classic", "prezzo": "€ 650.000", "img": _STATIC + "classic2.webp"},
+            {"nome": "Benefactor Stirling GT", "prezzo": "€ 975.000", "img": _STATIC + "classic3.webp"},
+            {"nome": "Grotti Cheetah Classic", "prezzo": "€ 695.000", "img": _STATIC + "classic4.webp"},
         ],
     },
     {
-        "categoria": "🚙 BERLINE & SUV",
+        "categoria": "🚙 BERLINE",
         "colore": (60, 160, 80),
         "auto": [
-            {"nome": "Ubermacht Oracle XS",    "prezzo": "€ 445.000",   "img": _WIKI + "OracleXS-GTAO-front.png"},
-            {"nome": "Enus Deity",             "prezzo": "€ 1.895.000", "img": _WIKI + "Deity-GTAO-front.png"},
-            {"nome": "Karin Sultan RS",        "prezzo": "€ 278.000",   "img": _WIKI + "SultanRS-GTAO-front.png"},
-            {"nome": "Albany Emperor",         "prezzo": "€ 195.000",   "img": _WIKI + "Emperor-GTA5-front.png"},
-            {"nome": "Benefactor Dubsta",      "prezzo": "€ 375.000",   "img": _WIKI + "Dubsta-GTAO-front.png"},
-            {"nome": "Gallivanter Baller ST",  "prezzo": "€ 1.250.000", "img": _WIKI + "BallerST-GTAO-front.png"},
+            {"nome": "Obey Tailgater S",  "prezzo": "€ 1.595.000", "img": _STATIC + "berlina1.webp"},
+            {"nome": "Ocelot Jugular",    "prezzo": "€ 1.225.000", "img": _STATIC + "berlina2.webp"},
+            {"nome": "Karin Asterope GT", "prezzo": "€ 795.000",   "img": _STATIC + "berlina3.webp"},
+            {"nome": "Declasse Impaler",  "prezzo": "€ 420.000",   "img": _STATIC + "berlina4.webp"},
         ],
     },
 ]
