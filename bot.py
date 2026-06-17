@@ -1500,19 +1500,26 @@ async def paga(interaction: discord.Interaction, utente: discord.Member, importo
 # NEGOZIO, INVENTARIO
 # =============================================================================
 
-@bot.tree.command(name="concessionaria", description="Apri il catalogo veicoli ufficiale di Tokyo Horizon Motors")
+@bot.tree.command(name="concessionaria", description="Informazioni sulla concessionaria di Tokyo Horizon Motors")
 async def concessionaria_cmd(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="🏮 Tokyo Horizon Motors — 東京ホライズン",
-        description=(
-            "Il catalogo ufficiale dei veicoli di **Tokyo Horizon RP**.\n\n"
-            f"👉 **[Apri il catalogo]({_CONCESSIONARIA_URL})**"
-        ),
-        url=_CONCESSIONARIA_URL,
-        color=discord.Color.from_rgb(220, 40, 40)
-    )
-    embed.set_footer(text="Tokyo Horizon RP · Solo visualizzazione · 閲覧専用")
-    await interaction.response.send_message(embed=embed)
+    try:
+        embed = discord.Embed(
+            title="🏮 Tokyo Horizon Motors — 東京ホライズン",
+            description=(
+                "東京ホライズン · カーディーラー\n\n"
+                "📋 Il catalogo completo dei veicoli è disponibile nel canale dedicato del server.\n"
+                "Cerca il canale **concessionaria** e scorri gli embed per vedere tutte le auto disponibili.\n\n"
+                "🌐 **Sito web:** attualmente in fase di sviluppo — disponibile prossimamente.\n\n"
+                "📅 Ogni settimana viene aggiunto un nuovo veicolo per ogni categoria!\n\n"
+                "💬 Per acquistare un veicolo, contatta uno **staff** o apri un **ticket**."
+            ),
+            color=discord.Color.from_rgb(220, 40, 40)
+        )
+        embed.set_footer(text="Tokyo Horizon RP · Catalogo Ufficiale · 公式ディーラー")
+        await interaction.response.send_message(embed=embed)
+    except Exception as e:
+        await interaction.response.send_message("❌ Errore nel caricamento. Riprova più tardi.", ephemeral=True)
+        print(f"[CONCESSIONARIA] Errore in /concessionaria: {e}")
 
 
 @bot.tree.command(name="negozio", description="Visualizza gli articoli disponibili nel negozio")
