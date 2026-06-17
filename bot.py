@@ -1502,6 +1502,7 @@ async def paga(interaction: discord.Interaction, utente: discord.Member, importo
 
 @bot.tree.command(name="concessionaria", description="Informazioni sulla concessionaria di Tokyo Horizon Motors")
 async def concessionaria_cmd(interaction: discord.Interaction):
+    await interaction.response.defer()
     try:
         embed = discord.Embed(
             title="🏮 Tokyo Horizon Motors — 東京ホライズン",
@@ -1516,9 +1517,9 @@ async def concessionaria_cmd(interaction: discord.Interaction):
             color=discord.Color.from_rgb(220, 40, 40)
         )
         embed.set_footer(text="Tokyo Horizon RP · Catalogo Ufficiale · 公式ディーラー")
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
     except Exception as e:
-        await interaction.response.send_message("❌ Errore nel caricamento. Riprova più tardi.", ephemeral=True)
+        await interaction.followup.send("❌ Errore nel caricamento. Riprova più tardi.", ephemeral=True)
         print(f"[CONCESSIONARIA] Errore in /concessionaria: {e}")
 
 
