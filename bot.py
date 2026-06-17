@@ -5357,85 +5357,174 @@ async def setupticket(interaction: discord.Interaction):
 # CONCESSIONARIA DISCORD
 # =============================================================================
 
-CATALOGO_DS = [
+_WIKI = "https://gta.fandom.com/wiki/Special:FilePath/"
+
+_CATALOGO_DEFAULT = [
     {
         "categoria": "🏎️ SUPER CAR",
-        "colore": discord.Color.from_rgb(220, 40, 40),
+        "colore": (220, 40, 40),
         "auto": [
-            ("Grotti Itali RSX",         "€ 3.465.000"),
-            ("Pegassi Zorrusso",          "€ 2.700.000"),
-            ("Overflod Entity XXR",       "€ 2.305.600"),
-            ("Vapid FMJ",                 "€ 1.750.000"),
-            ("Truffade Thrax",            "€ 2.325.000"),
-            ("Progen Emerus",             "€ 2.750.000"),
-            ("Dewbauchee Vagner",         "€ 1.535.000"),
-            ("Annis S80RR",               "€ 2.575.000"),
+            {"nome": "Grotti Itali RSX",       "prezzo": "€ 3.465.000", "img": _WIKI + "ItaliRSX-GTAO-front.png"},
+            {"nome": "Pegassi Zorrusso",        "prezzo": "€ 2.700.000", "img": _WIKI + "Zorrusso-GTAO-front.png"},
+            {"nome": "Overflod Entity XXR",     "prezzo": "€ 2.305.600", "img": _WIKI + "EntityXXR-GTAO-front.png"},
+            {"nome": "Vapid FMJ",               "prezzo": "€ 1.750.000", "img": _WIKI + "FMJ-GTAO-front.png"},
+            {"nome": "Truffade Thrax",          "prezzo": "€ 2.325.000", "img": _WIKI + "Thrax-GTAO-front.png"},
+            {"nome": "Progen Emerus",           "prezzo": "€ 2.750.000", "img": _WIKI + "Emerus-GTAO-front.png"},
+            {"nome": "Dewbauchee Vagner",       "prezzo": "€ 1.535.000", "img": _WIKI + "Vagner-GTAO-front.png"},
+            {"nome": "Annis S80RR",             "prezzo": "€ 2.575.000", "img": _WIKI + "S80RR-GTAO-front.png"},
         ],
     },
     {
         "categoria": "🚗 SPORTIVE",
-        "colore": discord.Color.from_rgb(201, 168, 76),
+        "colore": (201, 168, 76),
         "auto": [
-            ("Pfister Comet S2",          "€ 1.878.000"),
-            ("Annis Euros",               "€ 1.350.000"),
-            ("Ubermacht Cypher",          "€ 1.595.000"),
-            ("Obey 10F",                  "€ 1.995.000"),
-            ("Karin Calico GTF",          "€ 1.995.000"),
-            ("Annis Remus",               "€ 1.390.000"),
-            ("Dinka Jester RR",           "€ 1.965.000"),
-            ("Benefactor Schafter V12",   "€ 1.395.000"),
+            {"nome": "Pfister Comet S2",        "prezzo": "€ 1.878.000", "img": _WIKI + "CometS2-GTAO-front.png"},
+            {"nome": "Annis Euros",             "prezzo": "€ 1.350.000", "img": _WIKI + "Euros-GTAO-front.png"},
+            {"nome": "Ubermacht Cypher",        "prezzo": "€ 1.595.000", "img": _WIKI + "Cypher-GTAO-front.png"},
+            {"nome": "Obey 10F",                "prezzo": "€ 1.995.000", "img": _WIKI + "10F-GTAO-front.png"},
+            {"nome": "Karin Calico GTF",        "prezzo": "€ 1.995.000", "img": _WIKI + "CalicoGTF-GTAO-front.png"},
+            {"nome": "Annis Remus",             "prezzo": "€ 1.390.000", "img": _WIKI + "Remus-GTAO-front.png"},
+            {"nome": "Dinka Jester RR",         "prezzo": "€ 1.965.000", "img": _WIKI + "JesterRR-GTAO-front.png"},
+            {"nome": "Benefactor Schafter V12", "prezzo": "€ 1.395.000", "img": _WIKI + "SchafterV12-GTAO-front.png"},
         ],
     },
     {
         "categoria": "💪 MUSCLE",
-        "colore": discord.Color.from_rgb(180, 80, 20),
+        "colore": (180, 80, 20),
         "auto": [
-            ("Bravado Gauntlet Hellfire",  "€ 875.000"),
-            ("Bravado Greenwood",          "€ 1.900.000"),
-            ("Vapid Dominator GTX",        "€ 315.000"),
-            ("Albany Hermes",              "€ 325.000"),
-            ("Vapid Pisswasser Dominator", "€ 315.000"),
-            ("Imponte Ruiner 2000",        "€ 3.750.000"),
+            {"nome": "Bravado Gauntlet Hellfire",  "prezzo": "€ 875.000",   "img": _WIKI + "GauntletHellfire-GTAO-front.png"},
+            {"nome": "Bravado Greenwood",           "prezzo": "€ 1.900.000", "img": _WIKI + "Greenwood-GTAO-front.png"},
+            {"nome": "Vapid Dominator GTX",         "prezzo": "€ 315.000",   "img": _WIKI + "DominatorGTX-GTAO-front.png"},
+            {"nome": "Albany Hermes",               "prezzo": "€ 325.000",   "img": _WIKI + "Hermes-GTAO-front.png"},
+            {"nome": "Imponte Ruiner 2000",         "prezzo": "€ 3.750.000", "img": _WIKI + "Ruiner2000-GTAO-front.png"},
         ],
     },
     {
         "categoria": "🏛️ SPORTIVE CLASSICHE",
-        "colore": discord.Color.from_rgb(100, 100, 200),
+        "colore": (100, 100, 200),
         "auto": [
-            ("Grotti Stinger GT",          "€ 995.000"),
-            ("Grotti Turismo Classic",     "€ 650.000"),
-            ("Benefactor Stirling GT",     "€ 975.000"),
-            ("Grotti Cheetah Classic",     "€ 695.000"),
-            ("Lampadati Tropos Rallye",    "€ 527.000"),
-            ("Pfister Comet Classic",      "€ 595.000"),
+            {"nome": "Grotti Stinger GT",       "prezzo": "€ 995.000", "img": _WIKI + "StingerGT-GTAO-front.png"},
+            {"nome": "Grotti Turismo Classic",  "prezzo": "€ 650.000", "img": _WIKI + "TurismoClassico-GTAO-front.png"},
+            {"nome": "Benefactor Stirling GT",  "prezzo": "€ 975.000", "img": _WIKI + "StirlingGT-GTA5-front.png"},
+            {"nome": "Grotti Cheetah Classic",  "prezzo": "€ 695.000", "img": _WIKI + "CheetahClassic-GTAO-front.png"},
+            {"nome": "Lampadati Tropos Rallye", "prezzo": "€ 527.000", "img": _WIKI + "TroposRallye-GTAO-front.png"},
         ],
     },
     {
         "categoria": "🚙 BERLINE & SUV",
-        "colore": discord.Color.from_rgb(60, 160, 80),
+        "colore": (60, 160, 80),
         "auto": [
-            ("Ubermacht Oracle XS",        "€ 445.000"),
-            ("Enus Deity",                 "€ 1.895.000"),
-            ("Karin Sultan RS",            "€ 278.000"),
-            ("Albany Emperor",             "€ 195.000"),
-            ("Benefactor Dubsta",          "€ 375.000"),
-            ("Gallivanter Baller ST",      "€ 1.250.000"),
+            {"nome": "Ubermacht Oracle XS",    "prezzo": "€ 445.000",   "img": _WIKI + "OracleXS-GTAO-front.png"},
+            {"nome": "Enus Deity",             "prezzo": "€ 1.895.000", "img": _WIKI + "Deity-GTAO-front.png"},
+            {"nome": "Karin Sultan RS",        "prezzo": "€ 278.000",   "img": _WIKI + "SultanRS-GTAO-front.png"},
+            {"nome": "Albany Emperor",         "prezzo": "€ 195.000",   "img": _WIKI + "Emperor-GTA5-front.png"},
+            {"nome": "Benefactor Dubsta",      "prezzo": "€ 375.000",   "img": _WIKI + "Dubsta-GTAO-front.png"},
+            {"nome": "Gallivanter Baller ST",  "prezzo": "€ 1.250.000", "img": _WIKI + "BallerST-GTAO-front.png"},
         ],
     },
 ]
 
-@bot.tree.command(name="pubblicaconcessionaria", description="[STAFF] Pubblica il catalogo veicoli nel canale corrente")
+def _carica_catalogo() -> list:
+    """Carica il catalogo da dati_bot.json se presente, altrimenti usa i default."""
+    if not os.path.exists(DATI_FILE):
+        return [dict(c) for c in _CATALOGO_DEFAULT]
+    try:
+        with open(DATI_FILE, "r") as f:
+            dati = json.load(f)
+        salvato = dati.get("catalogo_auto")
+        if not salvato:
+            return [dict(c) for c in _CATALOGO_DEFAULT]
+        # Riapplica i colori (non serializzabili in JSON)
+        colori = {c["categoria"]: c["colore"] for c in _CATALOGO_DEFAULT}
+        for cat in salvato:
+            cat["colore"] = colori.get(cat["categoria"], (150, 150, 150))
+        return salvato
+    except Exception:
+        return [dict(c) for c in _CATALOGO_DEFAULT]
+
+def _salva_catalogo():
+    """Aggiunge il catalogo corrente al JSON (senza i colori discord)."""
+    if not os.path.exists(DATI_FILE):
+        return
+    try:
+        with open(DATI_FILE, "r") as f:
+            dati = json.load(f)
+        dati["catalogo_auto"] = [
+            {"categoria": cat["categoria"], "auto": cat["auto"]}
+            for cat in CATALOGO_DS
+        ]
+        tmp = DATI_FILE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(dati, f, indent=2)
+        os.replace(tmp, DATI_FILE)
+    except Exception as e:
+        print(f"[CATALOGO] Errore salvataggio: {e}")
+
+CATALOGO_DS: list = _carica_catalogo()
+
+def _tutte_le_auto() -> list[dict]:
+    """Restituisce lista piatta di tutte le auto con riferimento alla categoria."""
+    out = []
+    for cat in CATALOGO_DS:
+        for auto in cat["auto"]:
+            out.append({**auto, "_cat": cat["categoria"]})
+    return out
+
+def _trova_auto(nome: str):
+    """Cerca un'auto per nome (case-insensitive). Ritorna (cat_dict, auto_dict) o (None, None)."""
+    nome_lower = nome.lower()
+    for cat in CATALOGO_DS:
+        for auto in cat["auto"]:
+            if auto["nome"].lower() == nome_lower:
+                return cat, auto
+    return None, None
+
+# ---------- Autocomplete ----------
+
+async def _autocomplete_auto(interaction: discord.Interaction, current: str):
+    tutte = _tutte_le_auto()
+    return [
+        app_commands.Choice(name=a["nome"], value=a["nome"])
+        for a in tutte
+        if current.lower() in a["nome"].lower()
+    ][:25]
+
+async def _autocomplete_categoria(interaction: discord.Interaction, current: str):
+    categorie = [cat["categoria"] for cat in CATALOGO_DS]
+    return [
+        app_commands.Choice(name=c, value=c)
+        for c in categorie
+        if current.lower() in c.lower()
+    ][:25]
+
+# ---------- Helper embed auto ----------
+
+def _embed_auto(auto: dict, cat: dict) -> discord.Embed:
+    r, g, b = cat["colore"]
+    embed = discord.Embed(
+        title=auto["nome"],
+        color=discord.Color.from_rgb(r, g, b),
+    )
+    embed.add_field(name="💰 Prezzo", value=f"**{auto['prezzo']}**", inline=True)
+    embed.add_field(name="🏷️ Categoria", value=cat["categoria"], inline=True)
+    if auto.get("img"):
+        embed.set_image(url=auto["img"])
+    embed.set_footer(text="📩 Per acquistare apri un ticket o contatta uno staff · Tokyo Horizon RP")
+    return embed
+
+# ---------- Comandi ----------
+
+@bot.tree.command(name="pubblicaconcessionaria", description="[STAFF] Pubblica il catalogo veicoli con foto nel canale corrente")
 @app_commands.checks.has_permissions(manage_channels=True)
 async def pubblicaconcessionaria(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     try:
-        # Messaggio intestazione
         intestazione = discord.Embed(
             title="🗼 TOKYO HORIZON MOTORS",
             description=(
                 "東京ホライズン · カーディーラー\n\n"
                 "Benvenuto nel catalogo ufficiale della concessionaria.\n"
-                "Tutti i prezzi sono in valuta RP. Contatta uno staff per acquistare.\n"
+                "Tutti i prezzi sono in valuta RP · Contatta uno staff per acquistare.\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             ),
             color=discord.Color.from_rgb(220, 40, 40),
@@ -5443,42 +5532,133 @@ async def pubblicaconcessionaria(interaction: discord.Interaction):
         intestazione.set_footer(text="Tokyo Horizon RP · Catalogo Ufficiale · 公式ディーラー")
         await interaction.channel.send(embed=intestazione)
 
-        # Un embed per categoria
         for cat in CATALOGO_DS:
-            embed = discord.Embed(
-                title=cat["categoria"],
-                color=cat["colore"],
+            # Separatore categoria
+            r, g, b = cat["colore"]
+            sep = discord.Embed(
+                description=f"**{cat['categoria']}**",
+                color=discord.Color.from_rgb(r, g, b),
             )
-            righe = "\n".join(
-                f"**{nome}** — `{prezzo}`"
-                for nome, prezzo in cat["auto"]
-            )
-            embed.description = righe
-            embed.set_footer(text="Per acquistare apri un ticket o contatta uno staff")
-            await interaction.channel.send(embed=embed)
+            await interaction.channel.send(embed=sep)
+            # Un embed per auto con foto
+            for auto in cat["auto"]:
+                await interaction.channel.send(embed=_embed_auto(auto, cat))
 
-        # Messaggio chiusura
         chiusura = discord.Embed(
             description=(
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 "📩 **Come acquistare:** apri un ticket o contatta uno staff\n"
-                "⏱️ Il catalogo viene aggiornato periodicamente"
+                "⏱️ Il catalogo viene aggiornato periodicamente · 定期更新"
             ),
             color=discord.Color.from_rgb(30, 30, 40),
         )
         await interaction.channel.send(embed=chiusura)
-
         await interaction.followup.send("✅ Catalogo pubblicato!", ephemeral=True)
         print(f"[CONCESSIONARIA] Catalogo pubblicato da {interaction.user} in #{interaction.channel.name}")
 
     except discord.Forbidden:
-        await interaction.followup.send("❌ Il bot non ha i permessi per scrivere in questo canale.", ephemeral=True)
+        await interaction.followup.send("❌ Permessi insufficienti per scrivere in questo canale.", ephemeral=True)
     except Exception as e:
         await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
 
 
 @pubblicaconcessionaria.error
 async def pubblicaconcessionaria_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+
+
+@bot.tree.command(name="aggiornaconcessionaria", description="[STAFF] Modifica il prezzo di un'auto in catalogo")
+@app_commands.describe(auto="Nome dell'auto da aggiornare", prezzo="Nuovo prezzo (es: € 2.500.000)")
+@app_commands.autocomplete(auto=_autocomplete_auto)
+@app_commands.checks.has_permissions(manage_channels=True)
+async def aggiornaconcessionaria(interaction: discord.Interaction, auto: str, prezzo: str):
+    cat, found = _trova_auto(auto)
+    if not found:
+        await interaction.response.send_message(f"❌ Auto `{auto}` non trovata nel catalogo.", ephemeral=True)
+        return
+    vecchio = found["prezzo"]
+    found["prezzo"] = prezzo
+    _salva_catalogo()
+    embed = discord.Embed(
+        title="✅ Prezzo aggiornato",
+        color=discord.Color.green(),
+    )
+    embed.add_field(name="Auto",          value=found["nome"], inline=False)
+    embed.add_field(name="Prezzo vecchio", value=vecchio,       inline=True)
+    embed.add_field(name="Prezzo nuovo",   value=prezzo,        inline=True)
+    embed.set_footer(text="Usa /pubblicaconcessionaria per aggiornare il canale")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+    print(f"[CONCESSIONARIA] {interaction.user} ha aggiornato {found['nome']}: {vecchio} → {prezzo}")
+
+
+@aggiornaconcessionaria.error
+async def aggiornaconcessionaria_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+
+
+@bot.tree.command(name="aggiungiauto", description="[STAFF] Aggiunge un nuovo veicolo al catalogo")
+@app_commands.describe(
+    categoria="Categoria in cui inserire l'auto",
+    nome="Nome completo (es: Grotti Itali RSX)",
+    prezzo="Prezzo (es: € 2.500.000)",
+    img_url="URL immagine (lascia vuoto per nessuna foto)",
+)
+@app_commands.autocomplete(categoria=_autocomplete_categoria)
+@app_commands.checks.has_permissions(manage_channels=True)
+async def aggiungiauto(interaction: discord.Interaction, categoria: str, nome: str, prezzo: str, img_url: str = ""):
+    cat = next((c for c in CATALOGO_DS if c["categoria"] == categoria), None)
+    if not cat:
+        await interaction.response.send_message(f"❌ Categoria `{categoria}` non trovata.", ephemeral=True)
+        return
+    _, existing = _trova_auto(nome)
+    if existing:
+        await interaction.response.send_message(f"❌ `{nome}` è già in catalogo. Usa `/aggiornaconcessionaria` per modificarlo.", ephemeral=True)
+        return
+    nuova = {"nome": nome, "prezzo": prezzo, "img": img_url or ""}
+    cat["auto"].append(nuova)
+    _salva_catalogo()
+    embed = discord.Embed(title="✅ Auto aggiunta", color=discord.Color.green())
+    embed.add_field(name="Nome",      value=nome,      inline=True)
+    embed.add_field(name="Prezzo",    value=prezzo,    inline=True)
+    embed.add_field(name="Categoria", value=categoria, inline=True)
+    if img_url:
+        embed.set_thumbnail(url=img_url)
+    embed.set_footer(text="Usa /pubblicaconcessionaria per aggiornare il canale")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+    print(f"[CONCESSIONARIA] {interaction.user} ha aggiunto {nome} in {categoria}")
+
+
+@aggiungiauto.error
+async def aggiungiauto_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+
+
+@bot.tree.command(name="rimuoviauto", description="[STAFF] Rimuove un veicolo dal catalogo")
+@app_commands.describe(auto="Nome dell'auto da rimuovere")
+@app_commands.autocomplete(auto=_autocomplete_auto)
+@app_commands.checks.has_permissions(manage_channels=True)
+async def rimuoviauto(interaction: discord.Interaction, auto: str):
+    cat, found = _trova_auto(auto)
+    if not found:
+        await interaction.response.send_message(f"❌ Auto `{auto}` non trovata nel catalogo.", ephemeral=True)
+        return
+    cat["auto"].remove(found)
+    _salva_catalogo()
+    embed = discord.Embed(
+        title="🗑️ Auto rimossa",
+        description=f"**{found['nome']}** rimossa dalla categoria {cat['categoria']}.",
+        color=discord.Color.red(),
+    )
+    embed.set_footer(text="Usa /pubblicaconcessionaria per aggiornare il canale")
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+    print(f"[CONCESSIONARIA] {interaction.user} ha rimosso {found['nome']}")
+
+
+@rimuoviauto.error
+async def rimuoviauto_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
 
