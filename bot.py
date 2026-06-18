@@ -6457,18 +6457,23 @@ async def rimuoviauto_error(interaction: discord.Interaction, error: app_command
 # =============================================================================
 
 PREZZI_MODIFICHE = [
-    ("🔧 Motore",           "EMS Upgrade Liv. 4",          "€ 35.000"),
-    ("⚙️ Trasmissione",     "Trasmissione Sport",           "€ 32.500"),
-    ("🛑 Freni",            "Freni Racing",                 "€ 20.000"),
-    ("🔩 Sospensioni",      "Sospensioni da Competizione",  "€ 20.000"),
-    ("💨 Turbo",            "Turbina Racing",               "€ 50.000"),
-    ("🛡️ Corazza",          "Corazza Pesante (Liv. 5)",     "€ 50.000"),
-    ("🔊 Scarico",          "Scarico Racing",               "€ 12.000"),
-    ("🎨 Verniciatura",     "Perla / Metallizzata",         "€ 10.000"),
-    ("🪟 Finestrini",       "Oscuramento Totale",           "€ 5.000"),
-    ("🏎️ Cerchi",           "Set Racing (Gomme Sport)",     "€ 15.000"),
-    ("🪞 Spoiler",          "Spoiler da Gara",              "€ 8.000"),
-    ("🚗 Tettuccio",        "Carbonio / Rimozione",         "€ 8.000"),
+    ("🛡️ Armatura",         "Corazza Pesante — 100%",                   "€ 50.000"),
+    ("🛑 Freni",            "Freni da Gara",                            "€ 20.000"),
+    ("🔧 Motore",           "EMS Upgrade Liv. 4",                       "€ 35.000"),
+    ("🔊 Marmitta",         "Racing (varia per modello)",               "Su richiesta"),
+    ("🚗 Cofano",           "Modifica generica",                        "€ 8.000"),
+    ("🎭 Interni",          "Cambio colore interni",                    "€ 5.000"),
+    ("💡 Fari",             "Fari Xenon / Modifica",                    "€ 7.500"),
+    ("🎨 Colore",           "Verniciatura Perla / Metallizzata",        "€ 10.000"),
+    ("🪞 Specchietti",      "Modifica specchietti",                     "€ 3.000"),
+    ("🏠 Tettuccio",        "Carbonio / Rimozione",                     "€ 8.000"),
+    ("🏎️ Minigonne",        "Kit minigonne",                            "€ 6.000"),
+    ("🏁 Spoiler",          "Spoiler da Gara",                          "€ 8.000"),
+    ("🔩 Sospensioni",      "Sospensioni da Competizione",              "€ 20.000"),
+    ("⚙️ Trasmissione",     "Trasmissione Sport",                       "€ 32.500"),
+    ("💨 Turbo",            "Turbina Racing",                           "€ 50.000"),
+    ("🛞 Ruote",            "Set Racing + Gomme Sport",                 "€ 15.000"),
+    ("🪟 Finestrini",       "Oscuramento Totale",                       "€ 5.000"),
 ]
 
 @bot.tree.command(name="prezzimodifiche", description="Mostra il listino prezzi delle modifiche veicolo (livello massimo)")
