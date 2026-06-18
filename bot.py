@@ -438,10 +438,11 @@ def carica_dati():
                     rapine_meccanico,
                     richieste_pg,
                     dati.get("categoria_ticket_id", None),
+                    {int(k): v for k, v in dati.get("veicoli_posseduti", {}).items()},
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -461,10 +462,11 @@ def salva_dati():
             "rapine_pendenti_meccanico":     {str(k): v for k, v in rapine_pendenti_meccanico.items()},
             "richieste_pg_pendenti":         {str(k): v for k, v in richieste_pg_pendenti.items()},
             "categoria_ticket_id":           categoria_ticket_id,
+            "veicoli_posseduti":             {str(k): v for k, v in veicoli_posseduti.items()},
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -1775,8 +1777,32 @@ async def inventario_cmd(interaction: discord.Interaction):
 # GARAGE E PEZZI DI RICAMBIO
 # =============================================================================
 
-@bot.tree.command(name="garage", description="Visualizza il tuo veicolo in lavorazione e l'inventario pezzi")
+@bot.tree.command(name="garage", description="Visualizza tutte le macchine che possiedi")
 async def garage_cmd(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    uid = interaction.user.id
+    veicoli = veicoli_posseduti.get(uid, [])
+
+    embed = discord.Embed(
+        title=f"🚗 Garage di {interaction.user.display_name}",
+        color=discord.Color.dark_gold()
+    )
+
+    if veicoli:
+        righe = "\n".join(
+            f"`{i+1}.` 🚘 **{v['modello']}**  —  acquistato il `{v.get('data', '?')}`"
+            for i, v in enumerate(veicoli)
+        )
+        embed.description = righe
+    else:
+        embed.description = "Non hai ancora nessun veicolo registrato nel tuo garage.\nAcquistane uno in concessionaria!"
+
+    embed.set_footer(text=f"Tokyo Horizon RP | Totale veicoli: {len(veicoli)}")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="lavorazione", description="Visualizza il tuo furto veicolo in corso e i Pezzi di Ricambio")
+async def lavorazione_cmd(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     uid = interaction.user.id
     inv = get_inventario(uid)
@@ -1784,14 +1810,14 @@ async def garage_cmd(interaction: discord.Interaction):
     pezzi = inv.get("Pezzo di Ricambio", 0)
 
     embed = discord.Embed(
-        title=f"🚗 Garage di {interaction.user.display_name}",
-        color=discord.Color.dark_gold()
+        title=f"🔧 Lavorazione di {interaction.user.display_name}",
+        color=discord.Color.orange()
     )
 
     if ordine:
         stato = "🟡 In attesa di approvazione staff" if ordine.get("in_attesa") else "🔵 Ordine inviato"
         embed.add_field(
-            name="🔧 Veicolo in lavorazione",
+            name="🚗 Veicolo in lavorazione",
             value=(
                 f"**Modello:** `{ordine.get('modello', '?')}`\n"
                 f"**Destinazione:** `{ordine.get('destinazione', '?')}`\n"
@@ -1802,7 +1828,7 @@ async def garage_cmd(interaction: discord.Interaction):
         )
     else:
         embed.add_field(
-            name="🔧 Veicolo in lavorazione",
+            name="🚗 Veicolo in lavorazione",
             value="Nessun veicolo in lavorazione al momento.\nUsa `/furto macchina` per iniziare!",
             inline=False
         )
@@ -1814,6 +1840,102 @@ async def garage_cmd(interaction: discord.Interaction):
     )
     embed.set_footer(text="Tokyo Horizon RP | Sistema Garage")
     await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+RUOLO_CONCESSIONARIO = 1517103897469124678
+
+@bot.tree.command(name="vendiauto", description="[CONCESSIONARIO] Vendi una macchina a un giocatore")
+@app_commands.describe(
+    acquirente="Il giocatore che acquista la macchina",
+    modello="Modello del veicolo (es: Pfister 811, Sultan RS...)",
+    prezzo="Prezzo di vendita in €"
+)
+async def vendiauto_cmd(interaction: discord.Interaction, acquirente: discord.Member, modello: str, prezzo: int):
+    raw_roles = getattr(interaction.user, '_roles', None)
+    ha_ruolo = (raw_roles is not None and RUOLO_CONCESSIONARIO in raw_roles) or ha_permessi_staff(interaction)
+    if not ha_ruolo:
+        await interaction.response.send_message("❌ Solo i Concessionari possono usare questo comando.", ephemeral=True)
+        return
+
+    if prezzo <= 0:
+        await interaction.response.send_message("❌ Il prezzo deve essere maggiore di 0.", ephemeral=True)
+        return
+
+    if acquirente.id == interaction.user.id:
+        await interaction.response.send_message("❌ Non puoi venderti una macchina da solo.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=False)
+
+    bil_acquirente = get_balance(acquirente.id)
+    totale_disponibile = bil_acquirente["portafoglio"] + bil_acquirente["banca"]
+
+    if totale_disponibile < prezzo:
+        mancanti = prezzo - totale_disponibile
+        await interaction.followup.send(
+            f"❌ **{acquirente.display_name}** non ha fondi sufficienti.\n"
+            f"💰 Disponibili: `{totale_disponibile:,}€` — Necessari: `{prezzo:,}€` (mancano `{mancanti:,}€`)",
+            ephemeral=True
+        )
+        return
+
+    # Scala prima dal portafoglio, poi dalla banca
+    if bil_acquirente["portafoglio"] >= prezzo:
+        bil_acquirente["portafoglio"] -= prezzo
+    else:
+        resto = prezzo - bil_acquirente["portafoglio"]
+        bil_acquirente["portafoglio"] = 0
+        bil_acquirente["banca"] -= resto
+
+    # 20% al concessionario, 80% alla banca del server (rimosso dall'economia)
+    commissione = int(prezzo * 0.20)
+    bil_concessionario = get_balance(interaction.user.id)
+    bil_concessionario["banca"] += commissione
+
+    # Aggiunge il veicolo al garage dell'acquirente
+    from datetime import datetime
+    data_oggi = datetime.now().strftime("%d/%m/%Y")
+    if acquirente.id not in veicoli_posseduti:
+        veicoli_posseduti[acquirente.id] = []
+    veicoli_posseduti[acquirente.id].append({
+        "modello": modello.strip(),
+        "data": data_oggi,
+        "prezzo": prezzo,
+        "venduto_da": interaction.user.display_name,
+    })
+    salva_dati()
+
+    embed = discord.Embed(
+        title="🚘 Vendita Veicolo Completata!",
+        color=discord.Color.green()
+    )
+    embed.add_field(name="🚗 Veicolo", value=f"`{modello.strip()}`", inline=True)
+    embed.add_field(name="👤 Acquirente", value=acquirente.mention, inline=True)
+    embed.add_field(name="💵 Prezzo", value=f"`{prezzo:,}€`", inline=True)
+    embed.add_field(name="💼 Commissione concessionario (20%)", value=f"`{commissione:,}€`", inline=True)
+    embed.add_field(name="🏦 Alla banca del server (80%)", value=f"`{prezzo - commissione:,}€`", inline=True)
+    embed.set_footer(text=f"Tokyo Horizon RP | Venduto da {interaction.user.display_name}")
+    await interaction.followup.send(embed=embed)
+
+    # Notifica privata all'acquirente
+    try:
+        embed_acquirente = discord.Embed(
+            title="🚘 Hai acquistato un veicolo!",
+            description=(
+                f"La tua nuova **{modello.strip()}** è stata registrata nel tuo garage.\n\n"
+                f"💵 Pagato: `{prezzo:,}€`\n"
+                f"📅 Data: `{data_oggi}`\n"
+                f"🏪 Venduto da: `{interaction.user.display_name}`\n\n"
+                f"Usa `/garage` per vedere tutti i tuoi veicoli!"
+            ),
+            color=discord.Color.blue()
+        )
+        embed_acquirente.set_footer(text="Tokyo Horizon RP | Concessionaria")
+        await acquirente.send(embed=embed_acquirente)
+    except Exception:
+        pass
+
+    print(f"[VENDIAUTO] {interaction.user} ha venduto {modello} a {acquirente} per {prezzo:,}€ (comm. {commissione:,}€)")
 
 
 VALORE_PEZZO_RICAMBIO = 7000
