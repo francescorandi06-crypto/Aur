@@ -439,10 +439,11 @@ def carica_dati():
                     richieste_pg,
                     dati.get("categoria_ticket_id", None),
                     {int(k): v for k, v in dati.get("veicoli_posseduti", {}).items()},
+                    dati.get("canale_meccanico_id", None),
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -463,10 +464,11 @@ def salva_dati():
             "richieste_pg_pendenti":         {str(k): v for k, v in richieste_pg_pendenti.items()},
             "categoria_ticket_id":           categoria_ticket_id,
             "veicoli_posseduti":             {str(k): v for k, v in veicoli_posseduti.items()},
+            "canale_meccanico_id":           canale_meccanico_id,
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -6448,6 +6450,152 @@ async def rimuoviauto(interaction: discord.Interaction, auto: str):
 async def rimuoviauto_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.MissingPermissions):
         await interaction.response.send_message("❌ Solo lo staff può usare questo comando.", ephemeral=True)
+
+
+# =============================================================================
+# MECCANICO — PREZZI MODIFICHE & RICHIESTA MODIFICA
+# =============================================================================
+
+PREZZI_MODIFICHE = [
+    ("🔧 Motore",           "EMS Upgrade Liv. 4",          "€ 35.000"),
+    ("⚙️ Trasmissione",     "Trasmissione Sport",           "€ 32.500"),
+    ("🛑 Freni",            "Freni Racing",                 "€ 20.000"),
+    ("🔩 Sospensioni",      "Sospensioni da Competizione",  "€ 20.000"),
+    ("💨 Turbo",            "Turbina Racing",               "€ 50.000"),
+    ("🛡️ Corazza",          "Corazza Pesante (Liv. 5)",     "€ 50.000"),
+    ("🔊 Scarico",          "Scarico Racing",               "€ 12.000"),
+    ("🎨 Verniciatura",     "Perla / Metallizzata",         "€ 10.000"),
+    ("🪟 Finestrini",       "Oscuramento Totale",           "€ 5.000"),
+    ("🏎️ Cerchi",           "Set Racing (Gomme Sport)",     "€ 15.000"),
+    ("🪞 Spoiler",          "Spoiler da Gara",              "€ 8.000"),
+    ("🚗 Tettuccio",        "Carbonio / Rimozione",         "€ 8.000"),
+]
+
+@bot.tree.command(name="prezzimodifiche", description="Mostra il listino prezzi delle modifiche veicolo (livello massimo)")
+async def prezzimodifiche(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=False)
+    embed = discord.Embed(
+        title="🔧 Listino Prezzi — Modifiche Veicolo",
+        description=(
+            "Benvenuto nell'**Officina Tokyo Horizon**!\n"
+            "Di seguito trovi i prezzi per tutte le modifiche al **livello massimo disponibile**.\n\n"
+            "Per richiedere una modifica usa il comando `/modificaveicolo`."
+        ),
+        color=discord.Color.from_rgb(255, 165, 0),
+    )
+    for emoji_cat, modifica, prezzo in PREZZI_MODIFICHE:
+        embed.add_field(
+            name=f"{emoji_cat}",
+            value=f"**{modifica}**\n`{prezzo}`",
+            inline=True,
+        )
+    embed.set_footer(text="Tokyo Horizon RP | Officina Meccanica • Prezzi fissi — nessuna trattativa")
+    embed.set_thumbnail(url="https://static.wikia.nocookie.net/gtawiki/images/9/97/BennyOriginalMotorWorks-GTAO-Exterior.png/revision/latest")
+    await interaction.followup.send(embed=embed)
+
+
+class ModificaVeicoloModal(discord.ui.Modal, title="🔧 Richiesta Modifica Veicolo"):
+    nome_pg = discord.ui.TextInput(
+        label="Nome del tuo personaggio",
+        placeholder="Es: Marco Rossi",
+        min_length=2,
+        max_length=50,
+    )
+    modello_veicolo = discord.ui.TextInput(
+        label="Modello e colore del veicolo",
+        placeholder="Es: Zentorno nero, Infernus blu metallizzato",
+        min_length=2,
+        max_length=80,
+    )
+    modifiche_richieste = discord.ui.TextInput(
+        label="Modifiche richieste",
+        placeholder="Es: Motore Liv.4, Turbo, Freni Racing, Corazza Pesante",
+        style=discord.TextStyle.paragraph,
+        min_length=5,
+        max_length=300,
+    )
+    note = discord.ui.TextInput(
+        label="Note aggiuntive (opzionale)",
+        placeholder="Es: Verniciatura rossa perla, cerchi bianchi…",
+        style=discord.TextStyle.paragraph,
+        required=False,
+        max_length=200,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        nome   = self.nome_pg.value.strip()
+        modello = self.modello_veicolo.value.strip()
+        mods   = self.modifiche_richieste.value.strip()
+        note   = self.note.value.strip() if self.note.value else "—"
+
+        embed_ok = discord.Embed(
+            title="✅ Richiesta Modifica Inviata!",
+            description=(
+                f"👤 **Personaggio:** `{nome}`\n"
+                f"🚗 **Veicolo:** `{modello}`\n"
+                f"🔧 **Modifiche:** {mods}\n"
+                f"📝 **Note:** {note}\n\n"
+                f"Un meccanico ti contatterà al più presto per fissare l'appuntamento in officina."
+            ),
+            color=discord.Color.green(),
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
+        await interaction.followup.send(embed=embed_ok, ephemeral=True)
+
+        if canale_meccanico_id:
+            try:
+                canale = bot.get_channel(canale_meccanico_id) or await bot.fetch_channel(canale_meccanico_id)
+                embed_staff = discord.Embed(
+                    title="🔧 NUOVA RICHIESTA MODIFICA VEICOLO",
+                    description=(
+                        f"👤 **Personaggio:** `{nome}`\n"
+                        f"🎮 **Discord:** {interaction.user.mention} (`{interaction.user}`)\n"
+                        f"🚗 **Veicolo:** `{modello}`\n\n"
+                        f"🔧 **Modifiche richieste:**\n{mods}\n\n"
+                        f"📝 **Note:** {note}"
+                    ),
+                    color=discord.Color.orange(),
+                )
+                embed_staff.set_footer(text=f"Tokyo Horizon RP | Richiesta ricevuta • {discord.utils.utcnow().strftime('%d/%m/%Y %H:%M')} UTC")
+                embed_staff.set_thumbnail(url=interaction.user.display_avatar.url)
+                await canale.send(embed=embed_staff)
+                print(f"[MECCANICO] Richiesta di {interaction.user} inviata in #{canale.name} ✅")
+            except discord.Forbidden:
+                print(f"[MECCANICO] ❌ Permessi mancanti nel canale meccanico (id={canale_meccanico_id})")
+            except discord.NotFound:
+                print(f"[MECCANICO] ❌ Canale meccanico non trovato (id={canale_meccanico_id})")
+            except Exception as e:
+                print(f"[MECCANICO] ❌ Errore invio notifica: {e}")
+        else:
+            print(f"[MECCANICO] ⚠️ Nessun canale meccanico configurato — usa /setcanalemeccanico")
+
+
+@bot.tree.command(name="modificaveicolo", description="Invia una richiesta di modifica al meccanico")
+async def modificaveicolo(interaction: discord.Interaction):
+    await interaction.response.send_modal(ModificaVeicoloModal())
+
+
+@bot.tree.command(name="setcanalemeccanico", description="[MOD] Imposta questo canale come canale richieste meccanico")
+async def setcanalemeccanico(interaction: discord.Interaction):
+    global canale_meccanico_id
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+    canale_meccanico_id = interaction.channel_id
+    salva_dati()
+    embed = discord.Embed(
+        title="✅ Canale Meccanico Impostato",
+        description=(
+            f"Le richieste di modifica veicolo arriveranno in <#{interaction.channel_id}>.\n\n"
+            f"I giocatori possono inviare richieste con `/modificaveicolo`."
+        ),
+        color=discord.Color.green(),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+    print(f"[MECCANICO] Canale richieste impostato: #{interaction.channel.name} ({interaction.channel_id})")
 
 
 # =============================================================================
