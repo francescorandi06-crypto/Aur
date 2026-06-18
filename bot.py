@@ -2331,6 +2331,7 @@ CANALE_REVISIONE_PG      = 1516174570837770241   # canale revisione staff PG (wh
 CANALE_ESITO_PG          = 1516168066227241073   # canale esito PG (pubblico)
 RUOLO_GESTORE_WL         = 1514818877014409227   # ruolo @gestore wl
 CANALE_CARTA             = 1516151385064869928   # canale carta d'identità
+CANALE_MECCANICO_RICHIESTE = 1517160752123875339  # canale richieste modifiche veicolo
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 RUOLO_CITTADINO          = 1513574080232558804   # ruolo assegnato al completamento della carta d'identità
 
@@ -6494,6 +6495,12 @@ async def prezzimodifiche(interaction: discord.Interaction):
             value=f"**{modifica}**\n`{prezzo}`",
             inline=True,
         )
+    embed.add_field(name="\u200b", value="\u200b", inline=False)
+    embed.add_field(
+        name="📋 Come richiedere una modifica",
+        value=f"Usa il comando `/modificaveicolo` direttamente in <#{CANALE_MECCANICO_RICHIESTE}>.",
+        inline=False,
+    )
     embed.set_footer(text="Tokyo Horizon RP | Officina Meccanica • Prezzi fissi — nessuna trattativa")
     embed.set_thumbnail(url="https://static.wikia.nocookie.net/gtawiki/images/9/97/BennyOriginalMotorWorks-GTAO-Exterior.png/revision/latest")
     await interaction.followup.send(embed=embed)
@@ -6548,9 +6555,10 @@ class ModificaVeicoloModal(discord.ui.Modal, title="🔧 Richiesta Modifica Veic
         embed_ok.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
         await interaction.followup.send(embed=embed_ok, ephemeral=True)
 
-        if canale_meccanico_id:
+        canale_dest = canale_meccanico_id or CANALE_MECCANICO_RICHIESTE
+        if canale_dest:
             try:
-                canale = bot.get_channel(canale_meccanico_id) or await bot.fetch_channel(canale_meccanico_id)
+                canale = bot.get_channel(canale_dest) or await bot.fetch_channel(canale_dest)
                 embed_staff = discord.Embed(
                     title="🔧 NUOVA RICHIESTA MODIFICA VEICOLO",
                     description=(
