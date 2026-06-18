@@ -31,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
+args = "PYTHONPATH=/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages python3 main.py"
 waitForPort = 5000
 
 [agent]
@@ -49,10 +49,6 @@ externalPort = 3000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
 
 [[ports]]
 localPort = 8081
