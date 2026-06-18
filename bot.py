@@ -6477,6 +6477,30 @@ PREZZI_MODIFICHE = [
     ("🪟 Finestrini",       "Oscuramento Totale",                       "€ 5.000"),
 ]
 
+MECCANICO_IMG = "attached_assets/IMG_0363_1781796742520.jpeg"
+
+@bot.tree.command(name="posizionemeccanico", description="Mostra la posizione dell'officina meccanica sulla mappa")
+async def posizionemeccanico(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=False)
+    embed = discord.Embed(
+        title="📍 Posizione Officina Meccanica",
+        description=(
+            "Questa è la posizione dell'**Officina Meccanica** nel server.\n\n"
+            "🔧 Recati qui per richiedere modifiche al tuo veicolo.\n"
+            f"📋 Usa `/modificaveicolo` in <#{CANALE_MECCANICO_RICHIESTE}> per inviare la tua richiesta prima di venire."
+        ),
+        color=discord.Color.from_rgb(30, 144, 255),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
+    try:
+        file = discord.File(MECCANICO_IMG, filename="officina.jpeg")
+        embed.set_image(url="attachment://officina.jpeg")
+        await interaction.followup.send(embed=embed, file=file)
+    except FileNotFoundError:
+        await interaction.followup.send(embed=embed)
+        print(f"[MECCANICO] ⚠️ Immagine non trovata: {MECCANICO_IMG}")
+
+
 @bot.tree.command(name="prezzimodifiche", description="Mostra il listino prezzi delle modifiche veicolo (livello massimo)")
 async def prezzimodifiche(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=False)
