@@ -2331,7 +2331,8 @@ CANALE_REVISIONE_PG      = 1516174570837770241   # canale revisione staff PG (wh
 CANALE_ESITO_PG          = 1516168066227241073   # canale esito PG (pubblico)
 RUOLO_GESTORE_WL         = 1514818877014409227   # ruolo @gestore wl
 CANALE_CARTA             = 1516151385064869928   # canale carta d'identità
-CANALE_MECCANICO_RICHIESTE = 1517160752123875339  # canale richieste modifiche veicolo
+CANALE_MECCANICO_RICHIESTE = 1517160752123875339  # canale richieste modifiche veicolo (player)
+CANALE_MECCANICO_STAFF    = 1517200240510238900  # canale staff meccanico (accetta/rifiuta)
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 RUOLO_CITTADINO          = 1513574080232558804   # ruolo assegnato al completamento della carta d'identità
 
@@ -6530,6 +6531,74 @@ async def prezzimodifiche(interaction: discord.Interaction):
     await interaction.followup.send(embed=embed)
 
 
+class AccettaModificaView(discord.ui.View):
+    def __init__(self, player_id: int, nome_pg: str, modello: str, mods: str, note: str):
+        super().__init__(timeout=None)
+        self.player_id = player_id
+        self.nome_pg   = nome_pg
+        self.modello   = modello
+        self.mods      = mods
+        self.note      = note
+
+    async def _disabilita(self, interaction: discord.Interaction, colore: discord.Color, etichetta: str):
+        for item in self.children:
+            item.disabled = True
+        if interaction.message and interaction.message.embeds:
+            embed = interaction.message.embeds[0]
+            embed.color = colore
+            embed.set_footer(text=f"{etichetta} da {interaction.user} • Tokyo Horizon RP | Officina Meccanica")
+            await interaction.message.edit(embed=embed, view=self)
+        else:
+            await interaction.message.edit(view=self)
+
+    @discord.ui.button(label="✅ Accetta", style=discord.ButtonStyle.success, custom_id="modifica_accetta")
+    async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not ha_permessi_staff(interaction):
+            await interaction.response.send_message("❌ Non hai i permessi per farlo.", ephemeral=True)
+            return
+        await interaction.response.defer()
+        await self._disabilita(interaction, discord.Color.green(), "✅ Accettata")
+        try:
+            player = await bot.fetch_user(self.player_id)
+            dm = discord.Embed(
+                title="✅ Richiesta Modifica Accettata!",
+                description=(
+                    f"La tua richiesta di modifica per **{self.modello}** è stata **accettata** dal meccanico.\n\n"
+                    f"🔧 **Modifiche:** {self.mods}\n\n"
+                    f"📍 Recati in officina per effettuare le modifiche!"
+                ),
+                color=discord.Color.green(),
+            )
+            dm.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
+            await player.send(embed=dm)
+            print(f"[MECCANICO] ✅ Richiesta accettata — DM inviato a uid={self.player_id}")
+        except Exception as e:
+            print(f"[MECCANICO] ❌ DM accettazione fallita per uid={self.player_id}: {e}")
+
+    @discord.ui.button(label="❌ Rifiuta", style=discord.ButtonStyle.danger, custom_id="modifica_rifiuta")
+    async def rifiuta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not ha_permessi_staff(interaction):
+            await interaction.response.send_message("❌ Non hai i permessi per farlo.", ephemeral=True)
+            return
+        await interaction.response.defer()
+        await self._disabilita(interaction, discord.Color.red(), "❌ Rifiutata")
+        try:
+            player = await bot.fetch_user(self.player_id)
+            dm = discord.Embed(
+                title="❌ Richiesta Modifica Rifiutata",
+                description=(
+                    f"La tua richiesta di modifica per **{self.modello}** è stata **rifiutata** dal meccanico.\n\n"
+                    f"Per maggiori informazioni contatta lo staff in gioco."
+                ),
+                color=discord.Color.red(),
+            )
+            dm.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
+            await player.send(embed=dm)
+            print(f"[MECCANICO] ❌ Richiesta rifiutata — DM inviato a uid={self.player_id}")
+        except Exception as e:
+            print(f"[MECCANICO] ❌ DM rifiuto fallito per uid={self.player_id}: {e}")
+
+
 class ModificaVeicoloModal(discord.ui.Modal, title="🔧 Richiesta Modifica Veicolo"):
     nome_pg = discord.ui.TextInput(
         label="Nome del tuo personaggio",
@@ -6560,10 +6629,10 @@ class ModificaVeicoloModal(discord.ui.Modal, title="🔧 Richiesta Modifica Veic
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        nome   = self.nome_pg.value.strip()
+        nome    = self.nome_pg.value.strip()
         modello = self.modello_veicolo.value.strip()
-        mods   = self.modifiche_richieste.value.strip()
-        note   = self.note.value.strip() if self.note.value else "—"
+        mods    = self.modifiche_richieste.value.strip()
+        note    = self.note.value.strip() if self.note.value else "—"
 
         embed_ok = discord.Embed(
             title="✅ Richiesta Modifica Inviata!",
@@ -6572,40 +6641,43 @@ class ModificaVeicoloModal(discord.ui.Modal, title="🔧 Richiesta Modifica Veic
                 f"🚗 **Veicolo:** `{modello}`\n"
                 f"🔧 **Modifiche:** {mods}\n"
                 f"📝 **Note:** {note}\n\n"
-                f"Un meccanico ti contatterà al più presto per fissare l'appuntamento in officina."
+                f"Un meccanico valuterà la richiesta e ti risponderà in DM."
             ),
             color=discord.Color.green(),
         )
         embed_ok.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
         await interaction.followup.send(embed=embed_ok, ephemeral=True)
 
-        canale_dest = canale_meccanico_id or CANALE_MECCANICO_RICHIESTE
-        if canale_dest:
-            try:
-                canale = bot.get_channel(canale_dest) or await bot.fetch_channel(canale_dest)
-                embed_staff = discord.Embed(
-                    title="🔧 NUOVA RICHIESTA MODIFICA VEICOLO",
-                    description=(
-                        f"👤 **Personaggio:** `{nome}`\n"
-                        f"🎮 **Discord:** {interaction.user.mention} (`{interaction.user}`)\n"
-                        f"🚗 **Veicolo:** `{modello}`\n\n"
-                        f"🔧 **Modifiche richieste:**\n{mods}\n\n"
-                        f"📝 **Note:** {note}"
-                    ),
-                    color=discord.Color.orange(),
-                )
-                embed_staff.set_footer(text=f"Tokyo Horizon RP | Richiesta ricevuta • {discord.utils.utcnow().strftime('%d/%m/%Y %H:%M')} UTC")
-                embed_staff.set_thumbnail(url=interaction.user.display_avatar.url)
-                await canale.send(embed=embed_staff)
-                print(f"[MECCANICO] Richiesta di {interaction.user} inviata in #{canale.name} ✅")
-            except discord.Forbidden:
-                print(f"[MECCANICO] ❌ Permessi mancanti nel canale meccanico (id={canale_meccanico_id})")
-            except discord.NotFound:
-                print(f"[MECCANICO] ❌ Canale meccanico non trovato (id={canale_meccanico_id})")
-            except Exception as e:
-                print(f"[MECCANICO] ❌ Errore invio notifica: {e}")
-        else:
-            print(f"[MECCANICO] ⚠️ Nessun canale meccanico configurato — usa /setcanalemeccanico")
+        try:
+            canale = await bot.fetch_channel(CANALE_MECCANICO_STAFF)
+            embed_staff = discord.Embed(
+                title="🔧 NUOVA RICHIESTA MODIFICA VEICOLO",
+                description=(
+                    f"👤 **Personaggio:** `{nome}`\n"
+                    f"🎮 **Discord:** {interaction.user.mention} (`{interaction.user}`)\n"
+                    f"🚗 **Veicolo:** `{modello}`\n\n"
+                    f"🔧 **Modifiche richieste:**\n{mods}\n\n"
+                    f"📝 **Note:** {note}"
+                ),
+                color=discord.Color.orange(),
+            )
+            embed_staff.set_footer(text=f"Tokyo Horizon RP | Richiesta ricevuta • {discord.utils.utcnow().strftime('%d/%m/%Y %H:%M')} UTC")
+            embed_staff.set_thumbnail(url=interaction.user.display_avatar.url)
+            view = AccettaModificaView(
+                player_id=interaction.user.id,
+                nome_pg=nome,
+                modello=modello,
+                mods=mods,
+                note=note,
+            )
+            await canale.send(embed=embed_staff, view=view)
+            print(f"[MECCANICO] Richiesta di {interaction.user} inviata in #{canale.name} con bottoni ✅")
+        except discord.Forbidden:
+            print(f"[MECCANICO] ❌ Permessi mancanti nel canale staff meccanico ({CANALE_MECCANICO_STAFF})")
+        except discord.NotFound:
+            print(f"[MECCANICO] ❌ Canale staff meccanico non trovato ({CANALE_MECCANICO_STAFF})")
+        except Exception as e:
+            print(f"[MECCANICO] ❌ Errore invio notifica staff: {e}")
 
 
 @bot.tree.command(name="modificaveicolo", description="Invia una richiesta di modifica al meccanico")
@@ -6633,6 +6705,87 @@ async def setcanalemeccanico(interaction: discord.Interaction):
     embed.set_footer(text="Tokyo Horizon RP | Pannello Staff")
     await interaction.followup.send(embed=embed, ephemeral=True)
     print(f"[MECCANICO] Canale richieste impostato: #{interaction.channel.name} ({interaction.channel_id})")
+
+
+# =============================================================================
+# MECCANICO — APPLICA MODIFICA CON PEZZI DI RICAMBIO
+# =============================================================================
+
+class ApplicaModificaModal(discord.ui.Modal, title="🔩 Applica Modifica — Pezzi di Ricambio"):
+    modello_veicolo = discord.ui.TextInput(
+        label="Modello e colore del veicolo",
+        placeholder="Es: Zentorno nero, Infernus blu",
+        min_length=2,
+        max_length=80,
+    )
+    modifica_applicata = discord.ui.TextInput(
+        label="Modifica che stai applicando",
+        placeholder="Es: Motore Liv.4, Turbo, Freni da Gara…",
+        style=discord.TextStyle.paragraph,
+        min_length=3,
+        max_length=200,
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        uid     = interaction.user.id
+        inv     = get_inventario(uid)
+        pezzi   = inv.get("Pezzo di Ricambio", 0)
+
+        if pezzi < 5:
+            await interaction.followup.send(
+                f"❌ Ti servono **5 Pezzi di Ricambio** per applicare una modifica.\n"
+                f"Ne hai solo **`{pezzi}x`** nell'inventario — rubane altri dall'officina meccanica!",
+                ephemeral=True,
+            )
+            return
+
+        modello  = self.modello_veicolo.value.strip()
+        modifica = self.modifica_applicata.value.strip()
+
+        inv["Pezzo di Ricambio"] -= 5
+        if inv["Pezzo di Ricambio"] <= 0:
+            del inv["Pezzo di Ricambio"]
+        salva_dati()
+        rimasti = inv.get("Pezzo di Ricambio", 0)
+
+        embed_ok = discord.Embed(
+            title="🔩 Modifica Applicata!",
+            description=(
+                f"Hai usato **5x Pezzo di Ricambio** per applicare una modifica al tuo veicolo.\n\n"
+                f"🚗 **Veicolo:** `{modello}`\n"
+                f"🔧 **Modifica:** {modifica}\n\n"
+                f"🔩 Pezzi rimasti in inventario: **`{rimasti}x`**"
+            ),
+            color=discord.Color.green(),
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
+        await interaction.followup.send(embed=embed_ok, ephemeral=True)
+
+        try:
+            canale = await bot.fetch_channel(CANALE_MECCANICO_STAFF)
+            embed_log = discord.Embed(
+                title="🔩 MODIFICA AUTONOMA APPLICATA",
+                description=(
+                    f"👤 **Giocatore:** {interaction.user.mention} (`{interaction.user}`)\n"
+                    f"🚗 **Veicolo:** `{modello}`\n"
+                    f"🔧 **Modifica:** {modifica}\n\n"
+                    f"🔩 **Pezzi consumati:** 5x\n"
+                    f"📦 **Pezzi rimanenti:** {rimasti}x"
+                ),
+                color=discord.Color.blue(),
+            )
+            embed_log.set_footer(text=f"Tokyo Horizon RP | Modifica autonoma • {discord.utils.utcnow().strftime('%d/%m/%Y %H:%M')} UTC")
+            embed_log.set_thumbnail(url=interaction.user.display_avatar.url)
+            await canale.send(embed=embed_log)
+            print(f"[MECCANICO] 🔩 {interaction.user} ha applicato modifica autonoma — rimasti {rimasti}x pezzi")
+        except Exception as e:
+            print(f"[MECCANICO] ❌ Notifica staff modifica autonoma fallita: {e}")
+
+
+@bot.tree.command(name="applicamodifica", description="Applica una modifica al tuo veicolo usando 5 Pezzi di Ricambio (dal furto officina)")
+async def applicamodifica(interaction: discord.Interaction):
+    await interaction.response.send_modal(ApplicaModificaModal())
 
 
 # =============================================================================
