@@ -486,15 +486,19 @@ NEGOZIO = {
     "Dispositivo di Hacking Base": {"prezzo": 4000,  "emoji": "📟",  "descrizione": "Azzera il sistema antifurto del veicolo. Obbligatorio per il furto di veicoli (insieme allo Slim Jim)."},
     "Trapano":                     {"prezzo": 8000,  "emoji": "🔧",  "descrizione": "Perfora le cassette di sicurezza blindate. Obbligatorio per la Rapina alla Banca Fleeca (1x, insieme a 5x Piede di Porco)."},
     "Grimaldello Avanzato":        {"prezzo": 15000, "emoji": "🔐",  "descrizione": "Scassina serrature blindate di alta sicurezza. Obbligatorio per il Grande Colpo alla Maze Bank (min 2 unità)."},
+    "Simulatore di Impronte Digitali": {"prezzo": 20000, "emoji": "👆", "descrizione": "Bypassa i lettori biometrici delle officine blindate. Obbligatorio per il Furto Officina Meccanica. Non viene consumato — resta in inventario."},
 }
 
 MERCATO_NERO = {
     "Gas Soporifero":                  {"prezzo": 8000,  "emoji": "😴",  "descrizione": "Gas anestetico militare che induce il sonno. Necessario per l'Assalto alla Gioielleria."},
-    "Pistola":                         {"prezzo": 10000, "emoji": "🔫",  "descrizione": "Arma da fuoco illegale. Obbligatoria per rapine ai bancomat. Non viene consumata — resta in inventario."},
     "Dispositivo di Hacking Medio":    {"prezzo": 15000, "emoji": "📡",  "descrizione": "Hackera sistemi di sorveglianza di livello medio. Obbligatorio per l'Assalto alla Gioielleria."},
     "Lancia Termica":                  {"prezzo": 30000, "emoji": "🔥",  "descrizione": "Brucia serrature e porte blindate. Necessaria per aprire le serrature del caveau della Maze Bank."},
     "Dispositivo di Hacking Avanzato": {"prezzo": 50000, "emoji": "🖥️", "descrizione": "Hackera sistemi digitali di livello militare. Obbligatorio per il Grande Colpo alla Maze Bank."},
     "Trapano Pesante Professionale":   {"prezzo": 50000, "emoji": "⚙️",  "descrizione": "Perfora il caveau della Maze Bank. Obbligatorio per il Grande Colpo."},
+}
+
+MERCATO_ARMI = {
+    "Pistola": {"prezzo": 10000, "emoji": "🔫", "descrizione": "Arma da fuoco semi-automatica illegale. Obbligatoria per rapine ai bancomat e minimarket. Non viene consumata — resta in inventario."},
 }
 
 RUOLI_STAFF = {
@@ -1629,7 +1633,6 @@ async def mercatonero(interaction: discord.Interaction):
 @app_commands.describe(articolo="L'articolo illegale che vuoi acquistare")
 @app_commands.choices(articolo=[
     app_commands.Choice(name="Gas Soporifero (8.000€)",                    value="Gas Soporifero"),
-    app_commands.Choice(name="Pistola (10.000€)",                          value="Pistola"),
     app_commands.Choice(name="Dispositivo di Hacking Medio (15.000€)",     value="Dispositivo di Hacking Medio"),
     app_commands.Choice(name="Lancia Termica (30.000€)",                   value="Lancia Termica"),
     app_commands.Choice(name="Dispositivo di Hacking Avanzato (50.000€)",  value="Dispositivo di Hacking Avanzato"),
@@ -1679,6 +1682,69 @@ async def compranero(interaction: discord.Interaction, articolo: app_commands.Ch
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
+@bot.tree.command(name="mercatoarmi", description="Visualizza le armi disponibili nel mercato armi")
+async def mercatoarmi(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    embed = discord.Embed(
+        title="🔫 MERCATO ARMI — Tokyo Horizon RP",
+        description="Armi acquistabili con `/compraarmi <arma>`.\n⚠️ Detenere armi è illegale — usale a tuo rischio.",
+        color=discord.Color.dark_orange()
+    )
+    for nome, info in MERCATO_ARMI.items():
+        embed.add_field(name=f"{info['emoji']} {nome} — `{info['prezzo']:,}€`", value=info["descrizione"], inline=False)
+    embed.set_footer(text="Tokyo Horizon RP | Mercato Armi")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="compraarmi", description="Acquista un'arma dal mercato armi")
+@app_commands.describe(arma="L'arma che vuoi acquistare")
+@app_commands.choices(arma=[
+    app_commands.Choice(name="Pistola (10.000€)", value="Pistola"),
+])
+async def compraarmi(interaction: discord.Interaction, arma: app_commands.Choice[str]):
+    if not await safe_defer(interaction, ephemeral=True):
+        return
+    nome = arma.value
+    info = MERCATO_ARMI.get(nome)
+    if not info:
+        await interaction.followup.send("❌ Arma non trovata nel mercato armi.", ephemeral=True)
+        return
+    prezzo = info["prezzo"]
+    bil = get_balance(interaction.user.id)
+    totale = bil["portafoglio"] + bil["banca"]
+    if totale < prezzo:
+        await interaction.followup.send(
+            f"❌ Non hai abbastanza soldi! Ti servono `{prezzo:,}€`.\n"
+            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`",
+            ephemeral=True
+        )
+        return
+    da_tasca = min(bil["portafoglio"], prezzo)
+    da_banca = prezzo - da_tasca
+    bil["portafoglio"] -= da_tasca
+    bil["banca"] -= da_banca
+    inv = get_inventario(interaction.user.id)
+    inv[nome] = inv.get(nome, 0) + 1
+    salva_dati()
+    fonte = ""
+    if da_banca > 0 and da_tasca > 0:
+        fonte = f"💵 `{da_tasca:,}€` dalla tasca + 🏛️ `{da_banca:,}€` dalla banca\n"
+    elif da_banca > 0:
+        fonte = f"🏛️ Pagato dalla banca\n"
+    embed = discord.Embed(
+        title="✅ Acquisto Completato!",
+        description=(
+            f"Hai acquistato **{info['emoji']} {nome}** per `{prezzo:,}€`.\n\n"
+            f"{fonte}"
+            f"💵 **In tasca:** `{bil['portafoglio']:,}€` | 🏛️ **In banca:** `{bil['banca']:,}€`\n"
+            f"🎒 **In inventario:** `{inv[nome]}x {nome}`"
+        ),
+        color=discord.Color.dark_orange()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Mercato Armi")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
 @bot.tree.command(name="inventario", description="Visualizza il tuo inventario")
 async def inventario_cmd(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -1686,9 +1752,9 @@ async def inventario_cmd(interaction: discord.Interaction):
         inv = get_inventario(interaction.user.id)
         inv_filtrato = {n: q for n, q in inv.items() if isinstance(q, int) and q > 0}
         if not inv_filtrato:
-            await interaction.followup.send("🎒 Il tuo inventario è vuoto. Acquista qualcosa con `/negozio` o `/mercatonero`!", ephemeral=True)
+            await interaction.followup.send("🎒 Il tuo inventario è vuoto. Acquista qualcosa con `/negozio`, `/mercatonero` o `/mercatoarmi`!", ephemeral=True)
             return
-        TUTTI_ITEMS = {**NEGOZIO, **MERCATO_NERO}
+        TUTTI_ITEMS = {**NEGOZIO, **MERCATO_NERO, **MERCATO_ARMI}
         righe = "\n".join(
             f"• {TUTTI_ITEMS[n]['emoji'] if n in TUTTI_ITEMS else '📦'} **{n}** — `{q}x`"
             for n, q in inv_filtrato.items()
@@ -1812,25 +1878,27 @@ async def resetordine(interaction: discord.Interaction, utente: discord.Member):
     quantita="Importo in € (per contanti) o quantità (per oggetti)"
 )
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="Contanti in tasca",              value="portafoglio"),
-    app_commands.Choice(name="Contanti in banca",              value="banca"),
-    app_commands.Choice(name="Cacciavite",                     value="Cacciavite"),
-    app_commands.Choice(name="Grimaldello",                    value="Grimaldello"),
-    app_commands.Choice(name="Grimaldello Avanzato",           value="Grimaldello Avanzato"),
-    app_commands.Choice(name="Piede di Porco",                 value="Piede di Porco"),
-    app_commands.Choice(name="Torcia",                         value="Torcia"),
-    app_commands.Choice(name="Sistema di Hacking",             value="Sistema di Hacking"),
-    app_commands.Choice(name="Slim Jim",                       value="Slim Jim"),
-    app_commands.Choice(name="Dispositivo di Hacking Base",    value="Dispositivo di Hacking Base"),
-    app_commands.Choice(name="Trapano",                        value="Trapano"),
-    app_commands.Choice(name="Pistola",                        value="Pistola"),
-    app_commands.Choice(name="Gas Soporifero",                 value="Gas Soporifero"),
-    app_commands.Choice(name="Dispositivo di Hacking Medio",   value="Dispositivo di Hacking Medio"),
-    app_commands.Choice(name="Dispositivo di Hacking Avanzato",value="Dispositivo di Hacking Avanzato"),
-    app_commands.Choice(name="Lancia Termica",                 value="Lancia Termica"),
-    app_commands.Choice(name="Trapano Pesante Professionale",  value="Trapano Pesante Professionale"),
-    app_commands.Choice(name="Giubbotto Antiproiettile",       value="Giubbotto Antiproiettile"),
-    app_commands.Choice(name="Mitra Compatto",                 value="Mitra Compatto"),
+    app_commands.Choice(name="Contanti in tasca",                   value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca",                   value="banca"),
+    app_commands.Choice(name="Cacciavite",                          value="Cacciavite"),
+    app_commands.Choice(name="Grimaldello",                         value="Grimaldello"),
+    app_commands.Choice(name="Grimaldello Avanzato",                value="Grimaldello Avanzato"),
+    app_commands.Choice(name="Piede di Porco",                      value="Piede di Porco"),
+    app_commands.Choice(name="Torcia",                              value="Torcia"),
+    app_commands.Choice(name="Sistema di Hacking",                  value="Sistema di Hacking"),
+    app_commands.Choice(name="Slim Jim",                            value="Slim Jim"),
+    app_commands.Choice(name="Dispositivo di Hacking Base",         value="Dispositivo di Hacking Base"),
+    app_commands.Choice(name="Trapano",                             value="Trapano"),
+    app_commands.Choice(name="Simulatore di Impronte Digitali",     value="Simulatore di Impronte Digitali"),
+    app_commands.Choice(name="Pistola",                             value="Pistola"),
+    app_commands.Choice(name="Gas Soporifero",                      value="Gas Soporifero"),
+    app_commands.Choice(name="Dispositivo di Hacking Medio",        value="Dispositivo di Hacking Medio"),
+    app_commands.Choice(name="Dispositivo di Hacking Avanzato",     value="Dispositivo di Hacking Avanzato"),
+    app_commands.Choice(name="Lancia Termica",                      value="Lancia Termica"),
+    app_commands.Choice(name="Trapano Pesante Professionale",       value="Trapano Pesante Professionale"),
+    app_commands.Choice(name="Giubbotto Antiproiettile",            value="Giubbotto Antiproiettile"),
+    app_commands.Choice(name="Mitra Compatto",                      value="Mitra Compatto"),
+    app_commands.Choice(name="Pezzo di Ricambio",                   value="Pezzo di Ricambio"),
 ])
 async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     if not await safe_defer(interaction): return
@@ -1880,25 +1948,27 @@ async def dai(interaction: discord.Interaction, utente: discord.Member, tipo: ap
     quantita="Importo in € (per contanti) o quantità (per oggetti)"
 )
 @app_commands.choices(tipo=[
-    app_commands.Choice(name="Contanti in tasca",              value="portafoglio"),
-    app_commands.Choice(name="Contanti in banca",              value="banca"),
-    app_commands.Choice(name="Cacciavite",                     value="Cacciavite"),
-    app_commands.Choice(name="Grimaldello",                    value="Grimaldello"),
-    app_commands.Choice(name="Grimaldello Avanzato",           value="Grimaldello Avanzato"),
-    app_commands.Choice(name="Piede di Porco",                 value="Piede di Porco"),
-    app_commands.Choice(name="Torcia",                         value="Torcia"),
-    app_commands.Choice(name="Sistema di Hacking",             value="Sistema di Hacking"),
-    app_commands.Choice(name="Slim Jim",                       value="Slim Jim"),
-    app_commands.Choice(name="Dispositivo di Hacking Base",    value="Dispositivo di Hacking Base"),
-    app_commands.Choice(name="Trapano",                        value="Trapano"),
-    app_commands.Choice(name="Pistola",                        value="Pistola"),
-    app_commands.Choice(name="Gas Soporifero",                 value="Gas Soporifero"),
-    app_commands.Choice(name="Dispositivo di Hacking Medio",   value="Dispositivo di Hacking Medio"),
-    app_commands.Choice(name="Dispositivo di Hacking Avanzato",value="Dispositivo di Hacking Avanzato"),
-    app_commands.Choice(name="Lancia Termica",                 value="Lancia Termica"),
-    app_commands.Choice(name="Trapano Pesante Professionale",  value="Trapano Pesante Professionale"),
-    app_commands.Choice(name="Giubbotto Antiproiettile",       value="Giubbotto Antiproiettile"),
-    app_commands.Choice(name="Mitra Compatto",                 value="Mitra Compatto"),
+    app_commands.Choice(name="Contanti in tasca",                   value="portafoglio"),
+    app_commands.Choice(name="Contanti in banca",                   value="banca"),
+    app_commands.Choice(name="Cacciavite",                          value="Cacciavite"),
+    app_commands.Choice(name="Grimaldello",                         value="Grimaldello"),
+    app_commands.Choice(name="Grimaldello Avanzato",                value="Grimaldello Avanzato"),
+    app_commands.Choice(name="Piede di Porco",                      value="Piede di Porco"),
+    app_commands.Choice(name="Torcia",                              value="Torcia"),
+    app_commands.Choice(name="Sistema di Hacking",                  value="Sistema di Hacking"),
+    app_commands.Choice(name="Slim Jim",                            value="Slim Jim"),
+    app_commands.Choice(name="Dispositivo di Hacking Base",         value="Dispositivo di Hacking Base"),
+    app_commands.Choice(name="Trapano",                             value="Trapano"),
+    app_commands.Choice(name="Simulatore di Impronte Digitali",     value="Simulatore di Impronte Digitali"),
+    app_commands.Choice(name="Pistola",                             value="Pistola"),
+    app_commands.Choice(name="Gas Soporifero",                      value="Gas Soporifero"),
+    app_commands.Choice(name="Dispositivo di Hacking Medio",        value="Dispositivo di Hacking Medio"),
+    app_commands.Choice(name="Dispositivo di Hacking Avanzato",     value="Dispositivo di Hacking Avanzato"),
+    app_commands.Choice(name="Lancia Termica",                      value="Lancia Termica"),
+    app_commands.Choice(name="Trapano Pesante Professionale",       value="Trapano Pesante Professionale"),
+    app_commands.Choice(name="Giubbotto Antiproiettile",            value="Giubbotto Antiproiettile"),
+    app_commands.Choice(name="Mitra Compatto",                      value="Mitra Compatto"),
+    app_commands.Choice(name="Pezzo di Ricambio",                   value="Pezzo di Ricambio"),
 ])
 async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str], quantita: int):
     if not await safe_defer(interaction): return
@@ -1937,7 +2007,7 @@ async def togli(interaction: discord.Interaction, utente: discord.Member, tipo: 
         rimosso = min(quantita, attuale)
         inv[valore] = attuale - rimosso
         salva_dati()
-        TUTTI_ITEMS = {**NEGOZIO, **MERCATO_NERO}
+        TUTTI_ITEMS = {**NEGOZIO, **MERCATO_NERO, **MERCATO_ARMI}
         info = TUTTI_ITEMS.get(valore, {})
         emoji = info.get("emoji", "📦")
         avviso = f"\n⚠️ Ne aveva solo `{attuale}` — rimossi tutti." if rimosso < quantita else ""
@@ -2295,7 +2365,7 @@ class BancomatModal(discord.ui.Modal, title="🏧 Verbale di Rapina — Bancomat
             await interaction.followup.send("❌ Non hai il `Piede di Porco` nell'inventario! Acquistalo con `/negozio`.", ephemeral=True)
             return
         if inv.get("Pistola", 0) <= 0:
-            await interaction.followup.send("❌ Non hai la `Pistola` nell'inventario! Acquistala con `/compranero`.", ephemeral=True)
+            await interaction.followup.send("❌ Non hai la `Pistola` nell'inventario! Acquistala con `/compraarmi`.", ephemeral=True)
             return
 
         # Prepara embed conferma criminale
@@ -2673,7 +2743,7 @@ class MinimarketModal(discord.ui.Modal, title="🍏 Verbale di Rapina — Minima
             return
         if inv.get("Pistola", 0) <= 0:
             await interaction.followup.send(
-                "❌ Non hai la `Pistola` nell'inventario! Acquistala con `/compranero`.", ephemeral=True
+                "❌ Non hai la `Pistola` nell'inventario! Acquistala con `/compraarmi`.", ephemeral=True
             )
             return
 
@@ -2889,9 +2959,50 @@ async def accredita_gioielleria(criminal_uid: int, delay: float):
         criminal_lock_sec=7 * 86400)  # 1 settimana
 
 async def accredita_meccanico(criminal_uid: int, delay: float):
-    await _accredita_generico(criminal_uid, delay, LOOT_MECCANICO, "meccanico", "Furto Officina Meccanica",
-        rapine_pendenti_meccanico, "rapine_pendenti_meccanico", _meccanico_in_corso, _meccanico_tasks, dialogo_min=3,
-        criminal_lock_sec=12 * 3600)  # 12 ore
+    if criminal_uid in _meccanico_in_corso:
+        print(f"[MECCANICO] uid={criminal_uid} già in elaborazione — ignorato.")
+        return
+    _meccanico_in_corso.add(criminal_uid)
+    try:
+        if delay > 0:
+            await asyncio.sleep(delay)
+        if criminal_uid not in rapine_pendenti_meccanico:
+            return
+        try:
+            with open(DATI_FILE, "r") as _f:
+                _dati_freschi = json.load(_f)
+            _nel_file = {int(k): v for k, v in _dati_freschi.get("rapine_pendenti_meccanico", {}).items()}
+        except Exception as _e:
+            print(f"[MECCANICO] Errore lettura JSON: {_e} — uso memoria")
+            _nel_file = rapine_pendenti_meccanico
+        if criminal_uid not in _nel_file:
+            rapine_pendenti_meccanico.pop(criminal_uid, None)
+            return
+        inv = get_inventario(criminal_uid)
+        inv["Pezzo di Ricambio"] = inv.get("Pezzo di Ricambio", 0) + 5
+        furto_cooldown.setdefault(criminal_uid, {})["meccanico"] = time.time()
+        furto_cooldown[criminal_uid]["criminal_lock_until"] = time.time() + 12 * 3600
+        rapine_pendenti_meccanico.pop(criminal_uid, None)
+        salva_dati()
+        testo = (
+            f"✅ <@{criminal_uid}> **Furto Officina Meccanica completato!**\n"
+            f"🔩 Bottino: **5x Pezzo di Ricambio** — aggiunti all'inventario.\n"
+            f"⚠️ Dialogo obbligatorio di almeno **3 minuti** con gli FDO!\n"
+            f"🔒 Attività criminale bloccata per **12 ore**."
+        )
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(testo)
+        except Exception as e:
+            print(f"[MECCANICO] Messaggio canale fallito: {e}")
+            try:
+                utente_obj = await bot.fetch_user(criminal_uid)
+                await utente_obj.send(testo)
+            except Exception:
+                pass
+    finally:
+        _meccanico_in_corso.discard(criminal_uid)
+        _meccanico_tasks.pop(criminal_uid, None)
 
 async def accredita_mazebank(criminal_uid: int, delay: float):
     await _accredita_generico(criminal_uid, delay, LOOT_MAZEBANK, "mazebank", "Grande Colpo Maze Bank",
@@ -3411,7 +3522,7 @@ class MazeBankModal(discord.ui.Modal, title="🏛️ Verbale — Grande Colpo al
             await interaction.followup.send("❌ Ti manca **1x Dispositivo di Hacking Avanzato**. Acquistalo con `/compranero`.", ephemeral=True)
             return
         if inv.get("Lancia Termica", 0) < 1:
-            await interaction.followup.send("❌ Ti manca **1x Lancia Termica**. Acquistala con `/compranero`.", ephemeral=True)
+            await interaction.followup.send("❌ Ti manca **1x Lancia Termica**. Acquistala con `/compraarmi`.", ephemeral=True)
             return
         if inv.get("Trapano Pesante Professionale", 0) < 1:
             await interaction.followup.send("❌ Ti manca **1x Trapano Pesante Professionale**. Acquistalo con `/compranero`.", ephemeral=True)
@@ -3598,7 +3709,7 @@ class AccettaRapinaMeccanicoView(discord.ui.View):
                 f"👥 **Partecipanti:** `{self.partecipanti}`\n"
                 f"📍 **Posizione:** `{self.posizione}`\n\n"
                 f"⏳ **Scassinamento in corso — 5 minuti.**\n"
-                f"💰 Bottino di `{LOOT_MECCANICO:,}€` accreditato al termine.\n"
+                f"🔩 Bottino: **5x Pezzo di Ricambio** consegnato al termine.\n"
                 f"🔒 Dopo il colpo: **12 ore** di blocco attività criminale."
             ),
             color=discord.Color.orange()
@@ -3621,7 +3732,7 @@ class AccettaRapinaMeccanicoView(discord.ui.View):
         testo_inizio = (
             f"🚔 <@{self.criminal_uid}> **{n_fdo} FDO {'ha' if n_fdo==1 else 'hanno'} accettato** ({nomi_fdo}) — **scassinamento iniziato!**\n"
             f"⏳ Aspetta **5 minuti**.\n"
-            f"💰 Riceverai **`{LOOT_MECCANICO:,}€`** in banca allo scadere del tempo.\n"
+            f"🔩 Riceverai **5x Pezzo di Ricambio** nell'inventario allo scadere del tempo.\n"
             f"🔒 Dopo il colpo, attività criminale bloccata per **12 ore**."
         )
         try:
@@ -3640,9 +3751,7 @@ class AccettaRapinaMeccanicoView(discord.ui.View):
 
     async def on_timeout(self):
         if not self.avviata:
-            # Ripristina grimaldello e azzera cooldown
-            inv = get_inventario(self.criminal_uid)
-            inv["Grimaldello"] = inv.get("Grimaldello", 0) + 1
+            # Azzera cooldown (il Simulatore di Impronte Digitali NON viene consumato)
             furto_cooldown.get(self.criminal_uid, {}).pop("meccanico", None)
             salva_dati()
 
@@ -3662,7 +3771,7 @@ class AccettaRapinaMeccanicoView(discord.ui.View):
                 f"{motivo}\n\n"
                 f"🦹 **Criminale:** `{self.nome_pg}`\n"
                 f"📍 **Posizione:** `{self.posizione}`\n\n"
-                f"🎒 **Restituito:** `1x Grimaldello`\n"
+                f"👆 **Simulatore di Impronte Digitali:** non consumato, rimane in inventario.\n"
                 f"⏱️ Il cooldown è stato azzerato — può riprovare."
             ),
             color=discord.Color.dark_gray()
@@ -3700,17 +3809,14 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
         part = self.partecipanti.value.strip()
 
         inv = get_inventario(uid)
-        if inv.get("Grimaldello", 0) < 1:
+        if inv.get("Simulatore di Impronte Digitali", 0) < 1:
             await interaction.followup.send(
-                "🔒 Per svaligiare l'officina serve **`1x Grimaldello`**. Acquistalo con `/negozio`.",
+                "🔒 Per svaligiare l'officina serve **`1x Simulatore di Impronte Digitali`**. Acquistalo con `/negozio` (20.000€).\n"
+                "ℹ️ Non viene consumato — rimane in inventario dopo l'uso.",
                 ephemeral=True)
             return
 
-        # Consuma il grimaldello
-        inv["Grimaldello"] = inv.get("Grimaldello", 1) - 1
-        if inv["Grimaldello"] <= 0:
-            del inv["Grimaldello"]
-
+        # Il Simulatore NON viene consumato — rimane in inventario
         # Imposta il cooldown 48h subito (viene azzerato se nessun FDO accetta)
         furto_cooldown.setdefault(uid, {})["meccanico"] = time.time()
         salva_dati()
@@ -3721,10 +3827,10 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
                 f"🕵️ **Personaggio:** `{nome}`\n"
                 f"📍 **Posizione:** `{pos}`\n"
                 f"👥 **Partecipanti:** `{part}`\n\n"
-                f"🔧 Consumato: **1x Grimaldello**.\n"
+                f"👆 **Simulatore di Impronte Digitali** usato (non consumato).\n"
                 f"📡 Notifica inviata agli FDO — **massimo 2 FDO** possono accettare.\n"
                 f"⏳ Dopo il primo FDO, hai **2 minuti** per il secondo. Poi parte comunque.\n"
-                f"💰 **`{LOOT_MECCANICO:,}€`** accreditati in banca al termine (5 min).\n"
+                f"🔩 **Bottino:** 5x Pezzo di Ricambio consegnati in inventario al termine (5 min).\n"
                 f"⚠️ Dialogo obbligatorio di **almeno 3 minuti** con gli FDO.\n"
                 f"🔒 Dopo il colpo: **12 ore** di blocco attività criminale.\n\n"
                 f"⚔️ Equipaggiamento: **Pistola** (vietate armi automatiche)"
@@ -3743,7 +3849,7 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
                 f"👮 **FDO richiesti:** **Massimo 2** (basta 1 — il 2° ha 2 min per unirsi)\n"
                 f"⚔️ **Equipaggiamento criminale:** Pistola (vietate armi automatiche)\n"
                 f"⏱️ **Scassinamento:** 5 min | **Dialogo min.:** 3 min\n"
-                f"💰 **Bottino:** `{LOOT_MECCANICO:,}€`\n\n"
+                f"🔩 **Bottino:** 5x Pezzo di Ricambio\n\n"
                 f"⏳ Clicca entro 10 min o la rapina viene annullata."
             ),
             color=discord.Color.red()
@@ -3791,7 +3897,7 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
 @app_commands.choices(tipo=[
     app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h",                         value="bancomat"),
     app_commands.Choice(name="🍏 Minimarket — 15.000€ | Cacciavite/PdP + Pistola | Cooldown 24h",                      value="minimarket"),
-    app_commands.Choice(name="🔧 Officina Meccanica — 35.000€ | Grimaldello | Cooldown 48h",                           value="meccanico"),
+    app_commands.Choice(name="🔧 Officina Meccanica — 5x Pezzi di Ricambio | Sim. Impronte | Cooldown 48h",              value="meccanico"),
     app_commands.Choice(name="🔫 Ammu-Nation — Giubbotti+Pistole+Mitra | Nessun attrezzo | Cooldown 24h",               value="armeria"),
     app_commands.Choice(name="🏦 Banca Fleeca — 250.000€ | 5x PdP + Trapano | Cooldown 48h",                           value="fleeca"),
     app_commands.Choice(name="💎 Gioielleria — 500.000€ | Hack Medio + Gas Soporifero | Cooldown 4gg",               value="gioielleria"),
@@ -3845,7 +3951,7 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
         if inv.get("Piede di Porco", 0) <= 0:
             try:
                 await interaction.response.send_message(
-                    "🔒 Per rapinare un bancomat servono **`1x Piede di Porco`** e **`1x Pistola`**. Acquistali con `/negozio` e `/compranero`.",
+                    "🔒 Per rapinare un bancomat servono **`1x Piede di Porco`** e **`1x Pistola`**. Acquistali con `/negozio` e `/compraarmi`.",
                     ephemeral=True
                 )
             except Exception:
@@ -3854,7 +3960,7 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
         if inv.get("Pistola", 0) <= 0:
             try:
                 await interaction.response.send_message(
-                    "🔒 Per rapinare un bancomat serve anche **`1x Pistola`**. Acquistala con `/compranero`.",
+                    "🔒 Per rapinare un bancomat serve anche **`1x Pistola`**. Acquistala con `/compraarmi`.",
                     ephemeral=True
                 )
             except Exception:
@@ -3928,7 +4034,7 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
         if not ha_strumento:
             try:
                 await interaction.response.send_message(
-                    "🔒 Per rapinare un minimarket serve **`1x Cacciavite`** o **`1x Piede di Porco`** e **`1x Pistola`**. Acquistali con `/negozio` e `/compranero`.",
+                    "🔒 Per rapinare un minimarket serve **`1x Cacciavite`** o **`1x Piede di Porco`** e **`1x Pistola`**. Acquistali con `/negozio` e `/compraarmi`.",
                     ephemeral=True
                 )
             except Exception:
@@ -3937,7 +4043,7 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
         if inv.get("Pistola", 0) <= 0:
             try:
                 await interaction.response.send_message(
-                    "🔒 Per rapinare un minimarket serve anche **`1x Pistola`**. Acquistala con `/compranero`.",
+                    "🔒 Per rapinare un minimarket serve anche **`1x Pistola`**. Acquistala con `/compraarmi`.",
                     ephemeral=True
                 )
             except Exception:
