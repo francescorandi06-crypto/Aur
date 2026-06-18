@@ -58,11 +58,14 @@
   "rapine_pendenti_fleeca": {},
   "rapine_pendenti_gioielleria": {},
   "rapine_pendenti_mazebank": {},
+  "rapine_pendenti_meccanico": {},
   "richieste_pg_pendenti": {
     "1083459553892499476": {
       "nome": "Aura",
       "processata": true
     }
   },
-  "categoria_ticket_id": 1514405053354741760
+  "categoria_ticket_id": 1514405053354741760,
+  "veicoli_posseduti": {},
+  "canale_meccanico_id": 1517160752123875339
 }
