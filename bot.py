@@ -6477,7 +6477,7 @@ PREZZI_MODIFICHE = [
     ("🪟 Finestrini",       "Oscuramento Totale",                       "€ 5.000"),
 ]
 
-MECCANICO_IMG = "attached_assets/IMG_0363_1781796742520.jpeg"
+MECCANICO_IMG = "attached_assets/officina_pulita.jpeg"
 
 @bot.tree.command(name="posizionemeccanico", description="Mostra la posizione dell'officina meccanica sulla mappa")
 async def posizionemeccanico(interaction: discord.Interaction):
