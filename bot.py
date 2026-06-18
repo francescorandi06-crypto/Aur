@@ -1636,6 +1636,7 @@ async def mercatonero(interaction: discord.Interaction):
 @bot.tree.command(name="compranero", description="Acquista un articolo dal mercato nero")
 @app_commands.describe(articolo="L'articolo illegale che vuoi acquistare")
 @app_commands.choices(articolo=[
+    app_commands.Choice(name="Simulatore di Impronte Digitali (20.000€)", value="Simulatore di Impronte Digitali"),
     app_commands.Choice(name="Gas Soporifero (8.000€)",                    value="Gas Soporifero"),
     app_commands.Choice(name="Dispositivo di Hacking Medio (15.000€)",     value="Dispositivo di Hacking Medio"),
     app_commands.Choice(name="Lancia Termica (30.000€)",                   value="Lancia Termica"),
@@ -4119,7 +4120,7 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
 @app_commands.choices(tipo=[
     app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h",                         value="bancomat"),
     app_commands.Choice(name="🍏 Minimarket — 15.000€ | Cacciavite/PdP + Pistola | Cooldown 24h",                      value="minimarket"),
-    app_commands.Choice(name="🔧 Officina Meccanica — 5x Pezzi di Ricambio | Piede di Porco + Sim. Impronte | CD 48h",  value="meccanico"),
+    app_commands.Choice(name="🔧 Officina Meccanica — 3x Pezzi di Ricambio | Piede di Porco + Sim. Impronte | CD 48h",  value="meccanico"),
     app_commands.Choice(name="🔫 Ammu-Nation — Giubbotti+Pistole+Mitra | Nessun attrezzo | Cooldown 24h",               value="armeria"),
     app_commands.Choice(name="🏦 Banca Fleeca — 250.000€ | 5x PdP + Trapano | Cooldown 48h",                           value="fleeca"),
     app_commands.Choice(name="💎 Gioielleria — 500.000€ | Hack Medio + Gas Soporifero | Cooldown 4gg",               value="gioielleria"),
