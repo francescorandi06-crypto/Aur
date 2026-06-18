@@ -6472,7 +6472,7 @@ PREZZI_MODIFICHE = [
     ("🔩 Sospensioni",      "Sospensioni da Competizione",              "€ 20.000"),
     ("⚙️ Trasmissione",     "Trasmissione Sport",                       "€ 32.500"),
     ("💨 Turbo",            "Turbina Racing",                           "€ 50.000"),
-    ("🛞 Ruote",            "Set Racing + Gomme Sport",                 "€ 15.000"),
+    ("🛞 Ruote",            "Set ruote (varia per tipo)",               "Su richiesta"),
     ("🪟 Finestrini",       "Oscuramento Totale",                       "€ 5.000"),
 ]
 
