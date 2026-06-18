@@ -423,6 +423,7 @@ def carica_dati():
                 rapine_mazebank     = {int(k): v for k, v in dati.get("rapine_pendenti_mazebank", {}).items()}
                 rapine_meccanico    = {int(k): v for k, v in dati.get("rapine_pendenti_meccanico", {}).items()}
                 richieste_pg        = {int(k): v for k, v in dati.get("richieste_pg_pendenti", {}).items()}
+                storico_mods        = {int(k): v for k, v in dati.get("storico_modifiche", {}).items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
@@ -440,10 +441,11 @@ def carica_dati():
                     dati.get("categoria_ticket_id", None),
                     {int(k): v for k, v in dati.get("veicoli_posseduti", {}).items()},
                     dati.get("canale_meccanico_id", None),
+                    storico_mods,
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None, {}
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -465,10 +467,11 @@ def salva_dati():
             "categoria_ticket_id":           categoria_ticket_id,
             "veicoli_posseduti":             {str(k): v for k, v in veicoli_posseduti.items()},
             "canale_meccanico_id":           canale_meccanico_id,
+            "storico_modifiche":             {str(k): v for k, v in storico_modifiche.items()},
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id, storico_modifiche = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -6582,6 +6585,15 @@ class AccettaModificaView(discord.ui.View):
             return
         await interaction.response.defer()
         await self._disabilita(interaction, discord.Color.green(), "✅ Accettata")
+        # Salva nello storico modifiche
+        storico_modifiche.setdefault(self.player_id, []).append({
+            "data":    discord.utils.utcnow().strftime("%d/%m/%Y %H:%M"),
+            "veicolo": self.modello,
+            "mods":    self.mods,
+            "note":    self.note,
+            "stato":   "accettata",
+        })
+        salva_dati()
         try:
             player = await bot.fetch_user(self.player_id)
             dm = discord.Embed(
@@ -6653,10 +6665,28 @@ class ModificaVeicoloModal(discord.ui.Modal, title="🔧 Richiesta Modifica Veic
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
+        uid     = interaction.user.id
         nome    = self.nome_pg.value.strip()
         modello = self.modello_veicolo.value.strip()
         mods    = self.modifiche_richieste.value.strip()
         note    = self.note.value.strip() if self.note.value else "—"
+
+        # Cooldown 2 ore anti-spam
+        CD_MODIFICA = 2 * 3600
+        ultimo_mod = furto_cooldown.get(uid, {}).get("richiesta_modifica", 0)
+        rimasto_cd = CD_MODIFICA - (time.time() - ultimo_mod)
+        if rimasto_cd > 0:
+            ore_r = int(rimasto_cd) // 3600
+            min_r = (int(rimasto_cd) % 3600) // 60
+            await interaction.followup.send(
+                f"⏳ Hai già inviato una richiesta di recente.\n"
+                f"Aspetta ancora **{ore_r}h {min_r}m** prima di inviarne un'altra.",
+                ephemeral=True
+            )
+            return
+
+        furto_cooldown.setdefault(uid, {})["richiesta_modifica"] = time.time()
+        salva_dati()
 
         embed_ok = discord.Embed(
             title="✅ Richiesta Modifica Inviata!",
@@ -6707,6 +6737,40 @@ class ModificaVeicoloModal(discord.ui.Modal, title="🔧 Richiesta Modifica Veic
 @bot.tree.command(name="modificaveicolo", description="Invia una richiesta di modifica al meccanico")
 async def modificaveicolo(interaction: discord.Interaction):
     await interaction.response.send_modal(ModificaVeicoloModal())
+
+
+@bot.tree.command(name="miemodifiche", description="Visualizza lo storico delle modifiche accettate sul tuo veicolo")
+async def miemodifiche(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=True):
+        return
+    uid = interaction.user.id
+    storico = storico_modifiche.get(uid, [])
+    if not storico:
+        await interaction.followup.send(
+            "🔧 Non hai ancora nessuna modifica accettata.\n"
+            f"Invia una richiesta con `/modificaveicolo` in <#{CANALE_MECCANICO_RICHIESTE}>!",
+            ephemeral=True
+        )
+        return
+    embed = discord.Embed(
+        title="🔧 Le Tue Modifiche Veicolo",
+        description=f"Storico delle **{len(storico)}** modifica/e accettate dal meccanico.",
+        color=discord.Color.from_rgb(255, 165, 0),
+    )
+    # Mostra le ultime 10 (Discord ha limite field)
+    for entry in storico[-10:]:
+        note_txt = f"\n📝 Note: {entry['note']}" if entry.get("note") and entry["note"] != "—" else ""
+        embed.add_field(
+            name=f"📅 {entry['data']} — {entry['veicolo']}",
+            value=f"🔧 {entry['mods']}{note_txt}",
+            inline=False,
+        )
+    if len(storico) > 10:
+        embed.set_footer(text=f"Tokyo Horizon RP | Mostrate le ultime 10 di {len(storico)} modifiche totali")
+    else:
+        embed.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
+    embed.set_thumbnail(url="https://static.wikia.nocookie.net/gtawiki/images/9/97/BennyOriginalMotorWorks-GTAO-Exterior.png/revision/latest")
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 @bot.tree.command(name="setcanalemeccanico", description="[MOD] Imposta questo canale come canale richieste meccanico")
