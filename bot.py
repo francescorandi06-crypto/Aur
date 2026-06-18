@@ -6031,7 +6031,7 @@ async def setupticket(interaction: discord.Interaction):
 
 @bot.tree.command(
     name="setupguida",
-    description="[MOD] Pubblica la guida completa dei comandi nel canale corrente",
+    description="[MOD] Pubblica la guida Concessionaria & Veicoli nel canale corrente",
 )
 async def setupguida(interaction: discord.Interaction):
     if not ha_permessi_staff(interaction):
@@ -6042,137 +6042,138 @@ async def setupguida(interaction: discord.Interaction):
 
     await interaction.response.defer(ephemeral=True)
 
-    COLORE = discord.Color.from_rgb(30, 30, 40)
+    COLORE_DARK  = discord.Color.from_rgb(20, 20, 30)
+    COLORE_GOLD  = discord.Color.from_rgb(212, 175, 55)
+    COLORE_RED   = discord.Color.from_rgb(180, 30, 30)
+    COLORE_BLUE  = discord.Color.from_rgb(30, 80, 160)
 
-    # ── Embed 1: Intestazione ──────────────────────────────────────────────
+    # ── Embed 1: Intestazione ─────────────────────────────────────────────
     embed_intro = discord.Embed(
-        title="🗼 Guida Comandi — Tokyo Horizon RP",
+        title="🚗 Tokyo Horizon Motors — Concessionaria Ufficiale",
         description=(
-            "Qui trovi **tutti i comandi** del bot divisi per categoria.\n"
-            "Usali digitandoli direttamente nella chat con `/`.\n\u200b"
+            "Benvenuto/a nella **Concessionaria di Tokyo Horizon**!\n"
+            "Qui puoi acquistare veicoli, gestire il tuo garage e guadagnare rubando macchine.\n"
+            "Leggi con attenzione le sezioni qui sotto per capire come funziona tutto.\n\u200b"
         ),
-        color=discord.Color.from_rgb(88, 101, 242),
+        color=COLORE_GOLD,
     )
-    embed_intro.set_footer(text="Tokyo Horizon RP | Bot Guide")
+    embed_intro.set_footer(text="Tokyo Horizon RP | Concessionaria & Veicoli")
 
-    # ── Embed 2: Economia ──────────────────────────────────────────────────
-    embed_eco = discord.Embed(title="💰 Economia", color=COLORE)
-    embed_eco.add_field(
-        name="\u200b",
+    # ── Embed 2: Come acquistare un veicolo ───────────────────────────────
+    embed_acquisto = discord.Embed(
+        title="🏪 Come Acquistare un Veicolo",
+        color=COLORE_GOLD,
+    )
+    embed_acquisto.add_field(
+        name="1️⃣  Contatta un Concessionario",
         value=(
-            "`/bilancio` — Mostra il tuo portafoglio e il conto in banca\n"
-            "`/deposita [importo]` — Trasferisci contanti dal portafoglio alla banca\n"
-            "`/preleva [importo]` — Preleva contanti dalla banca al portafoglio\n"
-            "`/paga [@utente] [importo]` — Paga un altro giocatore con i contanti in tasca\n"
-            "`/classifica` — Mostra i giocatori più ricchi del server\n"
+            "I **Concessionari** sono i venditori ufficiali della città.\n"
+            "Trovali in questo canale o aprendo un ticket — trattate il prezzo in RP.\n\u200b"
         ),
         inline=False,
     )
-
-    # ── Embed 3: Negozio & Inventario ──────────────────────────────────────
-    embed_shop = discord.Embed(title="🛒 Negozio & Inventario", color=COLORE)
-    embed_shop.add_field(
-        name="🏪 Negozio Legale",
+    embed_acquisto.add_field(
+        name="2️⃣  Il Concessionario registra la vendita",
         value=(
-            "`/negozio` — Visualizza gli articoli disponibili (grimaldelli, torce, attrezzi…)\n"
-            "`/compra [articolo]` — Acquista un articolo dal negozio legale\n"
+            "Una volta accordati, il concessionario usa:\n"
+            "> `/vendiauto [@acquirente] [modello] [prezzo]`\n"
+            "Il bot scala i soldi dal tuo bilancio automaticamente.\n\u200b"
         ),
         inline=False,
     )
-    embed_shop.add_field(
-        name="🖤 Mercato Nero",
+    embed_acquisto.add_field(
+        name="3️⃣  Il veicolo appare nel tuo garage",
         value=(
-            "`/mercatonero` — Visualizza gli articoli del mercato nero (Sim. Impronte, Gas, Hack…)\n"
-            "`/compranero [articolo]` — Acquista un articolo dal mercato nero\n"
+            "Subito dopo la vendita il veicolo compare nel tuo `/garage`.\n"
+            "Ricevi anche una notifica in DM con i dettagli dell'acquisto.\n\u200b"
         ),
         inline=False,
     )
-    embed_shop.add_field(
-        name="🔫 Mercato Armi",
+    embed_acquisto.add_field(
+        name="💸 Come funziona il pagamento",
         value=(
-            "`/mercatoarmi` — Visualizza le armi disponibili (Pistola…)\n"
-            "`/compraarmi [arma]` — Acquista un'arma illegale\n"
+            "• Il bot preleva prima dal **portafoglio**, poi dalla **banca**\n"
+            "• **20%** del prezzo va al concessionario come commissione\n"
+            "• **80%** va alla banca del server\n"
         ),
-        inline=False,
-    )
-    embed_shop.add_field(
-        name="🎒 Inventario",
-        value="`/inventario` — Mostra tutto ciò che hai in inventario\n",
         inline=False,
     )
 
-    # ── Embed 4: Furti & Rapine ────────────────────────────────────────────
-    embed_furti = discord.Embed(title="🦹 Furti & Rapine", color=COLORE)
-    embed_furti.add_field(
-        name="🏠 Furti (Villa / Casa / Macchina)",
-        value=(
-            "`/furto villa` — Svaligia una villa (Piede di Porco o Grimaldello + Sistema Hacking)\n"
-            "`/furto casa` — Svaligia una casa (Piede di Porco + Torcia)\n"
-            "`/furto macchina` — Ruba un veicolo (Slim Jim + Dispositivo Hacking Base)\n"
+    # ── Embed 3: Catalogo ─────────────────────────────────────────────────
+    embed_catalogo = discord.Embed(
+        title="📋 Catalogo Veicoli",
+        description=(
+            "Usa il comando qui sotto per vedere tutti i veicoli disponibili con foto e prezzi:\n\n"
+            "> `/concessionaria` — Visualizza il catalogo ufficiale\n\n"
+            "I prezzi e la disponibilità possono variare — contratta sempre col concessionario in RP."
         ),
-        inline=False,
-    )
-    embed_furti.add_field(
-        name="🚨 Rapine",
-        value=(
-            "`/rapina bancomat` — Rapina un bancomat (Piede di Porco + Pistola | CD 12h)\n"
-            "`/rapina minimarket` — Rapina un minimarket (Cacciavite/PdP + Pistola | CD 24h)\n"
-            "`/rapina meccanico` — Svaligia un'officina (Piede di Porco + Sim. Impronte | CD 48h)\n"
-            "`/rapina armeria` — Assalta l'Ammu-Nation (nessun attrezzo | CD 24h)\n"
-            "`/rapina fleeca` — Rapina la Fleeca (5x PdP + Trapano | CD 48h)\n"
-            "`/rapina gioielleria` — Assalta la Gioielleria (Hack Medio + Gas | CD 4gg)\n"
-            "`/rapina mazebank` — Grande Colpo Maze Bank (Hack Avanzato + Lancia + Trapano + 2x Grim.Av. | CD 1 sett.)\n"
-        ),
-        inline=False,
-    )
-    embed_furti.add_field(
-        name="⏱️ Cooldown",
-        value="`/cooldown` — Controlla i tuoi tempi di attesa per tutti i furti\n",
-        inline=False,
+        color=COLORE_DARK,
     )
 
-    # ── Embed 5: Garage & Veicoli ─────────────────────────────────────────
-    embed_garage = discord.Embed(title="🚗 Garage & Veicoli", color=COLORE)
+    # ── Embed 4: Il tuo Garage ────────────────────────────────────────────
+    embed_garage = discord.Embed(
+        title="🚗 Il Tuo Garage",
+        color=COLORE_BLUE,
+    )
     embed_garage.add_field(
-        name="\u200b",
+        name="`/garage`",
+        value="Mostra tutte le macchine che possiedi, con modello e data di acquisto.\n\u200b",
+        inline=False,
+    )
+    embed_garage.add_field(
+        name="`/lavorazione`",
         value=(
-            "`/garage` — Visualizza tutte le macchine che possiedi\n"
-            "`/lavorazione` — Vedi il furto veicolo in corso e i tuoi Pezzi di Ricambio\n"
-            "`/usapezzo [quantità]` — Vendi i Pezzi di Ricambio a un meccanico (7.000€ cad.)\n"
-            "`/concessionaria` — Informazioni e catalogo della Concessionaria\n"
+            "Mostra il furto veicolo in corso (se attivo) e i tuoi **Pezzi di Ricambio** in inventario.\n\u200b"
+        ),
+        inline=False,
+    )
+    embed_garage.add_field(
+        name="`/usapezzo [quantità]`",
+        value=(
+            "Vendi i tuoi Pezzi di Ricambio a un meccanico di fiducia.\n"
+            "Ogni pezzo vale **7.000€**, accreditati direttamente in banca.\n"
+            "*(Lascia vuoto `quantità` per vendere tutti quelli che hai)*\n"
         ),
         inline=False,
     )
 
-    # ── Embed 6: Concessionaria (ruolo dedicato) ───────────────────────────
-    embed_conc = discord.Embed(
-        title="🏪 Concessionaria",
-        description="*Solo per chi ha il ruolo Concessionario*",
-        color=discord.Color.from_rgb(212, 175, 55),
+    # ── Embed 5: Furto Veicoli ────────────────────────────────────────────
+    embed_furto = discord.Embed(
+        title="🔑 Furto Veicoli — Attività Criminale",
+        description="*Vuoi guadagnare rubando macchine invece di comprarle? Ecco come funziona.*",
+        color=COLORE_RED,
     )
-    embed_conc.add_field(
-        name="\u200b",
+    embed_furto.add_field(
+        name="🚗 `/furto macchina` — Ruba un veicolo",
         value=(
-            "`/vendiauto [@acquirente] [modello] [prezzo]` — Vendi un veicolo a un giocatore\n"
-            "↳ Il **20%** del prezzo va nella banca del concessionario\n"
-            "↳ L'**80%** va alla banca del server\n"
-            "↳ Il veicolo compare automaticamente nel `/garage` dell'acquirente\n"
+            "**Strumenti richiesti:**\n"
+            "• 🔓 `1x Slim Jim` (4.000€ — `/negozio`)\n"
+            "• 📟 `1x Dispositivo di Hacking Base` (4.000€ — `/negozio`)\n\n"
+            "**Come funziona:**\n"
+            "Inserisci il modello del veicolo — il bot calcola la classe (Bassa/Media/Alta) e il guadagno.\n"
+            "Lo staff approva la consegna. Al termine ricevi i soldi in banca.\n\n"
+            "**Guadagni:** `10.000€` Bassa • `20.000€` Media • `30.000€` Alta\n"
+            "**Cooldown:** 24h\n\u200b"
         ),
+        inline=False,
+    )
+    embed_furto.add_field(
+        name="⏱️ `/cooldown`",
+        value="Controlla tutti i tuoi tempi di attesa attivi.\n",
         inline=False,
     )
 
     # ── Invio ──────────────────────────────────────────────────────────────
     try:
         await interaction.channel.send(embed=embed_intro)
-        await interaction.channel.send(embed=embed_eco)
-        await interaction.channel.send(embed=embed_shop)
-        await interaction.channel.send(embed=embed_furti)
+        await interaction.channel.send(embed=embed_acquisto)
+        await interaction.channel.send(embed=embed_catalogo)
         await interaction.channel.send(embed=embed_garage)
-        await interaction.channel.send(embed=embed_conc)
+        await interaction.channel.send(embed=embed_furto)
         await interaction.followup.send(
-            f"✅ Guida pubblicata in {interaction.channel.mention}!", ephemeral=True
+            f"✅ Guida Concessionaria pubblicata in {interaction.channel.mention}!", ephemeral=True
         )
-        print(f"[GUIDA] Pubblicata da {interaction.user} in #{interaction.channel.name}")
+        print(f"[GUIDA] Concessionaria pubblicata da {interaction.user} in #{interaction.channel.name}")
     except discord.Forbidden:
         await interaction.followup.send(
             "❌ Il bot non ha i permessi per scrivere in questo canale.", ephemeral=True
