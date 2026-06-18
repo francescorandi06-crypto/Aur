@@ -3183,15 +3183,14 @@ async def accredita_meccanico(criminal_uid: int, delay: float):
         if criminal_uid not in _nel_file:
             rapine_pendenti_meccanico.pop(criminal_uid, None)
             return
-        inv = get_inventario(criminal_uid)
-        inv["Pezzo di Ricambio"] = inv.get("Pezzo di Ricambio", 0) + 5
+        modifica_scelta = _nel_file[criminal_uid].get("modifica_scelta", "Non specificata")
         furto_cooldown.setdefault(criminal_uid, {})["meccanico"] = time.time()
         furto_cooldown[criminal_uid]["criminal_lock_until"] = time.time() + 12 * 3600
         rapine_pendenti_meccanico.pop(criminal_uid, None)
         salva_dati()
         testo = (
             f"✅ <@{criminal_uid}> **Furto Officina Meccanica completato!**\n"
-            f"🔩 Bottino: **5x Pezzo di Ricambio** — aggiunti all'inventario.\n"
+            f"🔧 Modifica applicata: **{modifica_scelta}**\n"
             f"⚠️ Dialogo obbligatorio di almeno **3 minuti** con gli FDO!\n"
             f"🔒 Attività criminale bloccata per **12 ore**."
         )
@@ -3205,6 +3204,22 @@ async def accredita_meccanico(criminal_uid: int, delay: float):
                 await utente_obj.send(testo)
             except Exception:
                 pass
+        # Notifica staff meccanico della modifica applicata
+        try:
+            embed_staff = discord.Embed(
+                title="🔧 Modifica Veicolo Applicata — Furto Officina",
+                description=(
+                    f"👤 **Giocatore:** <@{criminal_uid}>\n"
+                    f"🔧 **Modifica:** {modifica_scelta}\n\n"
+                    f"✅ Modifica applicata automaticamente al termine del furto officina."
+                ),
+                color=discord.Color.orange()
+            )
+            embed_staff.set_footer(text="Tokyo Horizon RP | Officina Meccanica")
+            canale_meccanico = await bot.fetch_channel(CANALE_MECCANICO_STAFF)
+            await canale_meccanico.send(embed=embed_staff)
+        except Exception as e:
+            print(f"[MECCANICO] Notifica staff meccanico fallita: {e}")
     finally:
         _meccanico_in_corso.discard(criminal_uid)
         _meccanico_tasks.pop(criminal_uid, None)
@@ -3834,12 +3849,13 @@ class MazeBankModal(discord.ui.Modal, title="🏛️ Verbale — Grande Colpo al
 class AccettaRapinaMeccanicoView(discord.ui.View):
     """View per Furto Officina Meccanica — max 2 FDO, parte 2 min dopo il primo accettante."""
 
-    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str):
+    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str, modifica_scelta: str = "Non specificata"):
         super().__init__(timeout=600)
         self.criminal_uid          = criminal_uid
         self.nome_pg               = nome_pg
         self.posizione             = posizione
         self.partecipanti          = partecipanti
+        self.modifica_scelta       = modifica_scelta
         self.fdo_list: list        = []
         self.avviata               = False
         self.message: discord.Message = None
@@ -3912,9 +3928,9 @@ class AccettaRapinaMeccanicoView(discord.ui.View):
                 f"{fdo_str}\n\n"
                 f"🦹 **Criminale:** `{self.nome_pg}`\n"
                 f"👥 **Partecipanti:** `{self.partecipanti}`\n"
-                f"📍 **Posizione:** `{self.posizione}`\n\n"
+                f"📍 **Posizione:** `{self.posizione}`\n"
+                f"🔧 **Modifica richiesta:** `{self.modifica_scelta}`\n\n"
                 f"⏳ **Scassinamento in corso — 5 minuti.**\n"
-                f"🔩 Bottino: **5x Pezzo di Ricambio** consegnato al termine.\n"
                 f"🔒 Dopo il colpo: **12 ore** di blocco attività criminale."
             ),
             color=discord.Color.orange()
@@ -3929,7 +3945,7 @@ class AccettaRapinaMeccanicoView(discord.ui.View):
             except Exception as e:
                 print(f"[MECCANICO] Edit timer fallito: {e}")
 
-        rapine_pendenti_meccanico[self.criminal_uid] = {"accepted_at": time.time()}
+        rapine_pendenti_meccanico[self.criminal_uid] = {"accepted_at": time.time(), "modifica_scelta": self.modifica_scelta}
         salva_dati()
 
         n_fdo = len(self.fdo_list)
@@ -3937,7 +3953,7 @@ class AccettaRapinaMeccanicoView(discord.ui.View):
         testo_inizio = (
             f"🚔 <@{self.criminal_uid}> **{n_fdo} FDO {'ha' if n_fdo==1 else 'hanno'} accettato** ({nomi_fdo}) — **scassinamento iniziato!**\n"
             f"⏳ Aspetta **5 minuti**.\n"
-            f"🔩 Riceverai **5x Pezzo di Ricambio** nell'inventario allo scadere del tempo.\n"
+            f"🔧 Modifica scelta: **{self.modifica_scelta}** — verrà confermata ai meccanici al termine.\n"
             f"🔒 Dopo il colpo, attività criminale bloccata per **12 ore**."
         )
         try:
@@ -4001,6 +4017,7 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
     nome_pg      = discord.ui.TextInput(label="Nome del tuo personaggio", placeholder="Es: Marco Rossi", min_length=2, max_length=50)
     posizione    = discord.ui.TextInput(label="Posizione dell'officina", placeholder="Es: Officina di Harmony, Route 68", min_length=3, max_length=100)
     partecipanti = discord.ui.TextInput(label="Partecipanti (max 2 criminali)", placeholder="Es: Solo / Con [nome personaggio]", min_length=2, max_length=120)
+    modifica_scelta = discord.ui.TextInput(label="Modifica che vuoi applicare al tuo veicolo", placeholder="Es: Turbo Racing / Motore Liv.4 / Corazza 100%", min_length=3, max_length=150)
 
     def __init__(self, uid: int):
         super().__init__()
@@ -4008,10 +4025,11 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=False)
-        uid  = self.uid
-        nome = self.nome_pg.value.strip()
-        pos  = self.posizione.value.strip()
-        part = self.partecipanti.value.strip()
+        uid      = self.uid
+        nome     = self.nome_pg.value.strip()
+        pos      = self.posizione.value.strip()
+        part     = self.partecipanti.value.strip()
+        modifica = self.modifica_scelta.value.strip()
 
         inv = get_inventario(uid)
         if inv.get("Simulatore di Impronte Digitali", 0) < 1:
@@ -4021,8 +4039,6 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
                 ephemeral=True)
             return
 
-        # Il Simulatore NON viene consumato — rimane in inventario
-        # Imposta il cooldown 48h subito (viene azzerato se nessun FDO accetta)
         furto_cooldown.setdefault(uid, {})["meccanico"] = time.time()
         salva_dati()
 
@@ -4031,11 +4047,12 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
             description=(
                 f"🕵️ **Personaggio:** `{nome}`\n"
                 f"📍 **Posizione:** `{pos}`\n"
-                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"👥 **Partecipanti:** `{part}`\n"
+                f"🔧 **Modifica scelta:** `{modifica}`\n\n"
                 f"👆 **Simulatore di Impronte Digitali** usato (non consumato).\n"
                 f"📡 Notifica inviata agli FDO — **massimo 2 FDO** possono accettare.\n"
                 f"⏳ Dopo il primo FDO, hai **2 minuti** per il secondo. Poi parte comunque.\n"
-                f"🔩 **Bottino:** 5x Pezzo di Ricambio consegnati in inventario al termine (5 min).\n"
+                f"🔩 **Bottino:** La modifica scelta verrà applicata al termine (5 min).\n"
                 f"⚠️ Dialogo obbligatorio di **almeno 3 minuti** con gli FDO.\n"
                 f"🔒 Dopo il colpo: **12 ore** di blocco attività criminale.\n\n"
                 f"⚔️ Equipaggiamento: **Pistola** (vietate armi automatiche)"
@@ -4050,18 +4067,18 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
             description=(
                 f"🦹 **Criminale:** `{nome}`\n"
                 f"👥 **Partecipanti:** `{part}`\n"
-                f"📍 **Posizione:** `{pos}`\n\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"🔧 **Modifica richiesta:** `{modifica}`\n\n"
                 f"👮 **FDO richiesti:** **Massimo 2** (basta 1 — il 2° ha 2 min per unirsi)\n"
                 f"⚔️ **Equipaggiamento criminale:** Pistola (vietate armi automatiche)\n"
-                f"⏱️ **Scassinamento:** 5 min | **Dialogo min.:** 3 min\n"
-                f"🔩 **Bottino:** 5x Pezzo di Ricambio\n\n"
+                f"⏱️ **Scassinamento:** 5 min | **Dialogo min.:** 3 min\n\n"
                 f"⏳ Clicca entro 10 min o la rapina viene annullata."
             ),
             color=discord.Color.red()
         )
         embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — max 2 agenti")
 
-        view = AccettaRapinaMeccanicoView(uid, nome, pos, part)
+        view = AccettaRapinaMeccanicoView(uid, nome, pos, part, modifica)
         try:
             await interaction.followup.send(embed=embed_ok, ephemeral=False)
         except Exception as e:
@@ -6551,10 +6568,16 @@ class AccettaModificaView(discord.ui.View):
         else:
             await interaction.message.edit(view=self)
 
+    def _ha_ruolo_meccanico(self, interaction: discord.Interaction) -> bool:
+        member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+        if member:
+            return any(r.id == 1517200733160734912 for r in member.roles)
+        return False
+
     @discord.ui.button(label="✅ Accetta", style=discord.ButtonStyle.success, custom_id="modifica_accetta")
     async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not ha_permessi_staff(interaction):
-            await interaction.response.send_message("❌ Non hai i permessi per farlo.", ephemeral=True)
+        if not self._ha_ruolo_meccanico(interaction):
+            await interaction.response.send_message("❌ Solo i meccanici possono accettare le richieste.", ephemeral=True)
             return
         await interaction.response.defer()
         await self._disabilita(interaction, discord.Color.green(), "✅ Accettata")
@@ -6577,8 +6600,8 @@ class AccettaModificaView(discord.ui.View):
 
     @discord.ui.button(label="❌ Rifiuta", style=discord.ButtonStyle.danger, custom_id="modifica_rifiuta")
     async def rifiuta(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not ha_permessi_staff(interaction):
-            await interaction.response.send_message("❌ Non hai i permessi per farlo.", ephemeral=True)
+        if not self._ha_ruolo_meccanico(interaction):
+            await interaction.response.send_message("❌ Solo i meccanici possono rifiutare le richieste.", ephemeral=True)
             return
         await interaction.response.defer()
         await self._disabilita(interaction, discord.Color.red(), "❌ Rifiutata")
@@ -6732,9 +6755,9 @@ class ApplicaModificaModal(discord.ui.Modal, title="🔩 Applica Modifica — Pe
         inv     = get_inventario(uid)
         pezzi   = inv.get("Pezzo di Ricambio", 0)
 
-        if pezzi < 5:
+        if pezzi < 3:
             await interaction.followup.send(
-                f"❌ Ti servono **5 Pezzi di Ricambio** per applicare una modifica.\n"
+                f"❌ Ti servono **3 Pezzi di Ricambio** per applicare una modifica.\n"
                 f"Ne hai solo **`{pezzi}x`** nell'inventario — rubane altri dall'officina meccanica!",
                 ephemeral=True,
             )
@@ -6743,7 +6766,7 @@ class ApplicaModificaModal(discord.ui.Modal, title="🔩 Applica Modifica — Pe
         modello  = self.modello_veicolo.value.strip()
         modifica = self.modifica_applicata.value.strip()
 
-        inv["Pezzo di Ricambio"] -= 5
+        inv["Pezzo di Ricambio"] -= 3
         if inv["Pezzo di Ricambio"] <= 0:
             del inv["Pezzo di Ricambio"]
         salva_dati()
@@ -6752,7 +6775,7 @@ class ApplicaModificaModal(discord.ui.Modal, title="🔩 Applica Modifica — Pe
         embed_ok = discord.Embed(
             title="🔩 Modifica Applicata!",
             description=(
-                f"Hai usato **5x Pezzo di Ricambio** per applicare una modifica al tuo veicolo.\n\n"
+                f"Hai usato **3x Pezzo di Ricambio** per applicare una modifica al tuo veicolo.\n\n"
                 f"🚗 **Veicolo:** `{modello}`\n"
                 f"🔧 **Modifica:** {modifica}\n\n"
                 f"🔩 Pezzi rimasti in inventario: **`{rimasti}x`**"
