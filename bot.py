@@ -486,10 +486,10 @@ NEGOZIO = {
     "Dispositivo di Hacking Base": {"prezzo": 4000,  "emoji": "📟",  "descrizione": "Azzera il sistema antifurto del veicolo. Obbligatorio per il furto di veicoli (insieme allo Slim Jim)."},
     "Trapano":                     {"prezzo": 8000,  "emoji": "🔧",  "descrizione": "Perfora le cassette di sicurezza blindate. Obbligatorio per la Rapina alla Banca Fleeca (1x, insieme a 5x Piede di Porco)."},
     "Grimaldello Avanzato":        {"prezzo": 15000, "emoji": "🔐",  "descrizione": "Scassina serrature blindate di alta sicurezza. Obbligatorio per il Grande Colpo alla Maze Bank (min 2 unità)."},
-    "Simulatore di Impronte Digitali": {"prezzo": 20000, "emoji": "👆", "descrizione": "Bypassa i lettori biometrici delle officine blindate. Obbligatorio per il Furto Officina Meccanica. Non viene consumato — resta in inventario."},
 }
 
 MERCATO_NERO = {
+    "Simulatore di Impronte Digitali": {"prezzo": 20000, "emoji": "👆", "descrizione": "Bypassa i lettori biometrici delle officine blindate. Obbligatorio per il Furto Officina Meccanica. Non viene consumato — resta in inventario."},
     "Gas Soporifero":                  {"prezzo": 8000,  "emoji": "😴",  "descrizione": "Gas anestetico militare che induce il sonno. Necessario per l'Assalto alla Gioielleria."},
     "Dispositivo di Hacking Medio":    {"prezzo": 15000, "emoji": "📡",  "descrizione": "Hackera sistemi di sorveglianza di livello medio. Obbligatorio per l'Assalto alla Gioielleria."},
     "Lancia Termica":                  {"prezzo": 30000, "emoji": "🔥",  "descrizione": "Brucia serrature e porte blindate. Necessaria per aprire le serrature del caveau della Maze Bank."},
@@ -1769,6 +1769,104 @@ async def inventario_cmd(interaction: discord.Interaction):
     except Exception as e:
         print(f"[ERRORE INVENTARIO] {e}")
         await interaction.followup.send("❌ Errore nel caricare l'inventario. Riprova.", ephemeral=True)
+
+
+# =============================================================================
+# GARAGE E PEZZI DI RICAMBIO
+# =============================================================================
+
+@bot.tree.command(name="garage", description="Visualizza il tuo veicolo in lavorazione e l'inventario pezzi")
+async def garage_cmd(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    uid = interaction.user.id
+    inv = get_inventario(uid)
+    ordine = ordini_pendenti_macchina.get(uid)
+    pezzi = inv.get("Pezzo di Ricambio", 0)
+
+    embed = discord.Embed(
+        title=f"🚗 Garage di {interaction.user.display_name}",
+        color=discord.Color.dark_gold()
+    )
+
+    if ordine:
+        stato = "🟡 In attesa di approvazione staff" if ordine.get("in_attesa") else "🔵 Ordine inviato"
+        embed.add_field(
+            name="🔧 Veicolo in lavorazione",
+            value=(
+                f"**Modello:** `{ordine.get('modello', '?')}`\n"
+                f"**Destinazione:** `{ordine.get('destinazione', '?')}`\n"
+                f"**Guadagno:** `{ordine.get('guadagno', 0):,}€`\n"
+                f"**Stato:** {stato}"
+            ),
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="🔧 Veicolo in lavorazione",
+            value="Nessun veicolo in lavorazione al momento.\nUsa `/furto macchina` per iniziare!",
+            inline=False
+        )
+
+    embed.add_field(
+        name="🔩 Pezzi di Ricambio",
+        value=f"`{pezzi}x` disponibili in inventario\n*Usa `/usapezzo` per convertirli in contanti!*",
+        inline=False
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Sistema Garage")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+VALORE_PEZZO_RICAMBIO = 7000
+
+@bot.tree.command(name="usapezzo", description="Vendi i tuoi Pezzi di Ricambio ad un meccanico (7.000€ cad.)")
+@app_commands.describe(quantita="Quanti pezzi vuoi vendere (lascia vuoto per vendere tutti)")
+async def usapezzo_cmd(interaction: discord.Interaction, quantita: int = None):
+    await interaction.response.defer(ephemeral=True)
+    uid = interaction.user.id
+    inv = get_inventario(uid)
+    disponibili = inv.get("Pezzo di Ricambio", 0)
+
+    if disponibili <= 0:
+        await interaction.followup.send(
+            "❌ Non hai **Pezzi di Ricambio** nell'inventario.\n"
+            "Ottienili svaligiando un'officina meccanica con `/rapina`!",
+            ephemeral=True
+        )
+        return
+
+    da_vendere = quantita if quantita is not None else disponibili
+
+    if da_vendere <= 0:
+        await interaction.followup.send("❌ La quantità deve essere almeno 1.", ephemeral=True)
+        return
+
+    if da_vendere > disponibili:
+        await interaction.followup.send(
+            f"❌ Hai solo **`{disponibili}x Pezzo di Ricambio`** — non puoi venderne `{da_vendere}`.",
+            ephemeral=True
+        )
+        return
+
+    guadagno = da_vendere * VALORE_PEZZO_RICAMBIO
+    inv["Pezzo di Ricambio"] -= da_vendere
+    if inv["Pezzo di Ricambio"] <= 0:
+        del inv["Pezzo di Ricambio"]
+    bil = get_balance(uid)
+    bil["banca"] += guadagno
+    salva_dati()
+
+    embed = discord.Embed(
+        title="🔩 Pezzi Venduti al Meccanico!",
+        description=(
+            f"Hai venduto **`{da_vendere}x Pezzo di Ricambio`** a un meccanico di fiducia.\n\n"
+            f"💰 Guadagno: **`{guadagno:,}€`** accreditati in banca.\n"
+            f"🔩 Rimasti in inventario: **`{inv.get('Pezzo di Ricambio', 0)}x`**"
+        ),
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Sistema Garage")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+    print(f"[GARAGE] uid={uid} ha venduto {da_vendere}x pezzi di ricambio per {guadagno:,}€")
 
 
 # =============================================================================
@@ -3811,7 +3909,7 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
         inv = get_inventario(uid)
         if inv.get("Simulatore di Impronte Digitali", 0) < 1:
             await interaction.followup.send(
-                "🔒 Per svaligiare l'officina serve **`1x Simulatore di Impronte Digitali`**. Acquistalo con `/negozio` (20.000€).\n"
+                "🔒 Per svaligiare l'officina serve **`1x Simulatore di Impronte Digitali`**. Acquistalo con `/compranero` (20.000€).\n"
                 "ℹ️ Non viene consumato — rimane in inventario dopo l'uso.",
                 ephemeral=True)
             return
@@ -3897,7 +3995,7 @@ class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Me
 @app_commands.choices(tipo=[
     app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h",                         value="bancomat"),
     app_commands.Choice(name="🍏 Minimarket — 15.000€ | Cacciavite/PdP + Pistola | Cooldown 24h",                      value="minimarket"),
-    app_commands.Choice(name="🔧 Officina Meccanica — 5x Pezzi di Ricambio | Sim. Impronte | Cooldown 48h",              value="meccanico"),
+    app_commands.Choice(name="🔧 Officina Meccanica — 5x Pezzi di Ricambio | Piede di Porco + Sim. Impronte | CD 48h",  value="meccanico"),
     app_commands.Choice(name="🔫 Ammu-Nation — Giubbotti+Pistole+Mitra | Nessun attrezzo | Cooldown 24h",               value="armeria"),
     app_commands.Choice(name="🏦 Banca Fleeca — 250.000€ | 5x PdP + Trapano | Cooldown 48h",                           value="fleeca"),
     app_commands.Choice(name="💎 Gioielleria — 500.000€ | Hack Medio + Gas Soporifero | Cooldown 4gg",               value="gioielleria"),
@@ -3993,10 +4091,10 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
                 pass
             return
         inv = get_inventario(uid)
-        if inv.get("Grimaldello", 0) < 1:
+        if inv.get("Piede di Porco", 0) < 1:
             try:
                 await interaction.response.send_message(
-                    "🔒 Per svaligiare l'officina serve **`1x Grimaldello`**. Acquistalo con `/negozio`.",
+                    "🔒 Per svaligiare l'officina serve **`1x Piede di Porco`**. Acquistalo con `/negozio`.",
                     ephemeral=True
                 )
             except Exception:
