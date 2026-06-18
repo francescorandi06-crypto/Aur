@@ -6026,6 +6026,162 @@ async def setupticket(interaction: discord.Interaction):
 
 
 # =============================================================================
+# SETUP GUIDA COMANDI
+# =============================================================================
+
+@bot.tree.command(
+    name="setupguida",
+    description="[MOD] Pubblica la guida completa dei comandi nel canale corrente",
+)
+async def setupguida(interaction: discord.Interaction):
+    if not ha_permessi_staff(interaction):
+        await interaction.response.send_message(
+            "❌ Solo lo staff può usare questo comando.", ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
+    COLORE = discord.Color.from_rgb(30, 30, 40)
+
+    # ── Embed 1: Intestazione ──────────────────────────────────────────────
+    embed_intro = discord.Embed(
+        title="🗼 Guida Comandi — Tokyo Horizon RP",
+        description=(
+            "Qui trovi **tutti i comandi** del bot divisi per categoria.\n"
+            "Usali digitandoli direttamente nella chat con `/`.\n\u200b"
+        ),
+        color=discord.Color.from_rgb(88, 101, 242),
+    )
+    embed_intro.set_footer(text="Tokyo Horizon RP | Bot Guide")
+
+    # ── Embed 2: Economia ──────────────────────────────────────────────────
+    embed_eco = discord.Embed(title="💰 Economia", color=COLORE)
+    embed_eco.add_field(
+        name="\u200b",
+        value=(
+            "`/bilancio` — Mostra il tuo portafoglio e il conto in banca\n"
+            "`/deposita [importo]` — Trasferisci contanti dal portafoglio alla banca\n"
+            "`/preleva [importo]` — Preleva contanti dalla banca al portafoglio\n"
+            "`/paga [@utente] [importo]` — Paga un altro giocatore con i contanti in tasca\n"
+            "`/classifica` — Mostra i giocatori più ricchi del server\n"
+        ),
+        inline=False,
+    )
+
+    # ── Embed 3: Negozio & Inventario ──────────────────────────────────────
+    embed_shop = discord.Embed(title="🛒 Negozio & Inventario", color=COLORE)
+    embed_shop.add_field(
+        name="🏪 Negozio Legale",
+        value=(
+            "`/negozio` — Visualizza gli articoli disponibili (grimaldelli, torce, attrezzi…)\n"
+            "`/compra [articolo]` — Acquista un articolo dal negozio legale\n"
+        ),
+        inline=False,
+    )
+    embed_shop.add_field(
+        name="🖤 Mercato Nero",
+        value=(
+            "`/mercatonero` — Visualizza gli articoli del mercato nero (Sim. Impronte, Gas, Hack…)\n"
+            "`/compranero [articolo]` — Acquista un articolo dal mercato nero\n"
+        ),
+        inline=False,
+    )
+    embed_shop.add_field(
+        name="🔫 Mercato Armi",
+        value=(
+            "`/mercatoarmi` — Visualizza le armi disponibili (Pistola…)\n"
+            "`/compraarmi [arma]` — Acquista un'arma illegale\n"
+        ),
+        inline=False,
+    )
+    embed_shop.add_field(
+        name="🎒 Inventario",
+        value="`/inventario` — Mostra tutto ciò che hai in inventario\n",
+        inline=False,
+    )
+
+    # ── Embed 4: Furti & Rapine ────────────────────────────────────────────
+    embed_furti = discord.Embed(title="🦹 Furti & Rapine", color=COLORE)
+    embed_furti.add_field(
+        name="🏠 Furti (Villa / Casa / Macchina)",
+        value=(
+            "`/furto villa` — Svaligia una villa (Piede di Porco o Grimaldello + Sistema Hacking)\n"
+            "`/furto casa` — Svaligia una casa (Piede di Porco + Torcia)\n"
+            "`/furto macchina` — Ruba un veicolo (Slim Jim + Dispositivo Hacking Base)\n"
+        ),
+        inline=False,
+    )
+    embed_furti.add_field(
+        name="🚨 Rapine",
+        value=(
+            "`/rapina bancomat` — Rapina un bancomat (Piede di Porco + Pistola | CD 12h)\n"
+            "`/rapina minimarket` — Rapina un minimarket (Cacciavite/PdP + Pistola | CD 24h)\n"
+            "`/rapina meccanico` — Svaligia un'officina (Piede di Porco + Sim. Impronte | CD 48h)\n"
+            "`/rapina armeria` — Assalta l'Ammu-Nation (nessun attrezzo | CD 24h)\n"
+            "`/rapina fleeca` — Rapina la Fleeca (5x PdP + Trapano | CD 48h)\n"
+            "`/rapina gioielleria` — Assalta la Gioielleria (Hack Medio + Gas | CD 4gg)\n"
+            "`/rapina mazebank` — Grande Colpo Maze Bank (Hack Avanzato + Lancia + Trapano + 2x Grim.Av. | CD 1 sett.)\n"
+        ),
+        inline=False,
+    )
+    embed_furti.add_field(
+        name="⏱️ Cooldown",
+        value="`/cooldown` — Controlla i tuoi tempi di attesa per tutti i furti\n",
+        inline=False,
+    )
+
+    # ── Embed 5: Garage & Veicoli ─────────────────────────────────────────
+    embed_garage = discord.Embed(title="🚗 Garage & Veicoli", color=COLORE)
+    embed_garage.add_field(
+        name="\u200b",
+        value=(
+            "`/garage` — Visualizza tutte le macchine che possiedi\n"
+            "`/lavorazione` — Vedi il furto veicolo in corso e i tuoi Pezzi di Ricambio\n"
+            "`/usapezzo [quantità]` — Vendi i Pezzi di Ricambio a un meccanico (7.000€ cad.)\n"
+            "`/concessionaria` — Informazioni e catalogo della Concessionaria\n"
+        ),
+        inline=False,
+    )
+
+    # ── Embed 6: Concessionaria (ruolo dedicato) ───────────────────────────
+    embed_conc = discord.Embed(
+        title="🏪 Concessionaria",
+        description="*Solo per chi ha il ruolo Concessionario*",
+        color=discord.Color.from_rgb(212, 175, 55),
+    )
+    embed_conc.add_field(
+        name="\u200b",
+        value=(
+            "`/vendiauto [@acquirente] [modello] [prezzo]` — Vendi un veicolo a un giocatore\n"
+            "↳ Il **20%** del prezzo va nella banca del concessionario\n"
+            "↳ L'**80%** va alla banca del server\n"
+            "↳ Il veicolo compare automaticamente nel `/garage` dell'acquirente\n"
+        ),
+        inline=False,
+    )
+
+    # ── Invio ──────────────────────────────────────────────────────────────
+    try:
+        await interaction.channel.send(embed=embed_intro)
+        await interaction.channel.send(embed=embed_eco)
+        await interaction.channel.send(embed=embed_shop)
+        await interaction.channel.send(embed=embed_furti)
+        await interaction.channel.send(embed=embed_garage)
+        await interaction.channel.send(embed=embed_conc)
+        await interaction.followup.send(
+            f"✅ Guida pubblicata in {interaction.channel.mention}!", ephemeral=True
+        )
+        print(f"[GUIDA] Pubblicata da {interaction.user} in #{interaction.channel.name}")
+    except discord.Forbidden:
+        await interaction.followup.send(
+            "❌ Il bot non ha i permessi per scrivere in questo canale.", ephemeral=True
+        )
+    except Exception as e:
+        await interaction.followup.send(f"❌ Errore: {e}", ephemeral=True)
+
+
+# =============================================================================
 # CONCESSIONARIA DISCORD
 # =============================================================================
 
