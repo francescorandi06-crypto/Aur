@@ -867,6 +867,7 @@ class MacchinaModal(discord.ui.Modal, title="🚗 Furto Veicolo — Inserisci il
             "foto_ok":     False,
             "in_attesa":   False,
             "consegnato":  False,
+            "creato_at":   time.time(),
         }
         salva_dati()
         print(f"[ORDINE] Creato ordine autore={self.autore_id} modello={modello_input}")
@@ -919,6 +920,19 @@ class ApprovazioneCosegnaView(discord.ui.View):
         destinazione = ordine.get("destinazione", "?")
         origin_ch_id = ordine.get("origin_ch_id") or self.origin_ch_id
 
+        # Calcola tempo impiegato dal giocatore (creato_at → in_attesa_at)
+        creato_at    = ordine.get("creato_at", 0)
+        in_attesa_at = ordine.get("in_attesa_at", 0)
+        if creato_at and in_attesa_at:
+            secondi_tot = int(in_attesa_at - creato_at)
+            minuti      = secondi_tot // 60
+            secondi     = secondi_tot % 60
+            tempo_str   = f"**{minuti}m {secondi}s**"
+            flag_tempo  = " ⚠️ FUORI TEMPO (>10 min)" if secondi_tot > 600 else " ✅ nei tempi"
+        else:
+            tempo_str  = "N/D"
+            flag_tempo = ""
+
         ordini_pendenti_macchina.pop(self.autore_id, None)
         furto_cooldown.setdefault(self.autore_id, {})["macchina"] = time.time()
         bilancio = get_balance(self.autore_id)
@@ -932,7 +946,8 @@ class ApprovazioneCosegnaView(discord.ui.View):
             title="✅ CONSEGNA APPROVATA",
             description=(
                 f"La consegna del veicolo `{modello}` è stata approvata da {interaction.user.mention}.\n\n"
-                f"💰 **Compenso:** `{guadagno:,}€` accreditati in banca al giocatore."
+                f"💰 **Compenso:** `{guadagno:,}€` accreditati in banca al giocatore.\n"
+                f"⏱️ **Tempo consegna:** {tempo_str}{flag_tempo}"
             ),
             color=discord.Color.green()
         )
@@ -971,6 +986,19 @@ class ApprovazioneCosegnaView(discord.ui.View):
         modello      = ordine.get("modello", "?")
         origin_ch_id = ordine.get("origin_ch_id") or self.origin_ch_id
 
+        # Calcola tempo impiegato dal giocatore (creato_at → in_attesa_at)
+        creato_at    = ordine.get("creato_at", 0)
+        in_attesa_at = ordine.get("in_attesa_at", 0)
+        if creato_at and in_attesa_at:
+            secondi_tot = int(in_attesa_at - creato_at)
+            minuti      = secondi_tot // 60
+            secondi     = secondi_tot % 60
+            tempo_str   = f"**{minuti}m {secondi}s**"
+            flag_tempo  = " ⚠️ FUORI TEMPO (>10 min)" if secondi_tot > 600 else " ✅ nei tempi"
+        else:
+            tempo_str  = "N/D"
+            flag_tempo = ""
+
         ordini_pendenti_macchina.pop(self.autore_id, None)
         salva_dati()
 
@@ -981,7 +1009,8 @@ class ApprovazioneCosegnaView(discord.ui.View):
             title="❌ CONSEGNA RIFIUTATA",
             description=(
                 f"La consegna del veicolo `{modello}` è stata **rifiutata** da {interaction.user.mention}.\n\n"
-                f"Il compenso **non** è stato accreditato al giocatore."
+                f"Il compenso **non** è stato accreditato al giocatore.\n"
+                f"⏱️ **Tempo consegna:** {tempo_str}{flag_tempo}"
             ),
             color=discord.Color.red()
         )
