@@ -40,16 +40,6 @@
       "consegnato": false,
       "in_attesa_at": 1781542367.6938086,
       "origin_ch_id": 1515093746671292547
-    },
-    "1083459553892499476": {
-      "guadagno": 10000,
-      "destinazione": "Rimessa Industriale di Cypress Flats",
-      "modello": "Aura",
-      "foto_ok": true,
-      "in_attesa": true,
-      "consegnato": false,
-      "in_attesa_at": 1781555049.179969,
-      "origin_ch_id": 1515093746671292547
     }
   },
   "rapine_pendenti": {},
@@ -67,5 +57,6 @@
   },
   "categoria_ticket_id": 1514405053354741760,
   "veicoli_posseduti": {},
-  "canale_meccanico_id": 1517160752123875339
+  "canale_meccanico_id": 1517160752123875339,
+  "storico_modifiche": {}
 }

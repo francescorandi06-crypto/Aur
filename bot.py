@@ -424,6 +424,7 @@ def carica_dati():
                 rapine_meccanico    = {int(k): v for k, v in dati.get("rapine_pendenti_meccanico", {}).items()}
                 richieste_pg        = {int(k): v for k, v in dati.get("richieste_pg_pendenti", {}).items()}
                 storico_mods        = {int(k): v for k, v in dati.get("storico_modifiche", {}).items()}
+                lavori              = {int(k): v for k, v in dati.get("lavori_attivi", {}).items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
@@ -442,10 +443,12 @@ def carica_dati():
                     {int(k): v for k, v in dati.get("veicoli_posseduti", {}).items()},
                     dati.get("canale_meccanico_id", None),
                     storico_mods,
+                    lavori,
+                    dati.get("canale_importexport_id", None),
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None, {}
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None, {}, {}, None
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -468,10 +471,12 @@ def salva_dati():
             "veicoli_posseduti":             {str(k): v for k, v in veicoli_posseduti.items()},
             "canale_meccanico_id":           canale_meccanico_id,
             "storico_modifiche":             {str(k): v for k, v in storico_modifiche.items()},
+            "lavori_attivi":                 {str(k): v for k, v in lavori_attivi.items()},
+            "canale_importexport_id":        canale_importexport_id,
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id, storico_modifiche = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id, storico_modifiche, lavori_attivi, canale_importexport_id = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -6903,6 +6908,258 @@ class ApplicaModificaModal(discord.ui.Modal, title="🔩 Applica Modifica — Pe
 @bot.tree.command(name="applicamodifica", description="Applica una modifica al tuo veicolo usando 5 Pezzi di Ricambio (dal furto officina)")
 async def applicamodifica(interaction: discord.Interaction):
     await interaction.response.send_modal(ApplicaModificaModal())
+
+
+# =============================================================================
+# IMPORT / EXPORT — SISTEMA CAMIONISTA
+# =============================================================================
+
+PAGA_ORARIA_CAMIONISTA = 1500   # €/ora (max 2.000 come da accordo)
+MAX_ORE_TURNO          = 12     # limite anti-abuso per singolo turno
+
+ZONE_CAMIONISTA = [
+    {
+        "nome":        "Fattoria di Grapeseed — Bestiame & Grano",
+        "emoji":       "🌾",
+        "descrizione": "Carica grano, fieno e bestiame dalla fattoria di Grapeseed. Zona rurale a nord-est, vicino ai silos e ai recinti per animali.",
+        "posizione":   "Grapeseed Ave, Grapeseed — zona nord-est della mappa, fattoria con silos e recinti.",
+        "img":         "attached_assets/IMG_1604_1781815292524.jpeg",
+        "tipo":        "legale",
+    },
+    {
+        "nome":        "Serre di Sandy Shores — Trasporto Droga",
+        "emoji":       "🌿",
+        "descrizione": "Ritiro materiale sintetico dalle serre coperte vicino ad Alamo Sea. Carico illegale — massima discrezione.",
+        "posizione":   "Sandy Shores / Alamo Sea — serre bianche su strada sterrata, zona nord del lago.",
+        "img":         "attached_assets/IMG_0389_1781815292524.png",
+        "tipo":        "illegale",
+    },
+    {
+        "nome":        "Zona Industriale Porto — Farmaci & Medicine",
+        "emoji":       "💊",
+        "descrizione": "Ritiro di farmaci e materiale medico dall'area industriale del porto. Carico sensibile — vietato aprire i colli.",
+        "posizione":   "Porto di Los Santos, zona industriale sud — edifici con tubature esterne, vicino alle banchine.",
+        "img":         "attached_assets/IMG_0388_1781815292524.png",
+        "tipo":        "illegale",
+    },
+    {
+        "nome":        "Cava del Grand Senora — Minerali",
+        "emoji":       "⛏️",
+        "descrizione": "Trasporto minerali estratti dalla cava nel deserto. Nastri trasportatori attivi, zona vicina ai mulini a vento.",
+        "posizione":   "Grand Senora Desert — cava con nastri trasportatori, zona est vicino ai mulini a vento.",
+        "img":         "attached_assets/IMG_0387_1781815292524.png",
+        "tipo":        "legale",
+    },
+    {
+        "nome":        "Recycling Center — Rottami & Ricambi",
+        "emoji":       "♻️",
+        "descrizione": "Carico di rottami metallici e ricambi dal centro di riciclaggio. Zona periferica vicino all'aeroporto di Sandy Shores.",
+        "posizione":   "Sandy Shores — Recycling Center, vicino all'airfield (aeroporto Sandy Shores).",
+        "img":         "attached_assets/IMG_0386_1781815292524.png",
+        "tipo":        "legale",
+    },
+    {
+        "nome":        "Stazione di Benzina — Carburante",
+        "emoji":       "⛽",
+        "descrizione": "Trasporto cisterne di carburante dalla stazione sulla costa nord. Carico infiammabile — guida prudente.",
+        "posizione":   "Costa nord, Paleto Bay area — stazione di benzina sulla strada principale costiera.",
+        "img":         "attached_assets/IMG_0392_1781815292524.png",
+        "tipo":        "legale",
+    },
+    {
+        "nome":        "Segheria di Paleto — Legname",
+        "emoji":       "🪵",
+        "descrizione": "Ritiro tronchi lavorati dalla segheria in zona montuosa. Trasporto pesante, strade strette — usa il rimorchio giusto.",
+        "posizione":   "Nord della mappa, vicino a Paleto Bay — segheria con edifici rossi nella foresta montana.",
+        "img":         "attached_assets/IMG_1610_1781815292524.jpeg",
+        "tipo":        "legale",
+    },
+]
+
+
+@bot.tree.command(name="setupmappa", description="[MOD] Pubblica la mappa e le info del canale Import/Export")
+async def setupmappa(interaction: discord.Interaction):
+    global canale_importexport_id
+    if not await safe_defer(interaction): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+
+    canale_importexport_id = interaction.channel_id
+    salva_dati()
+
+    # --- Embed principale: hub porto + istruzioni ---
+    embed_hub = discord.Embed(
+        title="🚛 IMPORT / EXPORT — Tokyo Horizon RP",
+        description=(
+            "Benvenuto nel sistema **Import/Export** della città!\n\n"
+            "Qui lavora chi muove la città: camionisti, trasportatori e operai.\n"
+            "Legale o illegale, tutto passa per le strade di Los Santos.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**📍 HUB DI PARTENZA — Porto di Los Santos**\n"
+            "Tutti i turni partono dal porto. Prendi il tuo camion, "
+            "fai `/startlavoro` e il bot ti assegna la destinazione.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🎮 COME FUNZIONA:**\n"
+            "1️⃣ Vai al porto con un camion\n"
+            "2️⃣ Usa `/startlavoro` → scegli **Camionista**\n"
+            "3️⃣ Il bot ti dice **dove andare** a caricare\n"
+            "4️⃣ Fai le consegne in RP per le ore che vuoi\n"
+            "5️⃣ Usa `/finelavoro` → inserisci le ore fatte\n"
+            "6️⃣ Ricevi lo **stipendio** direttamente in banca!\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "💰 **Paga:** `1.500€/ora` | ⏱️ Max `12 ore` per turno"
+        ),
+        color=discord.Color.from_rgb(255, 140, 0),
+    )
+    embed_hub.set_footer(text="Tokyo Horizon RP | Import/Export — Zona Portuale")
+    try:
+        file_hub = discord.File("attached_assets/IMG_0364_1781815292524.jpeg", filename="hub.jpeg")
+        embed_hub.set_image(url="attachment://hub.jpeg")
+        await interaction.followup.send(embed=embed_hub, file=file_hub)
+    except FileNotFoundError:
+        await interaction.followup.send(embed=embed_hub)
+
+    # --- Un embed per ogni zona di ritiro ---
+    for zona in ZONE_CAMIONISTA:
+        tag_tipo = "🔴 ILLEGALE" if zona["tipo"] == "illegale" else "🟢 LEGALE"
+        embed_zona = discord.Embed(
+            title=f"{zona['emoji']} {zona['nome']}",
+            description=(
+                f"**{tag_tipo}**\n\n"
+                f"{zona['descrizione']}\n\n"
+                f"📍 **Posizione:** {zona['posizione']}"
+            ),
+            color=discord.Color.red() if zona["tipo"] == "illegale" else discord.Color.from_rgb(34, 139, 34),
+        )
+        embed_zona.set_footer(text="Tokyo Horizon RP | Import/Export — Zona di Ritiro")
+        try:
+            ext = zona["img"].rsplit(".", 1)[-1]
+            fname = f"zona.{ext}"
+            file_zona = discord.File(zona["img"], filename=fname)
+            embed_zona.set_image(url=f"attachment://{fname}")
+            await interaction.channel.send(embed=embed_zona, file=file_zona)
+        except FileNotFoundError:
+            await interaction.channel.send(embed=embed_zona)
+
+    print(f"[IMPORTEXPORT] Mappa pubblicata in #{interaction.channel.name} da {interaction.user}")
+
+
+@bot.tree.command(name="startlavoro", description="Inizia il tuo turno di lavoro e ricevi la destinazione")
+@app_commands.describe(lavoro="Il tipo di lavoro che vuoi fare")
+@app_commands.choices(lavoro=[
+    app_commands.Choice(name="🚛 Camionista", value="camionista"),
+])
+async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
+    if not await safe_defer(interaction, ephemeral=True): return
+    uid = interaction.user.id
+
+    if uid in lavori_attivi:
+        inizio = lavori_attivi[uid].get("inizio", 0)
+        ore_passate = (time.time() - inizio) / 3600
+        await interaction.followup.send(
+            f"⚠️ Hai già un turno attivo da **{ore_passate:.1f}h**!\n"
+            f"Usa `/finelavoro` per concluderlo e riscuotere lo stipendio.",
+            ephemeral=True
+        )
+        return
+
+    zona = random.choice(ZONE_CAMIONISTA)
+    lavori_attivi[uid] = {
+        "lavoro":  lavoro.value,
+        "zona":    zona["nome"],
+        "inizio":  time.time(),
+    }
+    salva_dati()
+
+    tag_tipo = "🔴 ILLEGALE — massima discrezione" if zona["tipo"] == "illegale" else "🟢 LEGALE"
+    embed = discord.Embed(
+        title="🚛 Turno Avviato — Camionista",
+        description=(
+            f"Il tuo turno è iniziato!\n\n"
+            f"**📦 Carico assegnato:**\n"
+            f"{zona['emoji']} **{zona['nome']}**\n"
+            f"📍 {zona['posizione']}\n"
+            f"🏷️ Tipo: {tag_tipo}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Parti dall'**Hub del Porto**, raggiungi la zona di ritiro "
+            f"e inizia le consegne in RP.\n\n"
+            f"Quando hai finito usa `/finelavoro` e inserisci le ore reali che hai lavorato.\n"
+            f"💰 Paga: **1.500€/ora** (accreditati in banca)"
+        ),
+        color=discord.Color.from_rgb(255, 140, 0),
+    )
+    embed.set_footer(text=f"Tokyo Horizon RP | Turno iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+    try:
+        ext = zona["img"].rsplit(".", 1)[-1]
+        fname = f"dest.{ext}"
+        file_zona = discord.File(zona["img"], filename=fname)
+        embed.set_image(url=f"attachment://{fname}")
+        await interaction.followup.send(embed=embed, file=file_zona, ephemeral=True)
+    except FileNotFoundError:
+        await interaction.followup.send(embed=embed, ephemeral=True)
+    print(f"[LAVORO] {interaction.user} ha avviato turno camionista → {zona['nome']}")
+
+
+@bot.tree.command(name="finelavoro", description="Termina il turno e riscuoti lo stipendio")
+@app_commands.describe(ore="Ore di lavoro reali (es: 2 oppure 1.5 per un'ora e mezza)")
+async def finelavoro(interaction: discord.Interaction, ore: str):
+    if not await safe_defer(interaction, ephemeral=True): return
+    uid = interaction.user.id
+
+    if uid not in lavori_attivi:
+        await interaction.followup.send(
+            "❌ Non hai nessun turno attivo!\nUsa `/startlavoro` per iniziarne uno.",
+            ephemeral=True
+        )
+        return
+
+    try:
+        ore_float = float(ore.replace(",", "."))
+    except ValueError:
+        await interaction.followup.send(
+            "❌ Inserisci un numero valido di ore (es: `2` oppure `1.5`).",
+            ephemeral=True
+        )
+        return
+
+    if ore_float <= 0:
+        await interaction.followup.send("❌ Le ore devono essere maggiori di zero.", ephemeral=True)
+        return
+    if ore_float > MAX_ORE_TURNO:
+        await interaction.followup.send(
+            f"❌ Non puoi dichiarare più di **{MAX_ORE_TURNO} ore** per turno.",
+            ephemeral=True
+        )
+        return
+
+    turno     = lavori_attivi.pop(uid)
+    salva_dati()
+
+    paga      = int(ore_float * PAGA_ORARIA_CAMIONISTA)
+    zona_nome = turno.get("zona", "N/D")
+    inizio_ts = turno.get("inizio", time.time())
+    durata_reale = (time.time() - inizio_ts) / 3600
+
+    bil = get_balance(uid)
+    bil["banca"] += paga
+    salva_dati()
+
+    embed = discord.Embed(
+        title="✅ Turno Completato — Stipendio Accreditato!",
+        description=(
+            f"Ottimo lavoro! Il tuo stipendio è stato accreditato in banca.\n\n"
+            f"🚛 **Lavoro:** Camionista\n"
+            f"📦 **Zona assegnata:** {zona_nome}\n"
+            f"⏱️ **Ore dichiarate:** `{ore_float}h`\n"
+            f"💰 **Stipendio:** `{paga:,}€` (1.500€/ora)\n\n"
+            f"🏛️ **Nuovo saldo banca:** `{bil['banca']:,}€`"
+        ),
+        color=discord.Color.green(),
+    )
+    embed.set_footer(text=f"Tokyo Horizon RP | Fine turno • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+    print(f"[LAVORO] {interaction.user} fine turno — {ore_float}h → +{paga:,}€ (durata reale: {durata_reale:.1f}h)")
 
 
 # =============================================================================
