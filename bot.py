@@ -195,6 +195,13 @@ class TokyoHorizonBot(commands.Bot):
             remaining = max(0.0, 720.0 - elapsed)
             print(f"[MAZEBANK] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
             _mazebank_tasks[uid] = asyncio.create_task(accredita_mazebank(uid, remaining))
+        for uid, info in list(rapine_pendenti_meccanico.items()):
+            if uid in _meccanico_in_corso:
+                continue
+            elapsed = time.time() - info.get("accepted_at", 0)
+            remaining = max(0.0, 300.0 - elapsed)
+            print(f"[MECCANICO] Ripresa rapina pendente uid={uid}, rimanenti={remaining:.0f}s")
+            _meccanico_tasks[uid] = asyncio.create_task(accredita_meccanico(uid, remaining))
 
 bot = TokyoHorizonBot()
 
@@ -414,6 +421,7 @@ def carica_dati():
                 rapine_fleeca       = {int(k): v for k, v in dati.get("rapine_pendenti_fleeca", {}).items()}
                 rapine_gioielleria  = {int(k): v for k, v in dati.get("rapine_pendenti_gioielleria", {}).items()}
                 rapine_mazebank     = {int(k): v for k, v in dati.get("rapine_pendenti_mazebank", {}).items()}
+                rapine_meccanico    = {int(k): v for k, v in dati.get("rapine_pendenti_meccanico", {}).items()}
                 richieste_pg        = {int(k): v for k, v in dati.get("richieste_pg_pendenti", {}).items()}
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
@@ -427,12 +435,13 @@ def carica_dati():
                     rapine_fleeca,
                     rapine_gioielleria,
                     rapine_mazebank,
+                    rapine_meccanico,
                     richieste_pg,
                     dati.get("categoria_ticket_id", None),
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, None
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -449,12 +458,13 @@ def salva_dati():
             "rapine_pendenti_fleeca":        {str(k): v for k, v in rapine_pendenti_fleeca.items()},
             "rapine_pendenti_gioielleria":   {str(k): v for k, v in rapine_pendenti_gioielleria.items()},
             "rapine_pendenti_mazebank":      {str(k): v for k, v in rapine_pendenti_mazebank.items()},
+            "rapine_pendenti_meccanico":     {str(k): v for k, v in rapine_pendenti_meccanico.items()},
             "richieste_pg_pendenti":         {str(k): v for k, v in richieste_pg_pendenti.items()},
             "categoria_ticket_id":           categoria_ticket_id,
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, richieste_pg_pendenti, categoria_ticket_id = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -1710,8 +1720,9 @@ async def inventario_cmd(interaction: discord.Interaction):
     app_commands.Choice(name="🔫 Armeria",        value="armeria"),
     app_commands.Choice(name="🏦 Banca Fleeca",   value="fleeca"),
     app_commands.Choice(name="💎 Gioielleria",    value="gioielleria"),
-    app_commands.Choice(name="🏛️ Maze Bank",     value="mazebank"),
-    app_commands.Choice(name="⚡ Tutti",          value="tutti"),
+    app_commands.Choice(name="🔧 Officina Meccanica", value="meccanico"),
+    app_commands.Choice(name="🏛️ Maze Bank",         value="mazebank"),
+    app_commands.Choice(name="⚡ Tutti",              value="tutti"),
 ])
 async def resetcooldown(interaction: discord.Interaction, utente: discord.Member, tipo: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True):
@@ -1731,13 +1742,14 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
             (rapine_pendenti_fleeca,      _fleeca_tasks,      "fleeca"),
             (rapine_pendenti_gioielleria, _gioielleria_tasks, "gioielleria"),
             (rapine_pendenti_mazebank,    _mazebank_tasks,    "mazebank"),
+            (rapine_pendenti_meccanico,   _meccanico_tasks,   "meccanico"),
         ]:
             _pd.pop(utente.id, None)
             _t = _td.pop(utente.id, None)
             if _t and not _t.done():
                 _t.cancel()
                 print(f"[RESETCD] Task {_label} uid={utente.id} cancellato.")
-        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat, 🍏 Minimarket, 🔫 Armeria, 🏦 Fleeca, 💎 Gioielleria, 🏛️ Maze Bank"
+        azzerati = "🏰 Villa, 🏠 Casa, 🚗 Macchina, 🏧 Bancomat, 🍏 Minimarket, 🔧 Meccanico, 🔫 Armeria, 🏦 Fleeca, 💎 Gioielleria, 🏛️ Maze Bank"
     else:
         cd = furto_cooldown.get(utente.id, {})
         cd.pop(tipo.value, None)
@@ -1749,6 +1761,7 @@ async def resetcooldown(interaction: discord.Interaction, utente: discord.Member
             "fleeca":      (rapine_pendenti_fleeca,      _fleeca_tasks),
             "gioielleria": (rapine_pendenti_gioielleria, _gioielleria_tasks),
             "mazebank":    (rapine_pendenti_mazebank,    _mazebank_tasks),
+            "meccanico":   (rapine_pendenti_meccanico,   _meccanico_tasks),
         }
         if tipo.value in _rapine_map:
             _pd, _td = _rapine_map[tipo.value]
@@ -1981,6 +1994,7 @@ async def cooldown_cmd(interaction: discord.Interaction, utente: discord.Member 
         "macchina":    {"label": "🚗 Macchina",           "cooldown": 2 * 3600},
         "bancomat":    {"label": "🏧 Bancomat",           "cooldown": 12 * 3600},
         "minimarket":  {"label": "🍏 Minimarket",         "cooldown": 24 * 3600},
+        "meccanico":   {"label": "🔧 Officina Meccanica", "cooldown": 48 * 3600},
         "armeria":     {"label": "🔫 Ammu-Nation",        "cooldown": 24 * 3600},
         "fleeca":      {"label": "🏦 Banca Fleeca",       "cooldown": 48 * 3600},
         "gioielleria": {"label": "💎 Gioielleria",        "cooldown": 96 * 3600},
@@ -2057,6 +2071,7 @@ LOOT_ARMERIA     = 50_000
 LOOT_FLEECA      = 250_000
 LOOT_GIOIELLERIA = 500_000
 LOOT_MAZEBANK    = 1_000_000
+LOOT_MECCANICO   = 35_000
 
 _armeria_in_corso: set     = set()
 _armeria_tasks: dict       = {}
@@ -2066,6 +2081,8 @@ _gioielleria_in_corso: set = set()
 _gioielleria_tasks: dict   = {}
 _mazebank_in_corso: set    = set()
 _mazebank_tasks: dict      = {}
+_meccanico_in_corso: set   = set()
+_meccanico_tasks: dict     = {}
 
 
 async def accredita_bancomat(criminal_uid: int, delay: float):
@@ -2871,6 +2888,11 @@ async def accredita_gioielleria(criminal_uid: int, delay: float):
         rapine_pendenti_gioielleria, "rapine_pendenti_gioielleria", _gioielleria_in_corso, _gioielleria_tasks, dialogo_min=7,
         criminal_lock_sec=7 * 86400)  # 1 settimana
 
+async def accredita_meccanico(criminal_uid: int, delay: float):
+    await _accredita_generico(criminal_uid, delay, LOOT_MECCANICO, "meccanico", "Furto Officina Meccanica",
+        rapine_pendenti_meccanico, "rapine_pendenti_meccanico", _meccanico_in_corso, _meccanico_tasks, dialogo_min=3,
+        criminal_lock_sec=12 * 3600)  # 12 ore
+
 async def accredita_mazebank(criminal_uid: int, delay: float):
     await _accredita_generico(criminal_uid, delay, LOOT_MAZEBANK, "mazebank", "Grande Colpo Maze Bank",
         rapine_pendenti_mazebank, "rapine_pendenti_mazebank", _mazebank_in_corso, _mazebank_tasks, dialogo_min=10,
@@ -3489,11 +3511,287 @@ class MazeBankModal(discord.ui.Modal, title="🏛️ Verbale — Grande Colpo al
             pass
 
 
+# =============================================================================
+# FURTO OFFICINA MECCANICA — View speciale (max 2 FDO, 2 min finestra)
+# =============================================================================
+
+class AccettaRapinaMeccanicoView(discord.ui.View):
+    """View per Furto Officina Meccanica — max 2 FDO, parte 2 min dopo il primo accettante."""
+
+    def __init__(self, criminal_uid: int, nome_pg: str, posizione: str, partecipanti: str):
+        super().__init__(timeout=600)
+        self.criminal_uid          = criminal_uid
+        self.nome_pg               = nome_pg
+        self.posizione             = posizione
+        self.partecipanti          = partecipanti
+        self.fdo_list: list        = []
+        self.avviata               = False
+        self.message: discord.Message = None
+        self._timer_task: asyncio.Task = None
+
+    @discord.ui.button(label="Accetta Servizio (0/2 max)", style=discord.ButtonStyle.success, emoji="🚔")
+    async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+        role_ids = [r.id for r in member.roles] if member else []
+        if RUOLO_POLIZIA_HARDCODED not in role_ids:
+            await interaction.response.send_message("❌ Non hai il ruolo necessario per accettare il servizio.", ephemeral=True)
+            return
+        if self.avviata:
+            await interaction.response.send_message("❌ Lo scassinamento è già iniziato!", ephemeral=True)
+            return
+        fdo_nome = interaction.user.display_name
+        if fdo_nome in self.fdo_list:
+            await interaction.response.send_message("❌ Hai già accettato questo servizio!", ephemeral=True)
+            return
+        if len(self.fdo_list) >= 2:
+            await interaction.response.send_message("❌ Al massimo 2 FDO per questa operazione.", ephemeral=True)
+            return
+
+        self.fdo_list.append(fdo_nome)
+        n = len(self.fdo_list)
+
+        if n == 1:
+            button.label = "Accetta Servizio (1/2 max)"
+            embed = discord.Embed(
+                title="🚔 IN ATTESA 2° FDO — FURTO OFFICINA MECCANICA 🔧",
+                description=(
+                    f"✅ **1° Agente:** `{fdo_nome}`\n"
+                    f"⏳ **1 FDO ha accettato — il 2° ha 2 minuti per unirsi.**\n"
+                    f"Se nessun altro accetta, la rapina parte comunque tra **2 min**.\n\n"
+                    f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                    f"👥 **Partecipanti:** `{self.partecipanti}`\n"
+                    f"📍 **Posizione:** `{self.posizione}`"
+                ),
+                color=discord.Color.yellow()
+            )
+            embed.set_footer(text="Tokyo Horizon RP | In attesa 2° FDO (2 min)")
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+            self._timer_task = asyncio.create_task(self._avvia_dopo_attesa())
+            return
+
+        # n == 2: secondo cop arrivato in tempo — cancella timer e avvia subito
+        if self._timer_task and not self._timer_task.done():
+            self._timer_task.cancel()
+        await self._avvia_rapina(interaction=interaction)
+
+    async def _avvia_dopo_attesa(self):
+        """Aspetta 2 min poi avvia la rapina anche con 1 solo FDO."""
+        try:
+            await asyncio.sleep(120)
+        except asyncio.CancelledError:
+            return
+        if not self.avviata:
+            await self._avvia_rapina(interaction=None)
+
+    async def _avvia_rapina(self, interaction):
+        self.avviata = True
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+
+        fdo_str = "\n".join(f"✅ **{i+1}° Agente:** `{nome}`" for i, nome in enumerate(self.fdo_list))
+        embed = discord.Embed(
+            title="🚔 RAPINA IN CARICO — FURTO OFFICINA MECCANICA 🔧",
+            description=(
+                f"{fdo_str}\n\n"
+                f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                f"👥 **Partecipanti:** `{self.partecipanti}`\n"
+                f"📍 **Posizione:** `{self.posizione}`\n\n"
+                f"⏳ **Scassinamento in corso — 5 minuti.**\n"
+                f"💰 Bottino di `{LOOT_MECCANICO:,}€` accreditato al termine.\n"
+                f"🔒 Dopo il colpo: **12 ore** di blocco attività criminale."
+            ),
+            color=discord.Color.orange()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina in Corso")
+
+        if interaction:
+            await interaction.response.edit_message(embed=embed, view=self, attachments=[])
+        elif self.message:
+            try:
+                await self.message.edit(embed=embed, view=self, attachments=[])
+            except Exception as e:
+                print(f"[MECCANICO] Edit timer fallito: {e}")
+
+        rapine_pendenti_meccanico[self.criminal_uid] = {"accepted_at": time.time()}
+        salva_dati()
+
+        n_fdo = len(self.fdo_list)
+        nomi_fdo = ", ".join(f"`{n}`" for n in self.fdo_list)
+        testo_inizio = (
+            f"🚔 <@{self.criminal_uid}> **{n_fdo} FDO {'ha' if n_fdo==1 else 'hanno'} accettato** ({nomi_fdo}) — **scassinamento iniziato!**\n"
+            f"⏳ Aspetta **5 minuti**.\n"
+            f"💰 Riceverai **`{LOOT_MECCANICO:,}€`** in banca allo scadere del tempo.\n"
+            f"🔒 Dopo il colpo, attività criminale bloccata per **12 ore**."
+        )
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(testo_inizio)
+        except Exception as e:
+            print(f"[MECCANICO] Messaggio inizio fallito: {e}")
+            try:
+                utente = await bot.fetch_user(self.criminal_uid)
+                await utente.send(testo_inizio)
+            except Exception:
+                pass
+
+        task = asyncio.create_task(accredita_meccanico(self.criminal_uid, 300))
+        _meccanico_tasks[self.criminal_uid] = task
+
+    async def on_timeout(self):
+        if not self.avviata:
+            # Ripristina grimaldello e azzera cooldown
+            inv = get_inventario(self.criminal_uid)
+            inv["Grimaldello"] = inv.get("Grimaldello", 0) + 1
+            furto_cooldown.get(self.criminal_uid, {}).pop("meccanico", None)
+            salva_dati()
+
+        for child in self.children:
+            child.disabled = True
+
+        n_fdo = len(self.fdo_list)
+        if n_fdo == 0:
+            motivo = "Nessun FDO ha risposto entro 10 minuti."
+        else:
+            nomi = ", ".join(f"`{n}`" for n in self.fdo_list)
+            motivo = f"**{n_fdo} FDO** {'ha' if n_fdo==1 else 'hanno'} accettato ({nomi})."
+
+        embed = discord.Embed(
+            title="⌛ RAPINA ANNULLATA — Officina Meccanica",
+            description=(
+                f"{motivo}\n\n"
+                f"🦹 **Criminale:** `{self.nome_pg}`\n"
+                f"📍 **Posizione:** `{self.posizione}`\n\n"
+                f"🎒 **Restituito:** `1x Grimaldello`\n"
+                f"⏱️ Il cooldown è stato azzerato — può riprovare."
+            ),
+            color=discord.Color.dark_gray()
+        )
+        embed.set_footer(text="Tokyo Horizon RP | Rapina Scaduta")
+        if self.message:
+            try:
+                await self.message.edit(embed=embed, view=self, attachments=[])
+            except Exception as e:
+                print(f"[MECCANICO] Edit timeout fallito: {e}")
+        try:
+            canale = await bot.fetch_channel(CANALE_POLIZIA_HARDCODED)
+            await canale.send(
+                f"⌛ <@{self.criminal_uid}> Rapina officina annullata — {motivo}\n"
+                f"🎒 Grimaldello restituito e cooldown azzerato. Puoi riprovare!"
+            )
+        except Exception as e:
+            print(f"[MECCANICO] Messaggio timeout fallito: {e}")
+
+
+class MeccanicoModal(discord.ui.Modal, title="🔧 Verbale — Furto Officina Meccanica"):
+    nome_pg      = discord.ui.TextInput(label="Nome del tuo personaggio", placeholder="Es: Marco Rossi", min_length=2, max_length=50)
+    posizione    = discord.ui.TextInput(label="Posizione dell'officina", placeholder="Es: Officina di Harmony, Route 68", min_length=3, max_length=100)
+    partecipanti = discord.ui.TextInput(label="Partecipanti (max 2 criminali)", placeholder="Es: Solo / Con [nome personaggio]", min_length=2, max_length=120)
+
+    def __init__(self, uid: int):
+        super().__init__()
+        self.uid = uid
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=False)
+        uid  = self.uid
+        nome = self.nome_pg.value.strip()
+        pos  = self.posizione.value.strip()
+        part = self.partecipanti.value.strip()
+
+        inv = get_inventario(uid)
+        if inv.get("Grimaldello", 0) < 1:
+            await interaction.followup.send(
+                "🔒 Per svaligiare l'officina serve **`1x Grimaldello`**. Acquistalo con `/negozio`.",
+                ephemeral=True)
+            return
+
+        # Consuma il grimaldello
+        inv["Grimaldello"] = inv.get("Grimaldello", 1) - 1
+        if inv["Grimaldello"] <= 0:
+            del inv["Grimaldello"]
+
+        # Imposta il cooldown 48h subito (viene azzerato se nessun FDO accetta)
+        furto_cooldown.setdefault(uid, {})["meccanico"] = time.time()
+        salva_dati()
+
+        embed_ok = discord.Embed(
+            title="✅ Furto Officina Meccanica Inviato!",
+            description=(
+                f"🕵️ **Personaggio:** `{nome}`\n"
+                f"📍 **Posizione:** `{pos}`\n"
+                f"👥 **Partecipanti:** `{part}`\n\n"
+                f"🔧 Consumato: **1x Grimaldello**.\n"
+                f"📡 Notifica inviata agli FDO — **massimo 2 FDO** possono accettare.\n"
+                f"⏳ Dopo il primo FDO, hai **2 minuti** per il secondo. Poi parte comunque.\n"
+                f"💰 **`{LOOT_MECCANICO:,}€`** accreditati in banca al termine (5 min).\n"
+                f"⚠️ Dialogo obbligatorio di **almeno 3 minuti** con gli FDO.\n"
+                f"🔒 Dopo il colpo: **12 ore** di blocco attività criminale.\n\n"
+                f"⚔️ Equipaggiamento: **Pistola** (vietate armi automatiche)"
+            ),
+            color=discord.Color.green()
+        )
+        embed_ok.set_footer(text="Tokyo Horizon RP | Sistema Rapina")
+
+        mention = f"<@&{RUOLO_POLIZIA_HARDCODED}>"
+        embed_pol = discord.Embed(
+            title="🚨 FURTO IN CORSO — OFFICINA MECCANICA 🔧",
+            description=(
+                f"🦹 **Criminale:** `{nome}`\n"
+                f"👥 **Partecipanti:** `{part}`\n"
+                f"📍 **Posizione:** `{pos}`\n\n"
+                f"👮 **FDO richiesti:** **Massimo 2** (basta 1 — il 2° ha 2 min per unirsi)\n"
+                f"⚔️ **Equipaggiamento criminale:** Pistola (vietate armi automatiche)\n"
+                f"⏱️ **Scassinamento:** 5 min | **Dialogo min.:** 3 min\n"
+                f"💰 **Bottino:** `{LOOT_MECCANICO:,}€`\n\n"
+                f"⏳ Clicca entro 10 min o la rapina viene annullata."
+            ),
+            color=discord.Color.red()
+        )
+        embed_pol.set_footer(text="Tokyo Horizon RP | Allerta FDO — max 2 agenti")
+
+        view = AccettaRapinaMeccanicoView(uid, nome, pos, part)
+        try:
+            await interaction.followup.send(embed=embed_ok, ephemeral=False)
+        except Exception as e:
+            print(f"[MECCANICO] Followup criminale fallito: {e}")
+        try:
+            await interaction.followup.send("📍 **Manda subito uno screenshot del radar** per la tua posizione esatta!", ephemeral=False)
+        except Exception as e:
+            print(f"[MECCANICO] Messaggio radar fallito: {e}")
+        try:
+            canale_fdo = await bot.fetch_channel(CANALE_FDO)
+            msg = await canale_fdo.send(content=mention, embed=embed_pol, view=view,
+                                         allowed_mentions=discord.AllowedMentions(roles=True))
+            view.message = msg
+            print(f"[MECCANICO] Notifica FDO inviata ✅")
+        except discord.Forbidden as e:
+            print(f"[MECCANICO] ❌ Permessi mancanti canale FDO: {e}")
+        except discord.NotFound as e:
+            print(f"[MECCANICO] ❌ Canale FDO non trovato: {e}")
+        except Exception as e:
+            print(f"[MECCANICO] ❌ Errore invio FDO: {e}")
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
+        code = getattr(getattr(error, "original", error), "code", None)
+        print(f"[MECCANICO MODAL] {type(error).__name__} (code={code}): {error}")
+        if code in (10062, 40060):
+            return
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send("❌ Errore temporaneo. Riprova.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ Errore temporaneo. Riprova.", ephemeral=True)
+        except Exception:
+            pass
+
+
 @bot.tree.command(name="rapina", description="Esegui una rapina — bancomat, armeria, banca e altro")
 @app_commands.describe(tipo="Tipo di rapina da effettuare")
 @app_commands.choices(tipo=[
     app_commands.Choice(name="🏧 Bancomat — 7.000€ | Piede di Porco + Pistola | Cooldown 12h",                         value="bancomat"),
     app_commands.Choice(name="🍏 Minimarket — 15.000€ | Cacciavite/PdP + Pistola | Cooldown 24h",                      value="minimarket"),
+    app_commands.Choice(name="🔧 Officina Meccanica — 35.000€ | Grimaldello | Cooldown 48h",                           value="meccanico"),
     app_commands.Choice(name="🔫 Ammu-Nation — Giubbotti+Pistole+Mitra | Nessun attrezzo | Cooldown 24h",               value="armeria"),
     app_commands.Choice(name="🏦 Banca Fleeca — 250.000€ | 5x PdP + Trapano | Cooldown 48h",                           value="fleeca"),
     app_commands.Choice(name="💎 Gioielleria — 500.000€ | Hack Medio + Gas Soporifero | Cooldown 4gg",               value="gioielleria"),
@@ -3573,6 +3871,39 @@ async def rapina(interaction: discord.Interaction, tipo: app_commands.Choice[str
             print(f"[RAPINA] send_modal fallito: {e}")
         except Exception as e:
             print(f"[RAPINA] send_modal errore inatteso: {e}")
+
+    elif tipo.value == "meccanico":
+        ora = time.time()
+        ultimo = furto_cooldown.get(uid, {}).get("meccanico", 0)
+        if ora - ultimo < 48 * 3600:
+            rimanenti = int(48 * 3600 - (ora - ultimo))
+            ore_r, min_r = rimanenti // 3600, (rimanenti % 3600) // 60
+            try:
+                await interaction.response.send_message(
+                    f"⏳ Devi aspettare ancora **{ore_r}h {min_r}m** prima di svaligiare un'altra officina.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+            return
+        inv = get_inventario(uid)
+        if inv.get("Grimaldello", 0) < 1:
+            try:
+                await interaction.response.send_message(
+                    "🔒 Per svaligiare l'officina serve **`1x Grimaldello`**. Acquistalo con `/negozio`.",
+                    ephemeral=True
+                )
+            except Exception:
+                pass
+            return
+        try:
+            await interaction.response.send_modal(MeccanicoModal(uid))
+        except discord.InteractionResponded:
+            print(f"[RAPINA] MeccanicoModal già risposta uid={uid}")
+        except discord.NotFound:
+            print(f"[RAPINA] MeccanicoModal 10062 uid={uid}")
+        except Exception as e:
+            print(f"[RAPINA] MeccanicoModal errore: {e}")
 
     elif tipo.value == "minimarket":
         ora = time.time()
