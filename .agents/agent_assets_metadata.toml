@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Dn-AUXjmxHfdkD3FK2uAX"
+uri = "file://attached_assets/officina_pulita.jpeg"
+type = "image"
+title = "Officina — immagine pulita"
