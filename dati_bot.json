@@ -2,7 +2,7 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 36000,
-      "banca": 172000
+      "banca": 175000
     },
     "1214733905349845032": {
       "portafoglio": 995000,
@@ -58,5 +58,7 @@
   "categoria_ticket_id": 1514405053354741760,
   "veicoli_posseduti": {},
   "canale_meccanico_id": 1517160752123875339,
-  "storico_modifiche": {}
+  "storico_modifiche": {},
+  "lavori_attivi": {},
+  "canale_importexport_id": 1517261262382305454
 }

@@ -6988,7 +6988,9 @@ async def setupmappa(interaction: discord.Interaction):
     canale_importexport_id = interaction.channel_id
     salva_dati()
 
-    # --- Embed principale: hub porto + istruzioni ---
+    # --- Unico embed pubblico: hub porto + istruzioni ---
+    # Le destinazioni NON vengono mostrate pubblicamente — sono rivelate solo
+    # in privato (ephemeral) tramite /startlavoro, per mantenere il mistero.
     embed_hub = discord.Embed(
         title="🚛 IMPORT / EXPORT — Tokyo Horizon RP",
         description=(
@@ -6997,22 +6999,24 @@ async def setupmappa(interaction: discord.Interaction):
             "Legale o illegale, tutto passa per le strade di Los Santos.\n\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "**📍 HUB DI PARTENZA — Porto di Los Santos**\n"
-            "Tutti i turni partono dal porto. Prendi il tuo camion, "
-            "fai `/startlavoro` e il bot ti assegna la destinazione.\n\n"
+            "Tutti i turni **partono e si caricano dal porto**.\n"
+            "Raggiungi il porto con il tuo camion, "
+            "fai `/startlavoro` e il bot ti assegna la destinazione.\n"
+            "Le destinazioni sono **casuali e segrete** — scoprirai dove andare solo tu!\n\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "**🎮 COME FUNZIONA:**\n"
-            "1️⃣ Vai al porto con un camion\n"
+            "1️⃣ Vai al **Porto di Los Santos** con un camion\n"
             "2️⃣ Usa `/startlavoro` → scegli **Camionista**\n"
-            "3️⃣ Il bot ti dice **dove andare** a caricare\n"
-            "4️⃣ Fai le consegne in RP per le ore che vuoi\n"
-            "5️⃣ Usa `/finelavoro` → inserisci le ore fatte\n"
+            "3️⃣ Il bot ti dice **dove andare** (solo tu lo vedi)\n"
+            "4️⃣ Carica la merce al porto e consegna la destinazione in RP\n"
+            "5️⃣ Usa `/finelavoro` → inserisci le ore reali fatte\n"
             "6️⃣ Ricevi lo **stipendio** direttamente in banca!\n\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━\n"
             "💰 **Paga:** `1.500€/ora` | ⏱️ Max `12 ore` per turno"
         ),
         color=discord.Color.from_rgb(255, 140, 0),
     )
-    embed_hub.set_footer(text="Tokyo Horizon RP | Import/Export — Zona Portuale")
+    embed_hub.set_footer(text="Tokyo Horizon RP | Import/Export — Porto di Los Santos")
     try:
         file_hub = discord.File("attached_assets/IMG_0364_1781815292524.jpeg", filename="hub.jpeg")
         embed_hub.set_image(url="attachment://hub.jpeg")
@@ -7020,29 +7024,12 @@ async def setupmappa(interaction: discord.Interaction):
     except FileNotFoundError:
         await interaction.followup.send(embed=embed_hub)
 
-    # --- Un embed per ogni zona di ritiro ---
-    for zona in ZONE_CAMIONISTA:
-        tag_tipo = "🔴 ILLEGALE" if zona["tipo"] == "illegale" else "🟢 LEGALE"
-        embed_zona = discord.Embed(
-            title=f"{zona['emoji']} {zona['nome']}",
-            description=(
-                f"**{tag_tipo}**\n\n"
-                f"{zona['descrizione']}\n\n"
-                f"📍 **Posizione:** {zona['posizione']}"
-            ),
-            color=discord.Color.red() if zona["tipo"] == "illegale" else discord.Color.from_rgb(34, 139, 34),
-        )
-        embed_zona.set_footer(text="Tokyo Horizon RP | Import/Export — Zona di Ritiro")
-        try:
-            ext = zona["img"].rsplit(".", 1)[-1]
-            fname = f"zona.{ext}"
-            file_zona = discord.File(zona["img"], filename=fname)
-            embed_zona.set_image(url=f"attachment://{fname}")
-            await interaction.channel.send(embed=embed_zona, file=file_zona)
-        except FileNotFoundError:
-            await interaction.channel.send(embed=embed_zona)
-
-    print(f"[IMPORTEXPORT] Mappa pubblicata in #{interaction.channel.name} da {interaction.user}")
+    # Conferma silenziosa allo staff
+    await interaction.channel.send(
+        f"✅ Canale Import/Export configurato da {interaction.user.mention}.",
+        delete_after=5
+    )
+    print(f"[IMPORTEXPORT] Hub pubblicato in #{interaction.channel.name} da {interaction.user}")
 
 
 @bot.tree.command(name="startlavoro", description="Inizia il tuo turno di lavoro e ricevi la destinazione")
