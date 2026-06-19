@@ -6980,7 +6980,7 @@ ZONE_CAMIONISTA = [
 @bot.tree.command(name="setupmappa", description="[MOD] Pubblica la mappa e le info del canale Import/Export")
 async def setupmappa(interaction: discord.Interaction):
     global canale_importexport_id
-    if not await safe_defer(interaction): return
+    if not await safe_defer(interaction, ephemeral=False): return
     if not ha_permessi_staff(interaction):
         await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
         return

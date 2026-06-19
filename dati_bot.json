@@ -59,6 +59,12 @@
   "veicoli_posseduti": {},
   "canale_meccanico_id": 1517160752123875339,
   "storico_modifiche": {},
-  "lavori_attivi": {},
+  "lavori_attivi": {
+    "1083459553892499476": {
+      "lavoro": "camionista",
+      "zona": "Fattoria di Grapeseed \u2014 Bestiame & Grano",
+      "inizio": 1781904532.5784676
+    }
+  },
   "canale_importexport_id": 1517261262382305454
 }
