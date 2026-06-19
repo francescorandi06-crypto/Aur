@@ -6924,53 +6924,119 @@ PAGA_ORARIA_POLIZIA    = 1800   # €/ora (ruolo a rischio, paga superiore)
 MAX_ORE_TURNO          = 12     # limite anti-abuso per singolo turno
 
 ZONE_POLIZIA = [
+    # --- peso 3 → compare ~25% delle volte (pattugliamento libero) ---
+    {
+        "nome":      "🗺️ Pattugliamento Libero — Zona a Discrezione",
+        "emoji":     "🗺️",
+        "compito":   "Nessuna zona fissa assegnata. Pattuglia liberamente dove ritieni necessario in base alla situazione RP. Usa la tua discrezione.",
+        "posizione": "Tutta la mappa — vai dove serve, dove c'è attività criminale o dove ti mandano i tuoi superiori.",
+        "peso":      3,
+    },
+    # --- peso 1 → zone specifiche ---
     {
         "nome":      "Pattuglia Centro — Downtown Los Santos",
         "emoji":     "🏙️",
         "compito":   "Pattuglia a piedi e in auto nel cuore della città. Alta densità di criminalità.",
         "posizione": "Pershing Square / Alta / Downtown LS — zona centro con grattacieli.",
+        "peso":      1,
     },
     {
         "nome":      "Pattuglia Vinewood Hills",
         "emoji":     "⭐",
         "compito":   "Vigilanza nelle zone residenziali di lusso. Attenzione ai furti in villa.",
         "posizione": "Vinewood Hills — zone residenziali collinari a nord-ovest della mappa.",
+        "peso":      1,
     },
     {
         "nome":      "Pattuglia Porto & LSIA",
         "emoji":     "⚓",
         "compito":   "Controllo merci e veicoli nell'area portuale e intorno all'aeroporto.",
         "posizione": "Porto di LS / LSIA — zona sud, banchine e piste aeroportuali.",
+        "peso":      1,
     },
     {
         "nome":      "Pattuglia Sandy Shores",
         "emoji":     "🏜️",
         "compito":   "Zona ad alta attività criminale nel deserto. Operazioni anti-droga attive.",
         "posizione": "Sandy Shores — cittadina nel deserto vicino all'Alamo Sea.",
+        "peso":      1,
     },
     {
         "nome":      "Pattuglia Paleto Bay",
         "emoji":     "🌲",
         "compito":   "Controllo del territorio nella città costiera a nord. Strade di montagna.",
         "posizione": "Paleto Bay — città costiera nell'estremo nord della mappa.",
+        "peso":      1,
     },
     {
         "nome":      "Pattuglia Davis — South LS",
         "emoji":     "⚠️",
         "compito":   "Zona ad alta criminalità. Pattuglia intensiva, evitare di operare da soli.",
         "posizione": "Davis / Strawberry / South LS — zona sud della città.",
+        "peso":      1,
     },
     {
         "nome":      "Pattuglia Rockford Hills",
         "emoji":     "💎",
         "compito":   "Quartiere ricco, presenza di gioiellerie e banche. Prevenzione rapine.",
         "posizione": "Rockford Hills — zona lusso a ovest di Vinewood, vicino al Maze Bank Arena.",
+        "peso":      1,
     },
     {
         "nome":      "Pattuglia Autostrada I-5",
         "emoji":     "🛣️",
         "compito":   "Pattuglia autostradale. Controllo velocità, inseguimenti e veicoli rubati.",
         "posizione": "Interstate 5 — autostrada principale che attraversa tutta la mappa.",
+        "peso":      1,
+    },
+    {
+        "nome":      "Pattuglia La Mesa — Zona Industriale",
+        "emoji":     "🏭",
+        "compito":   "Controllo zona industriale. Frequenti attività di ricettazione e traffico illecito.",
+        "posizione": "La Mesa — area industriale est di LS, vicino al Grand Senora Desert.",
+        "peso":      1,
+    },
+    {
+        "nome":      "Pattuglia Vespucci Beach",
+        "emoji":     "🏖️",
+        "compito":   "Vigilanza sul lungomare. Spaccio, risse e furti nelle ore serali.",
+        "posizione": "Vespucci Beach / Del Perro Beach — costa ovest di Los Santos.",
+        "peso":      1,
+    },
+    {
+        "nome":      "Pattuglia Mirror Park",
+        "emoji":     "🌆",
+        "compito":   "Zona residenziale tranquilla ma con aumento di criminalità notturna.",
+        "posizione": "Mirror Park — quartiere est di LS, vicino al canale.",
+        "peso":      1,
+    },
+    {
+        "nome":      "Pattuglia Chumash — Pacific Bluffs",
+        "emoji":     "🌊",
+        "compito":   "Controllo della costa nord-ovest. Sbarchi sospetti e traffico di merci.",
+        "posizione": "Chumash / Pacific Bluffs — costa nord-ovest, ville sulle scogliere.",
+        "peso":      1,
+    },
+    {
+        "nome":      "Pattuglia Route 68",
+        "emoji":     "🚧",
+        "compito":   "Sorveglianza della Route 68. Strada ad alto rischio per inseguimenti e incidenti.",
+        "posizione": "Route 68 — strada che attraversa il deserto da est a ovest.",
+        "peso":      1,
+    },
+    {
+        "nome":      "Pattuglia Bolingbroke — Area Penitenziario",
+        "emoji":     "🔒",
+        "compito":   "Sorveglianza esterna del penitenziario. Prevenzione evasioni e contatti illeciti.",
+        "posizione": "Bolingbroke Penitentiary — penitenziario statale nel deserto a est.",
+        "peso":      1,
+    },
+    {
+        "nome":      "Pattuglia Grapeseed — Zona Rurale",
+        "emoji":     "🌾",
+        "compito":   "Vigilanza nelle campagne. Segnalazioni di attività sospette nelle fattorie.",
+        "posizione": "Grapeseed — zona rurale nord-est, fattorie e silos.",
+        "peso":      1,
     },
 ]
 
@@ -7148,7 +7214,8 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
 
     # --- Poliziotto ---
     elif lavoro.value == "polizia":
-        zona = random.choice(ZONE_POLIZIA)
+        pesi = [z["peso"] for z in ZONE_POLIZIA]
+        zona = random.choices(ZONE_POLIZIA, weights=pesi, k=1)[0]
         lavori_attivi[uid] = {
             "lavoro": "polizia",
             "zona":   zona["nome"],
