@@ -2,7 +2,7 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 36000,
-      "banca": 175000
+      "banca": 176500
     },
     "1214733905349845032": {
       "portafoglio": 995000,
@@ -61,9 +61,9 @@
   "storico_modifiche": {},
   "lavori_attivi": {
     "1083459553892499476": {
-      "lavoro": "camionista",
-      "zona": "Fattoria di Grapeseed \u2014 Bestiame & Grano",
-      "inizio": 1781904532.5784676
+      "lavoro": "polizia",
+      "zona": "Pattuglia Mirror Park",
+      "inizio": 1781908546.6461194
     }
   },
   "canale_importexport_id": 1517261262382305454,

@@ -7216,10 +7216,12 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
     elif lavoro.value == "polizia":
         pesi = [z["peso"] for z in ZONE_POLIZIA]
         zona = random.choices(ZONE_POLIZIA, weights=pesi, k=1)[0]
+        now = time.time()
         lavori_attivi[uid] = {
-            "lavoro": "polizia",
-            "zona":   zona["nome"],
-            "inizio": time.time(),
+            "lavoro":           "polizia",
+            "zona":             zona["nome"],
+            "inizio":           now,
+            "zona_assegnata_at": now,
         }
         salva_dati()
         embed = discord.Embed(
@@ -7231,8 +7233,12 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
                 f"📍 {zona['posizione']}\n"
                 f"🔵 **Compito:** {zona['compito']}\n\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"Raggiungi la zona assegnata e inizia la pattuglia in RP.\n"
-                f"Rispetta il codice di condotta e collabora con gli altri agenti.\n\n"
+                f"**📜 REGOLAMENTO SERVIZIO:**\n"
+                f"• Resta nella zona assegnata per **almeno 20 minuti**\n"
+                f"• Dopo 20 minuti puoi usare `/cambiazona` per richiedere una nuova zona\n"
+                f"• Se un collega usa `/soccorso`, puoi lasciare la zona per assisterlo\n"
+                f"• Puoi rimanere col collega fino alla fine dell'emergenza\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"Quando finisci il turno usa `/finelavoro` e inserisci le ore reali.\n"
                 f"💰 Paga: **1.800€/ora** (accreditati in banca)"
             ),
@@ -7313,6 +7319,121 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
     embed.set_footer(text=f"Tokyo Horizon RP | Fine turno • {discord.utils.utcnow().strftime('%H:%M')} UTC")
     await interaction.followup.send(embed=embed, ephemeral=True)
     print(f"[LAVORO] {interaction.user} fine turno {tipo_lavoro} — {ore_float}h → +{paga:,}€ (reale: {durata_reale:.1f}h)")
+
+
+# =============================================================================
+# POLIZIA — CAMBIO ZONA & SOCCORSO
+# =============================================================================
+
+MINUTI_MIN_ZONA = 20   # minuti minimi prima di poter cambiare zona
+
+
+@bot.tree.command(name="cambiazona", description="[POLIZIA] Richiedi una nuova zona di pattugliamento (min. 20 min nella zona attuale)")
+async def cambiazona(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=True): return
+    uid = interaction.user.id
+
+    turno = lavori_attivi.get(uid)
+    if not turno or turno.get("lavoro") != "polizia":
+        await interaction.followup.send(
+            "❌ Devi avere un turno da **Poliziotto** attivo per usare questo comando.\n"
+            "Usa `/startlavoro` → Poliziotto.",
+            ephemeral=True
+        )
+        return
+
+    zona_at   = turno.get("zona_assegnata_at", turno.get("inizio", 0))
+    trascorsi = (time.time() - zona_at) / 60   # in minuti
+
+    if trascorsi < MINUTI_MIN_ZONA:
+        rimasti = int(MINUTI_MIN_ZONA - trascorsi) + 1
+        await interaction.followup.send(
+            f"⏳ Devi restare nella zona assegnata ancora **{rimasti} minuti** prima di poter cambiare.\n"
+            f"_(Minimo: {MINUTI_MIN_ZONA} minuti per zona)_",
+            ephemeral=True
+        )
+        return
+
+    zona_vecchia = turno.get("zona", "N/D")
+    pesi = [z["peso"] for z in ZONE_POLIZIA]
+    nuova_zona = random.choices(ZONE_POLIZIA, weights=pesi, k=1)[0]
+
+    turno["zona"]             = nuova_zona["nome"]
+    turno["zona_assegnata_at"] = time.time()
+    salva_dati()
+
+    embed = discord.Embed(
+        title="🔄 Cambio Zona — Nuova Assegnazione",
+        description=(
+            f"La tua zona di pattugliamento è cambiata!\n\n"
+            f"🔴 **Zona precedente:** {zona_vecchia}\n\n"
+            f"🟢 **Nuova zona:**\n"
+            f"{nuova_zona['emoji']} **{nuova_zona['nome']}**\n"
+            f"📍 {nuova_zona['posizione']}\n"
+            f"🔵 **Compito:** {nuova_zona['compito']}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Ricorda: resta nella nuova zona per almeno **{MINUTI_MIN_ZONA} minuti**\n"
+            f"prima di poter richiedere un altro cambio."
+        ),
+        color=discord.Color.from_rgb(30, 100, 200),
+    )
+    embed.set_footer(text=f"Tokyo Horizon RP | Cambio zona • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+    await interaction.followup.send(embed=embed, ephemeral=True)
+    print(f"[POLIZIA] {interaction.user} cambio zona: {zona_vecchia} → {nuova_zona['nome']}")
+
+
+@bot.tree.command(name="soccorso", description="[POLIZIA] Lancia una richiesta di soccorso urgente ai colleghi in servizio")
+@app_commands.describe(
+    posizione="Dove ti trovi / dove serve aiuto (es: Davis, Vinewood Hills, Porto...)",
+    dettagli="Breve descrizione della situazione (es: inseguimento, sparatoria, ferito...)"
+)
+async def soccorso(interaction: discord.Interaction, posizione: str, dettagli: str):
+    if not await safe_defer(interaction, ephemeral=True): return
+    uid = interaction.user.id
+
+    turno = lavori_attivi.get(uid)
+    if not turno or turno.get("lavoro") != "polizia":
+        await interaction.followup.send(
+            "❌ Devi avere un turno da **Poliziotto** attivo per lanciare un soccorso.\n"
+            "Usa `/startlavoro` → Poliziotto.",
+            ephemeral=True
+        )
+        return
+
+    embed_alert = discord.Embed(
+        title="🚨 RICHIESTA SOCCORSO — UNITÀ IN DIFFICOLTÀ",
+        description=(
+            f"**🔴 ATTENZIONE — TUTTE LE UNITÀ DISPONIBILI**\n\n"
+            f"👮 **Agente:** {interaction.user.mention} (`{interaction.user}`)\n"
+            f"📍 **Posizione:** {posizione}\n"
+            f"⚠️ **Situazione:** {dettagli}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"Le unità libere o in pattugliamento libero possono abbandonare "
+            f"temporaneamente la propria zona per prestare soccorso.\n"
+            f"Rimanete con il collega **fino alla fine dell'emergenza**."
+        ),
+        color=discord.Color.red(),
+    )
+    embed_alert.set_footer(text=f"Tokyo Horizon RP | Soccorso • {discord.utils.utcnow().strftime('%H:%M:%S')} UTC")
+
+    try:
+        canale_fdo = await bot.fetch_channel(CANALE_FDO)
+        await canale_fdo.send("@here", embed=embed_alert)
+    except Exception as e:
+        print(f"[SOCCORSO] ❌ Errore invio canale FDO: {e}")
+        await interaction.followup.send(
+            "❌ Errore nell'invio dell'allerta al canale FDO. Contatta lo staff.",
+            ephemeral=True
+        )
+        return
+
+    await interaction.followup.send(
+        f"✅ Richiesta di soccorso inviata al canale FDO!\n"
+        f"📍 **Posizione dichiarata:** {posizione}\n"
+        f"Le unità disponibili sono state allertate.",
+        ephemeral=True
+    )
+    print(f"[SOCCORSO] {interaction.user} ha lanciato soccorso in: {posizione}")
 
 
 # =============================================================================
