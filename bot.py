@@ -6922,10 +6922,11 @@ async def applicamodifica(interaction: discord.Interaction):
 # IMPORT / EXPORT — SISTEMA CAMIONISTA
 # =============================================================================
 
-PAGA_ORARIA_CAMIONISTA = 1500   # €/ora
+PAGA_ORARIA_CAMIONISTA = 250    # €/ora — tetto 1.500€ in 6h (scala proporzionalmente)
+PAGA_MAX_CAMIONISTA    = 1500   # €  — massimo assoluto per turno camionista
 PAGA_ORARIA_POLIZIA    = 300    # €/ora — tetto 1.800€ in 6h (scala proporzionalmente)
 PAGA_MAX_POLIZIA       = 1800   # €  — massimo assoluto per turno polizia
-ORE_SAT_POLIZIA        = 6      # ore oltre le quali la paga non cresce più
+ORE_SAT_LAVORO         = 6      # ore oltre le quali la paga non cresce più (tutti i lavori)
 MAX_ORE_TURNO          = 12     # limite anti-abuso per singolo turno
 MAX_TURNI_GIORNALIERI  = 2      # turni massimi al giorno per giocatore
 
@@ -7215,7 +7216,7 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
                 f"Parti dall'**Hub del Porto**, raggiungi la zona di ritiro "
                 f"e inizia le consegne in RP.\n\n"
                 f"Quando hai finito usa `/finelavoro` e inserisci le ore reali che hai lavorato.\n"
-                f"💰 Paga: **1.500€/ora** (accreditati in banca)"
+                f"💰 Paga: **250€/ora** · max **1.500€** (raggiunto a 6h, poi si satura)"
             ),
             color=discord.Color.from_rgb(255, 140, 0),
         )
@@ -7308,16 +7309,17 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
     durata_reale = (time.time() - inizio_ts) / 3600
 
     if tipo_lavoro == "polizia":
-        ore_effettive = min(ore_float, ORE_SAT_POLIZIA)
+        ore_effettive = min(ore_float, ORE_SAT_LAVORO)
         paga          = min(int(ore_effettive * PAGA_ORARIA_POLIZIA), PAGA_MAX_POLIZIA)
         lavoro_label  = "👮 Poliziotto"
         colore        = discord.Color.from_rgb(30, 100, 200)
         paga_desc     = f"`{paga:,}€` (300€/ora · max 1.800€ in 6h)"
     else:
-        paga          = int(ore_float * PAGA_ORARIA_CAMIONISTA)
+        ore_effettive = min(ore_float, ORE_SAT_LAVORO)
+        paga          = min(int(ore_effettive * PAGA_ORARIA_CAMIONISTA), PAGA_MAX_CAMIONISTA)
         lavoro_label  = "🚛 Camionista"
         colore        = discord.Color.from_rgb(255, 140, 0)
-        paga_desc     = f"`{paga:,}€` (1.500€/ora)"
+        paga_desc     = f"`{paga:,}€` (250€/ora · max 1.500€ in 6h)"
 
     bil = get_balance(uid)
     bil["banca"] += paga
