@@ -425,6 +425,7 @@ def carica_dati():
                 richieste_pg        = {int(k): v for k, v in dati.get("richieste_pg_pendenti", {}).items()}
                 storico_mods        = {int(k): v for k, v in dati.get("storico_modifiche", {}).items()}
                 lavori              = {int(k): v for k, v in dati.get("lavori_attivi", {}).items()}
+                contatore_lav       = {int(k): v for k, v in dati.get("contatore_lavori_giornalieri", {}).items()}
                 trasporti_priv      = dati.get("trasporti_privati_pendenti", {})
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
@@ -448,10 +449,11 @@ def carica_dati():
                     dati.get("canale_importexport_id", None),
                     trasporti_priv,
                     dati.get("cassa_ditta", 0),
+                    contatore_lav,
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None, {}, {}, None, {}, 0
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None, {}, {}, None, {}, 0, {}
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -478,10 +480,11 @@ def salva_dati():
             "canale_importexport_id":        canale_importexport_id,
             "trasporti_privati_pendenti":    trasporti_privati_pendenti,
             "cassa_ditta":                   cassa_ditta,
+            "contatore_lavori_giornalieri":  {str(k): v for k, v in contatore_lavori_giornalieri.items()},
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id, storico_modifiche, lavori_attivi, canale_importexport_id, trasporti_privati_pendenti, cassa_ditta = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id, storico_modifiche, lavori_attivi, canale_importexport_id, trasporti_privati_pendenti, cassa_ditta, contatore_lavori_giornalieri = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -6920,8 +6923,11 @@ async def applicamodifica(interaction: discord.Interaction):
 # =============================================================================
 
 PAGA_ORARIA_CAMIONISTA = 1500   # €/ora
-PAGA_ORARIA_POLIZIA    = 1800   # €/ora (ruolo a rischio, paga superiore)
+PAGA_ORARIA_POLIZIA    = 300    # €/ora — tetto 1.800€ in 6h (scala proporzionalmente)
+PAGA_MAX_POLIZIA       = 1800   # €  — massimo assoluto per turno polizia
+ORE_SAT_POLIZIA        = 6      # ore oltre le quali la paga non cresce più
 MAX_ORE_TURNO          = 12     # limite anti-abuso per singolo turno
+MAX_TURNI_GIORNALIERI  = 2      # turni massimi al giorno per giocatore
 
 ZONE_POLIZIA = [
     # --- peso 3 → compare ~25% delle volte (pattugliamento libero) ---
@@ -7158,19 +7164,31 @@ async def setupmappa(interaction: discord.Interaction):
 @bot.tree.command(name="startlavoro", description="Inizia il tuo turno di lavoro e ricevi la destinazione")
 @app_commands.describe(lavoro="Il tipo di lavoro che vuoi fare")
 @app_commands.choices(lavoro=[
-    app_commands.Choice(name="🚛 Camionista — 1.500€/ora",  value="camionista"),
-    app_commands.Choice(name="👮 Poliziotto — 1.800€/ora",  value="polizia"),
+    app_commands.Choice(name="🚛 Camionista — 1.500€/ora",          value="camionista"),
+    app_commands.Choice(name="👮 Poliziotto — fino a 1.800€/turno", value="polizia"),
 ])
 async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True): return
     uid = interaction.user.id
 
+    # --- Controllo turno già attivo ---
     if uid in lavori_attivi:
         inizio = lavori_attivi[uid].get("inizio", 0)
         ore_passate = (time.time() - inizio) / 3600
         await interaction.followup.send(
             f"⚠️ Hai già un turno attivo da **{ore_passate:.1f}h**!\n"
             f"Usa `/finelavoro` per concluderlo e riscuotere lo stipendio.",
+            ephemeral=True
+        )
+        return
+
+    # --- Controllo limite giornaliero (max 2 turni/giorno) ---
+    oggi = discord.utils.utcnow().strftime("%Y-%m-%d")
+    rec  = contatore_lavori_giornalieri.get(uid, {})
+    if rec.get("data") == oggi and rec.get("count", 0) >= MAX_TURNI_GIORNALIERI:
+        await interaction.followup.send(
+            f"❌ Hai già completato **{MAX_TURNI_GIORNALIERI} turni** oggi!\n"
+            f"Puoi riprendere a lavorare domani.",
             ephemeral=True
         )
         return
@@ -7240,7 +7258,7 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
                 f"• Puoi rimanere col collega fino alla fine dell'emergenza\n\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"Quando finisci il turno usa `/finelavoro` e inserisci le ore reali.\n"
-                f"💰 Paga: **1.800€/ora** (accreditati in banca)"
+                f"💰 Paga: **300€/ora** · max **1.800€** (raggiunto a 6h, poi si satura)"
             ),
             color=discord.Color.from_rgb(30, 100, 200),
         )
@@ -7290,20 +7308,32 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
     durata_reale = (time.time() - inizio_ts) / 3600
 
     if tipo_lavoro == "polizia":
-        paga_oraria = PAGA_ORARIA_POLIZIA
-        lavoro_label = "👮 Poliziotto"
-        colore = discord.Color.from_rgb(30, 100, 200)
+        ore_effettive = min(ore_float, ORE_SAT_POLIZIA)
+        paga          = min(int(ore_effettive * PAGA_ORARIA_POLIZIA), PAGA_MAX_POLIZIA)
+        lavoro_label  = "👮 Poliziotto"
+        colore        = discord.Color.from_rgb(30, 100, 200)
+        paga_desc     = f"`{paga:,}€` (300€/ora · max 1.800€ in 6h)"
     else:
-        paga_oraria = PAGA_ORARIA_CAMIONISTA
-        lavoro_label = "🚛 Camionista"
-        colore = discord.Color.from_rgb(255, 140, 0)
-
-    paga = int(ore_float * paga_oraria)
+        paga          = int(ore_float * PAGA_ORARIA_CAMIONISTA)
+        lavoro_label  = "🚛 Camionista"
+        colore        = discord.Color.from_rgb(255, 140, 0)
+        paga_desc     = f"`{paga:,}€` (1.500€/ora)"
 
     bil = get_balance(uid)
     bil["banca"] += paga
+
+    # Incrementa contatore turni giornalieri
+    oggi = discord.utils.utcnow().strftime("%Y-%m-%d")
+    rec  = contatore_lavori_giornalieri.get(uid, {})
+    if rec.get("data") == oggi:
+        rec["count"] = rec.get("count", 0) + 1
+    else:
+        rec = {"data": oggi, "count": 1}
+    contatore_lavori_giornalieri[uid] = rec
+
     salva_dati()
 
+    turni_rimasti = max(0, MAX_TURNI_GIORNALIERI - rec["count"])
     embed = discord.Embed(
         title="✅ Turno Completato — Stipendio Accreditato!",
         description=(
@@ -7311,8 +7341,9 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
             f"💼 **Lavoro:** {lavoro_label}\n"
             f"📍 **Zona assegnata:** {zona_nome}\n"
             f"⏱️ **Ore dichiarate:** `{ore_float}h`\n"
-            f"💰 **Stipendio:** `{paga:,}€` ({paga_oraria:,}€/ora)\n\n"
-            f"🏛️ **Nuovo saldo banca:** `{bil['banca']:,}€`"
+            f"💰 **Stipendio:** {paga_desc}\n\n"
+            f"🏛️ **Nuovo saldo banca:** `{bil['banca']:,}€`\n"
+            f"📋 **Turni rimasti oggi:** `{turni_rimasti}/{MAX_TURNI_GIORNALIERI}`"
         ),
         color=colore,
     )
@@ -7326,6 +7357,61 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
 # =============================================================================
 
 MINUTI_MIN_ZONA = 20   # minuti minimi prima di poter cambiare zona
+
+
+@bot.tree.command(name="regolamentipolizia", description="[MOD] Pubblica il regolamento ufficiale della Polizia in questo canale")
+async def regolamentipolizia(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=False): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="👮 REGOLAMENTO POLIZIA — Tokyo Horizon RP",
+        description=(
+            "Benvenuto nel corpo di polizia di Los Santos.\n"
+            "Leggi attentamente il regolamento prima di iniziare il servizio.\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🎮 COME INIZIARE IL TURNO**\n"
+            "1️⃣ Usa `/startlavoro` → scegli **Poliziotto**\n"
+            "2️⃣ Il bot ti assegna una **zona di pattugliamento casuale** (solo tu la vedi)\n"
+            "3️⃣ Raggiungi la zona e inizia la pattuglia in RP\n"
+            "4️⃣ Al termine usa `/finelavoro` e inserisci le ore reali\n"
+            "5️⃣ Ricevi lo **stipendio** direttamente in banca\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**📜 REGOLE DI SERVIZIO**\n"
+            "🔵 Resta nella **zona assegnata per almeno 20 minuti**\n"
+            "🔵 Dopo 20 minuti puoi usare `/cambiazona` per richiedere una nuova zona\n"
+            "🔵 La nuova zona viene assegnata **casualmente** dal bot\n"
+            "🔵 Ogni cambio zona riavvia il timer dei 20 minuti\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🚨 SOCCORSO E EMERGENZE**\n"
+            "🔴 Se hai bisogno di rinforzi usa `/soccorso` con posizione e situazione\n"
+            "🔴 L'allerta viene inviata al canale FDO con **@here**\n"
+            "🔴 Le unità disponibili possono **lasciare la propria zona** per prestare soccorso\n"
+            "🔴 Si può restare col collega **fino alla fine dell'emergenza** senza penalità\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**💰 STIPENDIO**\n"
+            "💵 **300€/ora** · massimo **1.800€ per turno** (saturazione a 6 ore)\n"
+            "📋 Puoi fare **massimo 2 turni al giorno** (qualsiasi lavoro)\n"
+            "🏛️ Il pagamento viene accreditato direttamente in banca\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**📋 COMANDI DISPONIBILI**\n"
+            "`/startlavoro` → Poliziotto — inizia il turno\n"
+            "`/cambiazona` — cambia zona (dopo 20 min)\n"
+            "`/soccorso` — richiedi rinforzi urgenti\n"
+            "`/finelavoro` — termina il turno e riscuoti\n"
+        ),
+        color=discord.Color.from_rgb(30, 100, 200),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Regolamento Polizia — Rispetta sempre le regole del server")
+    await interaction.followup.send(embed=embed)
+    print(f"[POLIZIA] Regolamento pubblicato in #{interaction.channel.name} da {interaction.user}")
 
 
 @bot.tree.command(name="cambiazona", description="[POLIZIA] Richiedi una nuova zona di pattugliamento (min. 20 min nella zona attuale)")
