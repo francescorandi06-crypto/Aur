@@ -6919,8 +6919,60 @@ async def applicamodifica(interaction: discord.Interaction):
 # IMPORT / EXPORT — SISTEMA CAMIONISTA
 # =============================================================================
 
-PAGA_ORARIA_CAMIONISTA = 1500   # €/ora (max 2.000 come da accordo)
+PAGA_ORARIA_CAMIONISTA = 1500   # €/ora
+PAGA_ORARIA_POLIZIA    = 1800   # €/ora (ruolo a rischio, paga superiore)
 MAX_ORE_TURNO          = 12     # limite anti-abuso per singolo turno
+
+ZONE_POLIZIA = [
+    {
+        "nome":      "Pattuglia Centro — Downtown Los Santos",
+        "emoji":     "🏙️",
+        "compito":   "Pattuglia a piedi e in auto nel cuore della città. Alta densità di criminalità.",
+        "posizione": "Pershing Square / Alta / Downtown LS — zona centro con grattacieli.",
+    },
+    {
+        "nome":      "Pattuglia Vinewood Hills",
+        "emoji":     "⭐",
+        "compito":   "Vigilanza nelle zone residenziali di lusso. Attenzione ai furti in villa.",
+        "posizione": "Vinewood Hills — zone residenziali collinari a nord-ovest della mappa.",
+    },
+    {
+        "nome":      "Pattuglia Porto & LSIA",
+        "emoji":     "⚓",
+        "compito":   "Controllo merci e veicoli nell'area portuale e intorno all'aeroporto.",
+        "posizione": "Porto di LS / LSIA — zona sud, banchine e piste aeroportuali.",
+    },
+    {
+        "nome":      "Pattuglia Sandy Shores",
+        "emoji":     "🏜️",
+        "compito":   "Zona ad alta attività criminale nel deserto. Operazioni anti-droga attive.",
+        "posizione": "Sandy Shores — cittadina nel deserto vicino all'Alamo Sea.",
+    },
+    {
+        "nome":      "Pattuglia Paleto Bay",
+        "emoji":     "🌲",
+        "compito":   "Controllo del territorio nella città costiera a nord. Strade di montagna.",
+        "posizione": "Paleto Bay — città costiera nell'estremo nord della mappa.",
+    },
+    {
+        "nome":      "Pattuglia Davis — South LS",
+        "emoji":     "⚠️",
+        "compito":   "Zona ad alta criminalità. Pattuglia intensiva, evitare di operare da soli.",
+        "posizione": "Davis / Strawberry / South LS — zona sud della città.",
+    },
+    {
+        "nome":      "Pattuglia Rockford Hills",
+        "emoji":     "💎",
+        "compito":   "Quartiere ricco, presenza di gioiellerie e banche. Prevenzione rapine.",
+        "posizione": "Rockford Hills — zona lusso a ovest di Vinewood, vicino al Maze Bank Arena.",
+    },
+    {
+        "nome":      "Pattuglia Autostrada I-5",
+        "emoji":     "🛣️",
+        "compito":   "Pattuglia autostradale. Controllo velocità, inseguimenti e veicoli rubati.",
+        "posizione": "Interstate 5 — autostrada principale che attraversa tutta la mappa.",
+    },
+]
 
 ZONE_CAMIONISTA = [
     {
@@ -7040,7 +7092,8 @@ async def setupmappa(interaction: discord.Interaction):
 @bot.tree.command(name="startlavoro", description="Inizia il tuo turno di lavoro e ricevi la destinazione")
 @app_commands.describe(lavoro="Il tipo di lavoro che vuoi fare")
 @app_commands.choices(lavoro=[
-    app_commands.Choice(name="🚛 Camionista", value="camionista"),
+    app_commands.Choice(name="🚛 Camionista — 1.500€/ora",  value="camionista"),
+    app_commands.Choice(name="👮 Poliziotto — 1.800€/ora",  value="polizia"),
 ])
 async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True): return
@@ -7056,41 +7109,71 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
         )
         return
 
-    zona = random.choice(ZONE_CAMIONISTA)
-    lavori_attivi[uid] = {
-        "lavoro":  lavoro.value,
-        "zona":    zona["nome"],
-        "inizio":  time.time(),
-    }
-    salva_dati()
+    # --- Camionista ---
+    if lavoro.value == "camionista":
+        zona = random.choice(ZONE_CAMIONISTA)
+        lavori_attivi[uid] = {
+            "lavoro": "camionista",
+            "zona":   zona["nome"],
+            "inizio": time.time(),
+        }
+        salva_dati()
+        tag_tipo = "🔴 ILLEGALE — massima discrezione" if zona["tipo"] == "illegale" else "🟢 LEGALE"
+        embed = discord.Embed(
+            title="🚛 Turno Avviato — Camionista",
+            description=(
+                f"Il tuo turno è iniziato!\n\n"
+                f"**📦 Carico assegnato:**\n"
+                f"{zona['emoji']} **{zona['nome']}**\n"
+                f"📍 {zona['posizione']}\n"
+                f"🏷️ Tipo: {tag_tipo}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Parti dall'**Hub del Porto**, raggiungi la zona di ritiro "
+                f"e inizia le consegne in RP.\n\n"
+                f"Quando hai finito usa `/finelavoro` e inserisci le ore reali che hai lavorato.\n"
+                f"💰 Paga: **1.500€/ora** (accreditati in banca)"
+            ),
+            color=discord.Color.from_rgb(255, 140, 0),
+        )
+        embed.set_footer(text=f"Tokyo Horizon RP | Turno iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+        try:
+            ext   = zona["img"].rsplit(".", 1)[-1]
+            fname = f"dest.{ext}"
+            file_zona = discord.File(zona["img"], filename=fname)
+            embed.set_image(url=f"attachment://{fname}")
+            await interaction.followup.send(embed=embed, file=file_zona, ephemeral=True)
+        except FileNotFoundError:
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        print(f"[LAVORO] {interaction.user} avviato turno camionista → {zona['nome']}")
 
-    tag_tipo = "🔴 ILLEGALE — massima discrezione" if zona["tipo"] == "illegale" else "🟢 LEGALE"
-    embed = discord.Embed(
-        title="🚛 Turno Avviato — Camionista",
-        description=(
-            f"Il tuo turno è iniziato!\n\n"
-            f"**📦 Carico assegnato:**\n"
-            f"{zona['emoji']} **{zona['nome']}**\n"
-            f"📍 {zona['posizione']}\n"
-            f"🏷️ Tipo: {tag_tipo}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"Parti dall'**Hub del Porto**, raggiungi la zona di ritiro "
-            f"e inizia le consegne in RP.\n\n"
-            f"Quando hai finito usa `/finelavoro` e inserisci le ore reali che hai lavorato.\n"
-            f"💰 Paga: **1.500€/ora** (accreditati in banca)"
-        ),
-        color=discord.Color.from_rgb(255, 140, 0),
-    )
-    embed.set_footer(text=f"Tokyo Horizon RP | Turno iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
-    try:
-        ext = zona["img"].rsplit(".", 1)[-1]
-        fname = f"dest.{ext}"
-        file_zona = discord.File(zona["img"], filename=fname)
-        embed.set_image(url=f"attachment://{fname}")
-        await interaction.followup.send(embed=embed, file=file_zona, ephemeral=True)
-    except FileNotFoundError:
+    # --- Poliziotto ---
+    elif lavoro.value == "polizia":
+        zona = random.choice(ZONE_POLIZIA)
+        lavori_attivi[uid] = {
+            "lavoro": "polizia",
+            "zona":   zona["nome"],
+            "inizio": time.time(),
+        }
+        salva_dati()
+        embed = discord.Embed(
+            title="👮 Turno Avviato — Poliziotto",
+            description=(
+                f"Il tuo turno in servizio è iniziato!\n\n"
+                f"**📋 Zona assegnata:**\n"
+                f"{zona['emoji']} **{zona['nome']}**\n"
+                f"📍 {zona['posizione']}\n"
+                f"🔵 **Compito:** {zona['compito']}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Raggiungi la zona assegnata e inizia la pattuglia in RP.\n"
+                f"Rispetta il codice di condotta e collabora con gli altri agenti.\n\n"
+                f"Quando finisci il turno usa `/finelavoro` e inserisci le ore reali.\n"
+                f"💰 Paga: **1.800€/ora** (accreditati in banca)"
+            ),
+            color=discord.Color.from_rgb(30, 100, 200),
+        )
+        embed.set_footer(text=f"Tokyo Horizon RP | Turno polizia iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
         await interaction.followup.send(embed=embed, ephemeral=True)
-    print(f"[LAVORO] {interaction.user} ha avviato turno camionista → {zona['nome']}")
+        print(f"[LAVORO] {interaction.user} avviato turno polizia → {zona['nome']}")
 
 
 @bot.tree.command(name="finelavoro", description="Termina il turno e riscuoti lo stipendio")
@@ -7125,13 +7208,24 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
         )
         return
 
-    turno     = lavori_attivi.pop(uid)
+    turno        = lavori_attivi.pop(uid)
     salva_dati()
 
-    paga      = int(ore_float * PAGA_ORARIA_CAMIONISTA)
-    zona_nome = turno.get("zona", "N/D")
-    inizio_ts = turno.get("inizio", time.time())
+    tipo_lavoro  = turno.get("lavoro", "camionista")
+    zona_nome    = turno.get("zona", "N/D")
+    inizio_ts    = turno.get("inizio", time.time())
     durata_reale = (time.time() - inizio_ts) / 3600
+
+    if tipo_lavoro == "polizia":
+        paga_oraria = PAGA_ORARIA_POLIZIA
+        lavoro_label = "👮 Poliziotto"
+        colore = discord.Color.from_rgb(30, 100, 200)
+    else:
+        paga_oraria = PAGA_ORARIA_CAMIONISTA
+        lavoro_label = "🚛 Camionista"
+        colore = discord.Color.from_rgb(255, 140, 0)
+
+    paga = int(ore_float * paga_oraria)
 
     bil = get_balance(uid)
     bil["banca"] += paga
@@ -7141,17 +7235,17 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
         title="✅ Turno Completato — Stipendio Accreditato!",
         description=(
             f"Ottimo lavoro! Il tuo stipendio è stato accreditato in banca.\n\n"
-            f"🚛 **Lavoro:** Camionista\n"
-            f"📦 **Zona assegnata:** {zona_nome}\n"
+            f"💼 **Lavoro:** {lavoro_label}\n"
+            f"📍 **Zona assegnata:** {zona_nome}\n"
             f"⏱️ **Ore dichiarate:** `{ore_float}h`\n"
-            f"💰 **Stipendio:** `{paga:,}€` (1.500€/ora)\n\n"
+            f"💰 **Stipendio:** `{paga:,}€` ({paga_oraria:,}€/ora)\n\n"
             f"🏛️ **Nuovo saldo banca:** `{bil['banca']:,}€`"
         ),
-        color=discord.Color.green(),
+        color=colore,
     )
     embed.set_footer(text=f"Tokyo Horizon RP | Fine turno • {discord.utils.utcnow().strftime('%H:%M')} UTC")
     await interaction.followup.send(embed=embed, ephemeral=True)
-    print(f"[LAVORO] {interaction.user} fine turno — {ore_float}h → +{paga:,}€ (durata reale: {durata_reale:.1f}h)")
+    print(f"[LAVORO] {interaction.user} fine turno {tipo_lavoro} — {ore_float}h → +{paga:,}€ (reale: {durata_reale:.1f}h)")
 
 
 # =============================================================================
