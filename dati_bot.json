@@ -68,5 +68,6 @@
   },
   "canale_importexport_id": 1517261262382305454,
   "trasporti_privati_pendenti": {},
-  "cassa_ditta": 0
+  "cassa_ditta": 0,
+  "contatore_lavori_giornalieri": {}
 }

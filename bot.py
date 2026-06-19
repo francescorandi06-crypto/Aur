@@ -6928,7 +6928,25 @@ PAGA_ORARIA_POLIZIA    = 300    # €/ora — tetto 1.800€ in 6h (scala propor
 PAGA_MAX_POLIZIA       = 1800   # €  — massimo assoluto per turno polizia
 ORE_SAT_LAVORO         = 6      # ore oltre le quali la paga non cresce più (tutti i lavori)
 MAX_ORE_TURNO          = 12     # limite anti-abuso per singolo turno
-MAX_TURNI_GIORNALIERI  = 2      # turni massimi al giorno per giocatore
+MAX_TURNI_GIORNALIERI       = 2      # turni massimi al giorno per giocatore
+
+PAGA_ORARIA_MECCANICO      = 225    # €/ora — tetto 1.350€ in 6h
+PAGA_MAX_MECCANICO         = 1350
+PAGA_ORARIA_CONCESSIONARIO = 200    # €/ora — tetto 1.200€ in 6h
+PAGA_MAX_CONCESSIONARIO    = 1200
+
+# Ruoli Discord richiesti per ogni lavoro (modificabili dallo staff)
+RUOLI_LAVORO = {
+    "camionista":     "Camionista",
+    "polizia":        "Polizia",
+    "meccanico":      "Meccanico",
+    "concessionario": "Concessionario",
+}
+
+def ha_ruolo_lavoro(interaction: discord.Interaction, tipo: str) -> bool:
+    """Restituisce True se l'utente ha il ruolo Discord richiesto per quel lavoro."""
+    nome = RUOLI_LAVORO.get(tipo, "")
+    return any(r.name.lower() == nome.lower() for r in interaction.user.roles)
 
 ZONE_POLIZIA = [
     # --- peso 3 → compare ~25% delle volte (pattugliamento libero) ---
@@ -7106,6 +7124,72 @@ ZONE_CAMIONISTA = [
     },
 ]
 
+ZONE_MECCANICO = [
+    {
+        "nome":      "🔧 LS Customs — Viale dei Motori",
+        "posizione": "LS Customs, Viale dei Motori — officina principale con insegna rossa, accanto alla carreggiata.",
+        "compito":   "Riparazioni ordinarie e personalizzazioni su veicoli dei clienti.",
+    },
+    {
+        "nome":      "🔩 Benny's Original Motor Works — Strawberry",
+        "posizione": "Benny's, Strawberry — autofficina specializzata con cancello giallo, zona sud-ovest LS.",
+        "compito":   "Conversioni e upgrade su veicoli premium, lavori su ordinazione.",
+    },
+    {
+        "nome":      "🏭 Zona Industriale — La Mesa",
+        "posizione": "La Mesa, zona industriale est — capannoni metallici vicino ai binari della ferrovia.",
+        "compito":   "Riparazioni pesanti su veicoli commerciali e camion.",
+    },
+    {
+        "nome":      "🛣️ Assistenza Stradale — Autostrada GS",
+        "posizione": "Grand Senora Desert — piazzola di sosta sulla Route 68, vicino al distributore abbandonato.",
+        "compito":   "Interventi su strada per veicoli fermi: forature, batterie, traino.",
+    },
+    {
+        "nome":      "⚙️ Garage Privato — Vespucci Canals",
+        "posizione": "Vespucci Canals, lato canale ovest — garage con porta arancione vicino al pontile.",
+        "compito":   "Lavori riservati su veicoli privati, manutenzione discreta.",
+    },
+    {
+        "nome":      "🚁 Hangar Sandy Shores — Veicoli Aerei",
+        "posizione": "Sandy Shores Airfield — hangar nord con porte scorrevoli gialle.",
+        "compito":   "Manutenzione ed ispezione su elicotteri e aerei privati.",
+    },
+]
+
+ZONE_CONCESSIONARIO = [
+    {
+        "nome":      "🏎️ Premium Deluxe Motorsport — Rockford Hills",
+        "posizione": "PDM, Rockford Hills — showroom con vetrate e insegna gialla sul viale principale.",
+        "brand":     "Supercar & Sportive di lusso",
+    },
+    {
+        "nome":      "🚙 Southern SA Super Autos — Davis",
+        "posizione": "SASA, Davis Ave — lotto aperto con bandierine colorate, zona sud di LS.",
+        "brand":     "Berlina, SUV e utilitarie standard",
+    },
+    {
+        "nome":      "🚗 Luxury Autos Showroom — Rockford Hills",
+        "posizione": "Luxury Autos, Rockford Hills — showroom su due piani con pedane rotanti.",
+        "brand":     "Hypercar ed edizioni limitate",
+    },
+    {
+        "nome":      "🏍️ Arena War Motors — Maze Bank Arena",
+        "posizione": "Maze Bank Arena, lotto laterale ovest — espositori con riflettori e barriere stradali.",
+        "brand":     "Veicoli modificati e off-road",
+    },
+    {
+        "nome":      "🚐 Simeon Import/Export Lot — Porto LS",
+        "posizione": "Porto di Los Santos, parcheggio container — lotto recintato con cancello metallico.",
+        "brand":     "Import d'oltremare, veicoli rari",
+    },
+    {
+        "nome":      "🚕 Los Santos Fleet Center — Mirror Park",
+        "posizione": "Mirror Park Blvd — deposito flotta con insegna blu, vicino al lago artificiale.",
+        "brand":     "Taxi, furgoni e flotte aziendali",
+    },
+]
+
 
 @bot.tree.command(name="setupmappa", description="[MOD] Pubblica la mappa e le info del canale Import/Export")
 async def setupmappa(interaction: discord.Interaction):
@@ -7142,7 +7226,7 @@ async def setupmappa(interaction: discord.Interaction):
             "5️⃣ Usa `/finelavoro` → inserisci le ore reali fatte\n"
             "6️⃣ Ricevi lo **stipendio** direttamente in banca!\n\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "💰 **Paga:** `1.500€/ora` | ⏱️ Max `12 ore` per turno"
+            "💰 **Paga:** `250€/ora` · max `1.500€` (saturazione a 6h) | ⏱️ Max `12 ore` per turno"
         ),
         color=discord.Color.from_rgb(255, 140, 0),
     )
@@ -7165,12 +7249,24 @@ async def setupmappa(interaction: discord.Interaction):
 @bot.tree.command(name="startlavoro", description="Inizia il tuo turno di lavoro e ricevi la destinazione")
 @app_commands.describe(lavoro="Il tipo di lavoro che vuoi fare")
 @app_commands.choices(lavoro=[
-    app_commands.Choice(name="🚛 Camionista — 1.500€/ora",          value="camionista"),
-    app_commands.Choice(name="👮 Poliziotto — fino a 1.800€/turno", value="polizia"),
+    app_commands.Choice(name="🚛 Camionista — 250€/ora · max 1.500€",         value="camionista"),
+    app_commands.Choice(name="👮 Poliziotto — 300€/ora · max 1.800€",         value="polizia"),
+    app_commands.Choice(name="🔧 Meccanico — 225€/ora · max 1.350€",          value="meccanico"),
+    app_commands.Choice(name="🏎️ Concessionario — 200€/ora · max 1.200€",    value="concessionario"),
 ])
 async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True): return
     uid = interaction.user.id
+
+    # --- Controllo ruolo Discord ---
+    if not ha_ruolo_lavoro(interaction, lavoro.value):
+        nome_ruolo = RUOLI_LAVORO.get(lavoro.value, lavoro.value.capitalize())
+        await interaction.followup.send(
+            f"❌ Non hai la licenza per fare questo lavoro!\n"
+            f"Hai bisogno del ruolo **{nome_ruolo}** per iniziare questo turno.",
+            ephemeral=True
+        )
+        return
 
     # --- Controllo turno già attivo ---
     if uid in lavori_attivi:
@@ -7267,6 +7363,62 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
         await interaction.followup.send(embed=embed, ephemeral=True)
         print(f"[LAVORO] {interaction.user} avviato turno polizia → {zona['nome']}")
 
+    # --- Meccanico ---
+    elif lavoro.value == "meccanico":
+        zona = random.choice(ZONE_MECCANICO)
+        lavori_attivi[uid] = {
+            "lavoro": "meccanico",
+            "zona":   zona["nome"],
+            "inizio": time.time(),
+        }
+        salva_dati()
+        embed = discord.Embed(
+            title="🔧 Turno Avviato — Meccanico",
+            description=(
+                f"Il tuo turno in officina è iniziato!\n\n"
+                f"**🔩 Postazione assegnata:**\n"
+                f"📍 **{zona['nome']}**\n"
+                f"🗺️ {zona['posizione']}\n"
+                f"🛠️ **Lavoro:** {zona['compito']}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Raggiungi la postazione, gestisci le riparazioni in RP "
+                f"e quando hai finito usa `/finelavoro`.\n\n"
+                f"💰 Paga: **225€/ora** · max **1.350€** (raggiunto a 6h, poi si satura)"
+            ),
+            color=discord.Color.from_rgb(180, 100, 20),
+        )
+        embed.set_footer(text=f"Tokyo Horizon RP | Turno meccanico iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        print(f"[LAVORO] {interaction.user} avviato turno meccanico → {zona['nome']}")
+
+    # --- Concessionario ---
+    elif lavoro.value == "concessionario":
+        zona = random.choice(ZONE_CONCESSIONARIO)
+        lavori_attivi[uid] = {
+            "lavoro": "concessionario",
+            "zona":   zona["nome"],
+            "inizio": time.time(),
+        }
+        salva_dati()
+        embed = discord.Embed(
+            title="🏎️ Turno Avviato — Concessionario",
+            description=(
+                f"Il tuo turno in concessionaria è iniziato!\n\n"
+                f"**🚗 Showroom assegnato:**\n"
+                f"📍 **{zona['nome']}**\n"
+                f"🗺️ {zona['posizione']}\n"
+                f"🏷️ **Specializzazione:** {zona['brand']}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Raggiungi lo showroom, gestisci le vendite in RP "
+                f"e quando hai finito usa `/finelavoro`.\n\n"
+                f"💰 Paga: **200€/ora** · max **1.200€** (raggiunto a 6h, poi si satura)"
+            ),
+            color=discord.Color.from_rgb(40, 160, 80),
+        )
+        embed.set_footer(text=f"Tokyo Horizon RP | Turno concessionario iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        print(f"[LAVORO] {interaction.user} avviato turno concessionario → {zona['nome']}")
+
 
 @bot.tree.command(name="finelavoro", description="Termina il turno e riscuoti lo stipendio")
 @app_commands.describe(ore="Ore di lavoro reali (es: 2 oppure 1.5 per un'ora e mezza)")
@@ -7308,18 +7460,27 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
     inizio_ts    = turno.get("inizio", time.time())
     durata_reale = (time.time() - inizio_ts) / 3600
 
+    ore_effettive = min(ore_float, ORE_SAT_LAVORO)
     if tipo_lavoro == "polizia":
-        ore_effettive = min(ore_float, ORE_SAT_LAVORO)
-        paga          = min(int(ore_effettive * PAGA_ORARIA_POLIZIA), PAGA_MAX_POLIZIA)
-        lavoro_label  = "👮 Poliziotto"
-        colore        = discord.Color.from_rgb(30, 100, 200)
-        paga_desc     = f"`{paga:,}€` (300€/ora · max 1.800€ in 6h)"
+        paga         = min(int(ore_effettive * PAGA_ORARIA_POLIZIA), PAGA_MAX_POLIZIA)
+        lavoro_label = "👮 Poliziotto"
+        colore       = discord.Color.from_rgb(30, 100, 200)
+        paga_desc    = f"`{paga:,}€` (300€/ora · max 1.800€ in 6h)"
+    elif tipo_lavoro == "meccanico":
+        paga         = min(int(ore_effettive * PAGA_ORARIA_MECCANICO), PAGA_MAX_MECCANICO)
+        lavoro_label = "🔧 Meccanico"
+        colore       = discord.Color.from_rgb(180, 100, 20)
+        paga_desc    = f"`{paga:,}€` (225€/ora · max 1.350€ in 6h)"
+    elif tipo_lavoro == "concessionario":
+        paga         = min(int(ore_effettive * PAGA_ORARIA_CONCESSIONARIO), PAGA_MAX_CONCESSIONARIO)
+        lavoro_label = "🏎️ Concessionario"
+        colore       = discord.Color.from_rgb(40, 160, 80)
+        paga_desc    = f"`{paga:,}€` (200€/ora · max 1.200€ in 6h)"
     else:
-        ore_effettive = min(ore_float, ORE_SAT_LAVORO)
-        paga          = min(int(ore_effettive * PAGA_ORARIA_CAMIONISTA), PAGA_MAX_CAMIONISTA)
-        lavoro_label  = "🚛 Camionista"
-        colore        = discord.Color.from_rgb(255, 140, 0)
-        paga_desc     = f"`{paga:,}€` (250€/ora · max 1.500€ in 6h)"
+        paga         = min(int(ore_effettive * PAGA_ORARIA_CAMIONISTA), PAGA_MAX_CAMIONISTA)
+        lavoro_label = "🚛 Camionista"
+        colore       = discord.Color.from_rgb(255, 140, 0)
+        paga_desc    = f"`{paga:,}€` (250€/ora · max 1.500€ in 6h)"
 
     bil = get_balance(uid)
     bil["banca"] += paga
