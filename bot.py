@@ -425,6 +425,7 @@ def carica_dati():
                 richieste_pg        = {int(k): v for k, v in dati.get("richieste_pg_pendenti", {}).items()}
                 storico_mods        = {int(k): v for k, v in dati.get("storico_modifiche", {}).items()}
                 lavori              = {int(k): v for k, v in dati.get("lavori_attivi", {}).items()}
+                trasporti_priv      = dati.get("trasporti_privati_pendenti", {})
                 return (
                     {int(k): v for k, v in dati.get("economia", {}).items()},
                     cooldown,
@@ -445,10 +446,12 @@ def carica_dati():
                     storico_mods,
                     lavori,
                     dati.get("canale_importexport_id", None),
+                    trasporti_priv,
+                    dati.get("cassa_ditta", 0),
                 )
         except Exception as e:
             print(f"[CARICA_DATI] Errore caricamento JSON: {e} — partenza con dati vuoti")
-    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None, {}, {}, None
+    return {}, {}, {}, None, {}, {}, {}, {}, {}, {}, {}, {}, {}, None, {}, None, {}, {}, None, {}, 0
 
 def salva_dati():
     tmp = DATI_FILE + ".tmp"
@@ -473,10 +476,12 @@ def salva_dati():
             "storico_modifiche":             {str(k): v for k, v in storico_modifiche.items()},
             "lavori_attivi":                 {str(k): v for k, v in lavori_attivi.items()},
             "canale_importexport_id":        canale_importexport_id,
+            "trasporti_privati_pendenti":    trasporti_privati_pendenti,
+            "cassa_ditta":                   cassa_ditta,
         }, f, indent=2)
     os.replace(tmp, DATI_FILE)
 
-economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id, storico_modifiche, lavori_attivi, canale_importexport_id = carica_dati()
+economia, furto_cooldown, inventario, canale_furti_id, ordini_pendenti_macchina, rapine_pendenti_bancomat, rapine_pendenti_minimarket, rapine_pendenti_armeria, rapine_pendenti_fleeca, rapine_pendenti_gioielleria, rapine_pendenti_mazebank, rapine_pendenti_meccanico, richieste_pg_pendenti, categoria_ticket_id, veicoli_posseduti, canale_meccanico_id, storico_modifiche, lavori_attivi, canale_importexport_id, trasporti_privati_pendenti, cassa_ditta = carica_dati()
 
 def get_balance(user_id):
     if user_id not in economia:
@@ -7147,6 +7152,308 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
     embed.set_footer(text=f"Tokyo Horizon RP | Fine turno • {discord.utils.utcnow().strftime('%H:%M')} UTC")
     await interaction.followup.send(embed=embed, ephemeral=True)
     print(f"[LAVORO] {interaction.user} fine turno — {ore_float}h → +{paga:,}€ (durata reale: {durata_reale:.1f}h)")
+
+
+# =============================================================================
+# TRASPORTI PRIVATI
+# =============================================================================
+
+CANALE_TRASPORTI_PRIVATI = 1517654549270106253
+
+PREZZI_TRASPORTO = {
+    "piccola": {"label": "📦 Piccola",  "prezzo": 3000,  "desc": "Colli leggeri, bagagli, piccoli pacchi"},
+    "media":   {"label": "📫 Media",    "prezzo": 6000,  "desc": "Mobili singoli, merci medie, attrezzatura"},
+    "grande":  {"label": "🚛 Grande",   "prezzo": 12000, "desc": "Carichi pesanti, container, merci ingombranti"},
+}
+
+
+class AccettaTrasportoView(discord.ui.View):
+    def __init__(self, richiesta_id: str):
+        super().__init__(timeout=None)
+        self.richiesta_id = richiesta_id
+
+    @discord.ui.button(label="✅ Accetta", style=discord.ButtonStyle.success, custom_id="accetta_trasporto")
+    async def accetta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        global cassa_ditta
+        rid = self.richiesta_id
+        if rid not in trasporti_privati_pendenti:
+            await interaction.response.send_message("❌ Questa richiesta non esiste più.", ephemeral=True)
+            return
+        richiesta = trasporti_privati_pendenti[rid]
+        if richiesta.get("stato") != "attesa":
+            await interaction.response.send_message("❌ Questa richiesta è già stata gestita.", ephemeral=True)
+            return
+        if interaction.user.id == richiesta["player_id"]:
+            await interaction.response.send_message("❌ Non puoi accettare la tua stessa richiesta.", ephemeral=True)
+            return
+
+        player_id = richiesta["player_id"]
+        prezzo    = richiesta["prezzo"]
+        taglia    = richiesta["taglia"]
+        bil       = get_balance(player_id)
+        totale_disponibile = bil["portafoglio"] + bil["banca"]
+
+        if totale_disponibile < prezzo:
+            await interaction.response.send_message(
+                f"❌ Il cliente non ha fondi sufficienti per pagare questo trasporto (`{prezzo:,}€`).",
+                ephemeral=True
+            )
+            return
+
+        # Scala dalla banca prima, poi dal portafoglio
+        if bil["banca"] >= prezzo:
+            bil["banca"] -= prezzo
+        else:
+            resto = prezzo - bil["banca"]
+            bil["banca"] = 0
+            bil["portafoglio"] -= resto
+
+        cassa_ditta += prezzo
+        richiesta["stato"]     = "accettata"
+        richiesta["driver_id"] = interaction.user.id
+        salva_dati()
+
+        # Aggiorna il messaggio originale disabilitando i pulsanti
+        for child in self.children:
+            child.disabled = True
+        taglia_info = PREZZI_TRASPORTO[taglia]
+        embed_upd = discord.Embed(
+            title=f"🚛 TRASPORTO PRIVATO — {taglia_info['label']} ✅ ACCETTATO",
+            description=(
+                f"👤 **Cliente:** <@{player_id}>\n"
+                f"🚗 **Driver:** {interaction.user.mention}\n"
+                f"📦 **Taglia:** {taglia_info['label']}\n"
+                f"💬 **Descrizione:** {richiesta['descrizione']}\n"
+                f"💰 **Pagato:** `{prezzo:,}€` → Cassa Ditta"
+            ),
+            color=discord.Color.green(),
+        )
+        embed_upd.set_footer(text="Tokyo Horizon RP | Trasporto Privato — ACCETTATO")
+        await interaction.message.edit(embed=embed_upd, view=self)
+
+        # Conferma al driver
+        await interaction.response.send_message(
+            f"✅ Trasporto accettato! Il pagamento di `{prezzo:,}€` è stato addebitato al cliente.",
+            ephemeral=True
+        )
+
+        # Notifica in DM al cliente
+        try:
+            player = await bot.fetch_user(player_id)
+            dm_embed = discord.Embed(
+                title="🚛 Trasporto Privato — Accettato!",
+                description=(
+                    f"La tua richiesta di trasporto **{taglia_info['label']}** è stata accettata!\n\n"
+                    f"🚗 **Driver assegnato:** {interaction.user.mention} (`{interaction.user}`)\n"
+                    f"💬 **Descrizione:** {richiesta['descrizione']}\n"
+                    f"💰 **Importo scalato:** `{prezzo:,}€`\n\n"
+                    f"Rimani in zona — il driver ti raggiungerà presto in RP!"
+                ),
+                color=discord.Color.green(),
+            )
+            await player.send(embed=dm_embed)
+        except Exception:
+            pass
+
+        print(f"[TRASPORTO] {interaction.user} ha accettato trasporto {rid} — cliente <@{player_id}> pagato {prezzo:,}€")
+
+    @discord.ui.button(label="❌ Rifiuta", style=discord.ButtonStyle.danger, custom_id="rifiuta_trasporto")
+    async def rifiuta(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not ha_permessi_staff(interaction):
+            await interaction.response.send_message("❌ Solo lo staff può rifiutare le richieste.", ephemeral=True)
+            return
+        rid = self.richiesta_id
+        if rid not in trasporti_privati_pendenti:
+            await interaction.response.send_message("❌ Questa richiesta non esiste più.", ephemeral=True)
+            return
+        richiesta = trasporti_privati_pendenti.pop(rid)
+        salva_dati()
+
+        for child in self.children:
+            child.disabled = True
+        taglia_info = PREZZI_TRASPORTO[richiesta["taglia"]]
+        embed_upd = discord.Embed(
+            title=f"🚛 TRASPORTO PRIVATO — {taglia_info['label']} ❌ RIFIUTATO",
+            description=(
+                f"👤 **Cliente:** <@{richiesta['player_id']}>\n"
+                f"📦 **Taglia:** {taglia_info['label']}\n"
+                f"💬 **Descrizione:** {richiesta['descrizione']}\n"
+                f"🚫 **Rifiutato da:** {interaction.user.mention}"
+            ),
+            color=discord.Color.red(),
+        )
+        embed_upd.set_footer(text="Tokyo Horizon RP | Trasporto Privato — RIFIUTATO")
+        await interaction.message.edit(embed=embed_upd, view=self)
+        await interaction.response.send_message("✅ Richiesta rifiutata.", ephemeral=True)
+
+        try:
+            player = await bot.fetch_user(richiesta["player_id"])
+            await player.send(
+                embed=discord.Embed(
+                    title="🚛 Trasporto Privato — Rifiutato",
+                    description="La tua richiesta di trasporto privato è stata **rifiutata** dallo staff.\nPuoi effettuare una nuova richiesta.",
+                    color=discord.Color.red(),
+                )
+            )
+        except Exception:
+            pass
+
+
+@bot.tree.command(name="prenotatrasporto", description="Prenota un trasporto privato e ricevi un preventivo")
+@app_commands.describe(
+    taglia="Dimensione del carico da trasportare",
+    descrizione="Descrivi cosa devi trasportare e dove (max 200 caratteri)"
+)
+@app_commands.choices(taglia=[
+    app_commands.Choice(name="📦 Piccola — 3.000€  (colli leggeri, bagagli)", value="piccola"),
+    app_commands.Choice(name="📫 Media  — 6.000€  (mobili, attrezzatura)",   value="media"),
+    app_commands.Choice(name="🚛 Grande — 12.000€ (carichi pesanti, container)", value="grande"),
+])
+async def prenotatrasporto(interaction: discord.Interaction, taglia: app_commands.Choice[str], descrizione: str):
+    if not await safe_defer(interaction, ephemeral=True): return
+
+    if len(descrizione) > 200:
+        await interaction.followup.send("❌ La descrizione non può superare i 200 caratteri.", ephemeral=True)
+        return
+
+    info   = PREZZI_TRASPORTO[taglia.value]
+    bil    = get_balance(interaction.user.id)
+    totale = bil["portafoglio"] + bil["banca"]
+
+    if totale < info["prezzo"]:
+        await interaction.followup.send(
+            f"❌ Non hai abbastanza fondi.\n"
+            f"💰 Costo trasporto: `{info['prezzo']:,}€`\n"
+            f"👛 Tuo totale disponibile: `{totale:,}€`",
+            ephemeral=True
+        )
+        return
+
+    # Genera ID univoco per la richiesta
+    rid = str(int(time.time()))[-6:]
+    trasporti_privati_pendenti[rid] = {
+        "player_id":    interaction.user.id,
+        "player_name":  str(interaction.user),
+        "taglia":       taglia.value,
+        "prezzo":       info["prezzo"],
+        "descrizione":  descrizione,
+        "stato":        "attesa",
+        "driver_id":    None,
+    }
+    salva_dati()
+
+    # Embed nel canale driver
+    embed = discord.Embed(
+        title=f"🚛 NUOVA RICHIESTA TRASPORTO — {info['label']}",
+        description=(
+            f"👤 **Cliente:** {interaction.user.mention} (`{interaction.user}`)\n"
+            f"📦 **Taglia:** {info['label']}\n"
+            f"📝 **Descrizione:** {descrizione}\n"
+            f"💰 **Prezzo:** `{info['prezzo']:,}€`\n\n"
+            f"Un driver può cliccare **Accetta** per prendere in carico il trasporto.\n"
+            f"Il pagamento verrà addebitato automaticamente al cliente."
+        ),
+        color=discord.Color.from_rgb(255, 165, 0),
+    )
+    embed.set_footer(text=f"Tokyo Horizon RP | Richiesta #{rid} • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+
+    try:
+        canale = await bot.fetch_channel(CANALE_TRASPORTI_PRIVATI)
+        view   = AccettaTrasportoView(rid)
+        await canale.send(embed=embed, view=view)
+    except Exception as e:
+        print(f"[TRASPORTO] ❌ Errore invio canale driver: {e}")
+        await interaction.followup.send("❌ Errore invio richiesta al canale driver. Contatta lo staff.", ephemeral=True)
+        return
+
+    await interaction.followup.send(
+        embed=discord.Embed(
+            title="✅ Richiesta Inviata!",
+            description=(
+                f"La tua richiesta di trasporto **{info['label']}** è stata inviata ai driver disponibili.\n\n"
+                f"📝 **Descrizione:** {descrizione}\n"
+                f"💰 **Costo:** `{info['prezzo']:,}€` (addebitato solo se accettata)\n\n"
+                f"Riceverai un messaggio privato quando un driver accetterà la tua richiesta!"
+            ),
+            color=discord.Color.blurple(),
+        ),
+        ephemeral=True
+    )
+    print(f"[TRASPORTO] Nuova richiesta #{rid} da {interaction.user} — taglia {taglia.value} ({info['prezzo']:,}€)")
+
+
+@bot.tree.command(name="cassaditta", description="[MOD] Visualizza il saldo della cassa della ditta trasporti")
+async def cassaditta(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=True): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi.", ephemeral=True)
+        return
+
+    in_attesa  = sum(1 for r in trasporti_privati_pendenti.values() if r.get("stato") == "attesa")
+    completati = sum(1 for r in trasporti_privati_pendenti.values() if r.get("stato") == "accettata")
+
+    embed = discord.Embed(
+        title="🏦 Cassa Ditta — Import/Export Trasporti",
+        description=(
+            f"💰 **Saldo attuale:** `{cassa_ditta:,}€`\n\n"
+            f"📋 Richieste in attesa: `{in_attesa}`\n"
+            f"✅ Richieste accettate (archivio): `{completati}`\n\n"
+            f"Usa `/pagadriver @utente importo` per pagare un driver."
+        ),
+        color=discord.Color.gold(),
+    )
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="pagadriver", description="[MOD] Paga un driver dalla cassa della ditta")
+@app_commands.describe(driver="Il driver da pagare", importo="Importo in € da pagare")
+async def pagadriver(interaction: discord.Interaction, driver: discord.Member, importo: int):
+    global cassa_ditta
+    if not await safe_defer(interaction, ephemeral=True): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi.", ephemeral=True)
+        return
+    if importo <= 0:
+        await interaction.followup.send("❌ L'importo deve essere maggiore di zero.", ephemeral=True)
+        return
+    if importo > cassa_ditta:
+        await interaction.followup.send(
+            f"❌ Fondi insufficienti in cassa.\n💰 Cassa attuale: `{cassa_ditta:,}€`\n📤 Richiesto: `{importo:,}€`",
+            ephemeral=True
+        )
+        return
+
+    cassa_ditta -= importo
+    bil = get_balance(driver.id)
+    bil["banca"] += importo
+    salva_dati()
+
+    embed = discord.Embed(
+        title="💸 Pagamento Driver Effettuato",
+        description=(
+            f"✅ Pagamento inviato a {driver.mention}\n\n"
+            f"💰 **Importo:** `{importo:,}€`\n"
+            f"🏦 **Cassa rimanente:** `{cassa_ditta:,}€`"
+        ),
+        color=discord.Color.green(),
+    )
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+    try:
+        await driver.send(
+            embed=discord.Embed(
+                title="💸 Stipendio Ricevuto — Ditta Trasporti",
+                description=(
+                    f"Hai ricevuto un pagamento dalla ditta!\n\n"
+                    f"💰 **Importo accreditato in banca:** `{importo:,}€`\n"
+                    f"🏦 **Nuovo saldo banca:** `{bil['banca']:,}€`"
+                ),
+                color=discord.Color.green(),
+            )
+        )
+    except Exception:
+        pass
+    print(f"[TRASPORTO] Staff {interaction.user} ha pagato driver {driver} → {importo:,}€ dalla cassa")
 
 
 # =============================================================================
