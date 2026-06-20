@@ -7207,33 +7207,11 @@ ZONE_CONCESSIONARIO = [
     },
 ]
 
-ZONE_PARAMEDICO = [
-    {
-        "nome":      "🏥 Mount Zonah Medical Center — Pillbox Hill",
-        "posizione": "Pillbox Hill, centro di LS — ospedale principale con elipista sul tetto e pronto soccorso attivo.",
-        "compito":   "Risposta alle emergenze in tutto il centro città, gestione PS e trasporti critici.",
-    },
-    {
-        "nome":      "🚑 Stazione EMS — Little Seoul",
-        "posizione": "Little Seoul, lato ovest di LS — rimessa ambulanze con insegna verde, vicino all'autostrada.",
-        "compito":   "Pattugliamento zona ovest e supporto agli incidenti stradali sulla Great Ocean Highway.",
-    },
-    {
-        "nome":      "🏥 Sandy Shores Medical Clinic — Contea di Blaine",
-        "posizione": "Sandy Shores, Main Street — clinica con tenda bianco-rossa, unico presidio sanitario del deserto.",
-        "compito":   "Copertura sanitaria della Contea di Blaine, interventi rurali e supporto ai traumi del deserto.",
-    },
-    {
-        "nome":      "🚁 Base Aerea EMS — LSIA",
-        "posizione": "Los Santos International Airport, settore nord — hangar EMS con elicottero medico in standby.",
-        "compito":   "Trasporti aerei d'emergenza, interventi in zone inaccessibili via terra.",
-    },
-    {
-        "nome":      "🏥 Paleto Bay Clinic — Paleto Bay",
-        "posizione": "Paleto Bay, Route 1 — piccola clinica costiera con ambulanza in permanenza.",
-        "compito":   "Presidio sanitario del nord della mappa, primo intervento su traumi da arma da fuoco.",
-    },
-]
+OSPEDALE_PARAMEDICO = {
+    "nome":      "🏥 TW Hospital",
+    "posizione": "Da aggiornare — in attesa dei dettagli.",
+    "compito":   "Risposta alle emergenze, gestione pronto soccorso e trasporti critici.",
+}
 
 
 @bot.tree.command(name="setupmappa", description="[MOD] Pubblica la mappa e le info del canale Import/Export")
@@ -7511,7 +7489,7 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
 
     # --- Paramedico ---
     elif lavoro.value == "paramedico":
-        zona = random.choice(ZONE_PARAMEDICO)
+        zona = OSPEDALE_PARAMEDICO
         lavori_attivi[uid] = {
             "lavoro": "paramedico",
             "zona":   zona["nome"],
