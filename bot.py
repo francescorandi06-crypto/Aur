@@ -6947,12 +6947,14 @@ def ha_ruolo_lavoro(interaction: discord.Interaction, tipo: str) -> bool:
     """Restituisce True se l'utente ha il ruolo Discord richiesto per quel lavoro."""
     nome = RUOLI_LAVORO.get(tipo, "")
     if not nome or interaction.guild is None:
+        print(f"[LAVORO_ROLE] FAIL — nome='{nome}' guild={interaction.guild}")
         return False
-    # _roles è sempre popolato per i membri del guild — contiene gli ID dei ruoli
     raw = getattr(interaction.user, '_roles', None)
     if raw is None:
+        print(f"[LAVORO_ROLE] FAIL — _roles è None per {interaction.user}")
         return False
-    # Cerca l'ID del ruolo per nome nella lista ruoli del server (sempre in cache)
+    nomi_utente = [r.name for r in interaction.guild.roles if r.id in raw]
+    print(f"[LAVORO_ROLE] {interaction.user} cerca '{nome}' — ruoli utente: {nomi_utente}")
     for role in interaction.guild.roles:
         if role.name.lower() == nome.lower() and role.id in raw:
             return True
