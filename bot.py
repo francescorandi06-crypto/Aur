@@ -6928,7 +6928,7 @@ PAGA_ORARIA_POLIZIA    = 300    # €/ora — tetto 1.800€ in 6h (scala propor
 PAGA_MAX_POLIZIA       = 1800   # €  — massimo assoluto per turno polizia
 ORE_SAT_LAVORO         = 6      # ore oltre le quali la paga non cresce più (tutti i lavori)
 MAX_ORE_TURNO          = 6      # limite anti-abuso per singolo turno
-MAX_TURNI_GIORNALIERI       = 2      # turni massimi al giorno per giocatore
+MAX_TURNI_GIORNALIERI       = 9999   # turni massimi al giorno per giocatore (limite rimosso temporaneamente)
 
 PAGA_ORARIA_MECCANICO      = 225    # €/ora — tetto 1.350€ in 6h
 PAGA_MAX_MECCANICO         = 1350
