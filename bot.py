@@ -7755,6 +7755,70 @@ async def regolamentipolizia(interaction: discord.Interaction):
     print(f"[POLIZIA] Regolamento pubblicato in #{interaction.channel.name} da {interaction.user}")
 
 
+@bot.tree.command(name="regolamentisanitari", description="[MOD] Pubblica il regolamento ufficiale del Soccorso Medico in questo canale")
+async def regolamentisanitari(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=False): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🚑 REGOLAMENTO SOCCORSO MEDICO — Tokyo Horizon RP",
+        description=(
+            "Regole fondamentali per la gestione dei feriti e del personale sanitario.\n"
+            "Leggi attentamente prima di operare sul campo.\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🎮 COME INIZIARE IL TURNO**\n"
+            "1️⃣ Usa `/startlavoro` → scegli **Paramedico**\n"
+            "2️⃣ Il bot ti assegna la **postazione** (solo tu la vedi)\n"
+            "3️⃣ Raggiungi l'ospedale e rimani operativo in RP\n"
+            "4️⃣ Al termine usa `/finelavoro` e inserisci le ore reali\n"
+            "5️⃣ Ricevi lo **stipendio** direttamente in banca\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🚨 REGOLE PER I FERITI**\n"
+            "🔴 Chi cade a terra deve **chiamare i soccorsi** prima di qualsiasi altra azione\n"
+            "⏳ Dopo la chiamata, il ferito **deve aspettare 10 minuti** sul posto per permettere ai medici di arrivare\n"
+            "🩺 Solo se nessun medico risponde entro i 10 minuti, è consentito usare un kit medico o fare rientro autonomo\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**❌ ANTI-COMBAT RESPAWN**\n"
+            "È vietato forzare il rientro per sfuggire a:\n"
+            "🚔 Arresti o fermi della Polizia\n"
+            "💰 Rapine in corso\n"
+            "🎭 Sequestri da parte di gang\n"
+            "⚠️ Il rientro è consentito **solo quando tutte le interazioni RP sulla scena sono concluse**\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🩹 CONVALESCENZA (RP DA FERITO)**\n"
+            "Dopo le cure o il rientro, per i successivi **5 minuti** è obbligatorio:\n"
+            "🚶 Muoversi **camminando** — vietato scattare, scalare o fare parkour\n"
+            "🚫 Vietato ingaggiare conflitti a fuoco fino alla fine della convalescenza\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🚷 TUTELA DEL PERSONALE SANITARIO**\n"
+            "🔒 È vietato intralciare i medici durante le manovre di rianimazione\n"
+            "📴 Vietato inondare la centrale con chiamate false — chi molesta il personale sanitario verrà sanzionato\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🧠 RESET MEMORIA (NLR)**\n"
+            "Se fai rientro autonomo senza l'intervento dei medici si attiva la **perdita di memoria**:\n"
+            "🔇 Il personaggio **non ricorda nulla** degli eventi precedenti\n"
+            "🚫 Vietato tornare sul punto del decesso o vendicarsi dell'accaduto\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**💰 STIPENDIO**\n"
+            "💵 **275€/ora** · massimo **1.650€ per turno** (saturazione a 6 ore)\n"
+            "🏛️ Il pagamento viene accreditato direttamente in banca\n"
+        ),
+        color=discord.Color.from_rgb(220, 50, 50),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Regolamento Soccorso Medico — Rispetta sempre le regole del server")
+    await interaction.followup.send(embed=embed)
+    print(f"[SANITARI] Regolamento pubblicato in #{interaction.channel.name} da {interaction.user}")
+
+
 @bot.tree.command(name="cambiazona", description="[POLIZIA] Richiedi una nuova zona di pattugliamento (min. 20 min nella zona attuale)")
 async def cambiazona(interaction: discord.Interaction):
     if not await safe_defer(interaction, ephemeral=True): return
