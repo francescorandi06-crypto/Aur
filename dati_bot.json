@@ -2,7 +2,7 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 36000,
-      "banca": 176500
+      "banca": 178300
     },
     "1214733905349845032": {
       "portafoglio": 995000,
@@ -61,13 +61,18 @@
   "storico_modifiche": {},
   "lavori_attivi": {
     "1083459553892499476": {
-      "lavoro": "polizia",
-      "zona": "Pattuglia Mirror Park",
-      "inizio": 1781908546.6461194
+      "lavoro": "meccanico",
+      "zona": "\ud83d\udd27 LS Customs \u2014 Viale dei Motori",
+      "inizio": 1781957074.8596745
     }
   },
   "canale_importexport_id": 1517261262382305454,
   "trasporti_privati_pendenti": {},
   "cassa_ditta": 0,
-  "contatore_lavori_giornalieri": {}
+  "contatore_lavori_giornalieri": {
+    "1083459553892499476": {
+      "data": "2026-06-20",
+      "count": 1
+    }
+  }
 }
