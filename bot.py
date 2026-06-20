@@ -7819,6 +7819,65 @@ async def regolamentisanitari(interaction: discord.Interaction):
     print(f"[SANITARI] Regolamento pubblicato in #{interaction.channel.name} da {interaction.user}")
 
 
+@bot.tree.command(name="regolamentoparamedici", description="[MOD] Pubblica il regolamento interno per i Paramedici in questo canale")
+async def regolamentoparamedici(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=False): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🚑 REGOLAMENTO PARAMEDICI — Tokyo Horizon RP",
+        description=(
+            "Benvenuto nel corpo sanitario di Los Santos.\n"
+            "Questo regolamento è riservato al personale medico in servizio attivo.\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🎮 TURNO DI SERVIZIO**\n"
+            "1️⃣ Usa `/startlavoro` → **Paramedico** per iniziare il turno\n"
+            "2️⃣ Posizionati all'**Ospedale Paramedico** e rimani operativo in RP\n"
+            "3️⃣ Durante il turno rispondi a tutte le chiamate di soccorso\n"
+            "4️⃣ Al termine usa `/finelavoro` con le ore reali lavorate\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**📋 DOVERI IN SERVIZIO**\n"
+            "🔴 Sei **obbligato a rispondere** alle chiamate di soccorso durante il tuo turno\n"
+            "🔴 Raggiungi il ferito nel minor tempo possibile\n"
+            "🔴 Gestisci la scena in modo realistico — valuta il ferito, stabilizzalo, trasportalo se necessario\n"
+            "🔴 Non puoi abbandonare un paziente in cura senza averlo stabilizzato o passato ad un collega\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🚷 CONDOTTA PROFESSIONALE**\n"
+            "✅ Mantieni sempre un comportamento professionale e neutrale sulla scena\n"
+            "✅ Non prendere parte attiva a conflitti in corso — il personale sanitario è **neutrale**\n"
+            "✅ Non rivelare informazioni sui pazienti o sulle scene a terze parti\n"
+            "❌ È vietato utilizzare l'ambulanza o l'uniforme per scopi criminali\n"
+            "❌ È vietato rifiutarsi di soccorrere un giocatore senza valido motivo RP\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🧠 GESTIONE DELLA SCENA**\n"
+            "🩺 Se la scena è ancora calda (sparatoria in corso), **aspetta in zona sicura** e intervieni solo quando è sicuro\n"
+            "🚔 Coordina con la Polizia in caso di scene con più feriti o criminali armati\n"
+            "📞 In caso di massa critica di feriti, puoi richiedere supporto ad altri medici online\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**💰 STIPENDIO**\n"
+            "💵 **275€/ora** · massimo **1.650€ per turno** (saturazione a 6 ore)\n"
+            "🏛️ Il pagamento viene accreditato direttamente in banca al `/finelavoro`\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**📋 COMANDI DISPONIBILI**\n"
+            "`/startlavoro` → Paramedico — inizia il turno\n"
+            "`/finelavoro` — termina il turno e riscuoti\n"
+            "`/turniattivi` — vedi chi è in servizio\n"
+        ),
+        color=discord.Color.from_rgb(220, 50, 50),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Regolamento Paramedici — Rispetta sempre le regole del server")
+    await interaction.followup.send(embed=embed)
+    print(f"[SANITARI] Regolamento paramedici pubblicato in #{interaction.channel.name} da {interaction.user}")
+
+
 @bot.tree.command(name="cambiazona", description="[POLIZIA] Richiedi una nuova zona di pattugliamento (min. 20 min nella zona attuale)")
 async def cambiazona(interaction: discord.Interaction):
     if not await safe_defer(interaction, ephemeral=True): return
