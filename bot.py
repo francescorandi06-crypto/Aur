@@ -6943,22 +6943,22 @@ RUOLI_LAVORO = {
     "concessionario": "Concessionario",
 }
 
+_IDS_RUOLI_LAVORO = {
+    "camionista":     1513574080232558804,
+    "polizia":        1515441313216991262,
+    "meccanico":      1517200733160734912,
+    "concessionario": 1517103897469124678,
+}
+
 def ha_ruolo_lavoro(interaction: discord.Interaction, tipo: str) -> bool:
     """Restituisce True se l'utente ha il ruolo Discord richiesto per quel lavoro."""
-    nome = RUOLI_LAVORO.get(tipo, "")
-    if not nome or interaction.guild is None:
-        print(f"[LAVORO_ROLE] FAIL — nome='{nome}' guild={interaction.guild}")
+    ruolo_id = _IDS_RUOLI_LAVORO.get(tipo)
+    if ruolo_id is None:
         return False
     raw = getattr(interaction.user, '_roles', None)
     if raw is None:
-        print(f"[LAVORO_ROLE] FAIL — _roles è None per {interaction.user}")
         return False
-    nomi_utente = [r.name for r in interaction.guild.roles if r.id in raw]
-    print(f"[LAVORO_ROLE] {interaction.user} cerca '{nome}' — ruoli utente: {nomi_utente}")
-    for role in interaction.guild.roles:
-        if role.name.lower() == nome.lower() and role.id in raw:
-            return True
-    return False
+    return ruolo_id in raw
 
 ZONE_POLIZIA = [
     # --- peso 3 → compare ~25% delle volte (pattugliamento libero) ---
@@ -7267,11 +7267,6 @@ async def setupmappa(interaction: discord.Interaction):
     app_commands.Choice(name="🏎️ Concessionario — 250€/ora · max 1.500€",    value="concessionario"),
 ])
 async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
-    # Log ruoli PRIMA del defer per debug (visibile anche su interazioni ghost)
-    raw_debug = getattr(interaction.user, '_roles', None)
-    nomi_debug = [r.name for r in interaction.guild.roles if r.id in raw_debug] if (interaction.guild and raw_debug) else []
-    print(f"[STARTLAVORO_DEBUG] {interaction.user} lavoro={lavoro.value} | _roles IDs={raw_debug} | nomi={nomi_debug}")
-
     if not await safe_defer(interaction, ephemeral=True): return
     uid = interaction.user.id
 
