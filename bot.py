@@ -7267,6 +7267,11 @@ async def setupmappa(interaction: discord.Interaction):
     app_commands.Choice(name="🏎️ Concessionario — 250€/ora · max 1.500€",    value="concessionario"),
 ])
 async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
+    # Log ruoli PRIMA del defer per debug (visibile anche su interazioni ghost)
+    raw_debug = getattr(interaction.user, '_roles', None)
+    nomi_debug = [r.name for r in interaction.guild.roles if r.id in raw_debug] if (interaction.guild and raw_debug) else []
+    print(f"[STARTLAVORO_DEBUG] {interaction.user} lavoro={lavoro.value} | _roles IDs={raw_debug} | nomi={nomi_debug}")
+
     if not await safe_defer(interaction, ephemeral=True): return
     uid = interaction.user.id
 
