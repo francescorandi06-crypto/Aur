@@ -7584,6 +7584,59 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
 
 
 # =============================================================================
+# TURNI ATTIVI
+# =============================================================================
+
+_EMOJI_LAVORO = {
+    "camionista":     "🚛",
+    "polizia":        "👮",
+    "meccanico":      "🔧",
+    "concessionario": "🏎️",
+}
+_LABEL_LAVORO = {
+    "camionista":     "Camionista",
+    "polizia":        "Poliziotto",
+    "meccanico":      "Meccanico",
+    "concessionario": "Concessionario",
+}
+
+
+@bot.tree.command(name="turniattivi", description="Mostra i giocatori attualmente in turno di lavoro")
+async def turniattivi(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=False): return
+
+    if not lavori_attivi:
+        await interaction.followup.send(
+            embed=discord.Embed(
+                description="📭 Nessun giocatore è attualmente in turno.",
+                color=discord.Color.greyple(),
+            )
+        )
+        return
+
+    ora_now = time.time()
+    righe = []
+    for uid, info in sorted(lavori_attivi.items(), key=lambda x: x[1].get("inizio", 0)):
+        tipo   = info.get("lavoro", "camionista")
+        emoji  = _EMOJI_LAVORO.get(tipo, "💼")
+        label  = _LABEL_LAVORO.get(tipo, tipo.capitalize())
+        inizio = info.get("inizio", ora_now)
+        minuti = int((ora_now - inizio) / 60)
+        ore    = minuti // 60
+        mins   = minuti % 60
+        durata = f"{ore}h {mins}m" if ore > 0 else f"{mins}m"
+        righe.append(f"{emoji} <@{uid}> — **{label}** · in servizio da `{durata}`")
+
+    embed = discord.Embed(
+        title=f"👷 Turni Attivi — {len(lavori_attivi)} giocator{'e' if len(lavori_attivi) == 1 else 'i'}",
+        description="\n".join(righe),
+        color=discord.Color.from_rgb(88, 101, 242),
+    )
+    embed.set_footer(text=f"Tokyo Horizon RP • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+    await interaction.followup.send(embed=embed)
+
+
+# =============================================================================
 # POLIZIA — CAMBIO ZONA & SOCCORSO
 # =============================================================================
 
