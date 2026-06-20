@@ -6935,6 +6935,8 @@ PAGA_ORARIA_MECCANICO      = 225    # €/ora — tetto 1.350€ in 6h
 PAGA_MAX_MECCANICO         = 1350
 PAGA_ORARIA_CONCESSIONARIO = 250    # €/ora — tetto 1.500€ in 6h
 PAGA_MAX_CONCESSIONARIO    = 1500
+PAGA_ORARIA_PARAMEDICO     = 275    # €/ora — tetto 1.650€ in 6h
+PAGA_MAX_PARAMEDICO        = 1650
 
 # Ruoli Discord richiesti per ogni lavoro (modificabili dallo staff)
 RUOLI_LAVORO = {
@@ -6942,6 +6944,7 @@ RUOLI_LAVORO = {
     "polizia":        "Poliziotto",
     "meccanico":      "Meccanico",
     "concessionario": "Concessionario",
+    "paramedico":     "Paramedico",
 }
 
 _IDS_RUOLI_LAVORO = {
@@ -6949,6 +6952,7 @@ _IDS_RUOLI_LAVORO = {
     "polizia":        1515441313216991262,
     "meccanico":      1517200733160734912,
     "concessionario": 1517103897469124678,
+    "paramedico":     1517962728390656011,
 }
 
 def ha_ruolo_lavoro(interaction: discord.Interaction, tipo: str) -> bool:
@@ -7203,6 +7207,34 @@ ZONE_CONCESSIONARIO = [
     },
 ]
 
+ZONE_PARAMEDICO = [
+    {
+        "nome":      "🏥 Mount Zonah Medical Center — Pillbox Hill",
+        "posizione": "Pillbox Hill, centro di LS — ospedale principale con elipista sul tetto e pronto soccorso attivo.",
+        "compito":   "Risposta alle emergenze in tutto il centro città, gestione PS e trasporti critici.",
+    },
+    {
+        "nome":      "🚑 Stazione EMS — Little Seoul",
+        "posizione": "Little Seoul, lato ovest di LS — rimessa ambulanze con insegna verde, vicino all'autostrada.",
+        "compito":   "Pattugliamento zona ovest e supporto agli incidenti stradali sulla Great Ocean Highway.",
+    },
+    {
+        "nome":      "🏥 Sandy Shores Medical Clinic — Contea di Blaine",
+        "posizione": "Sandy Shores, Main Street — clinica con tenda bianco-rossa, unico presidio sanitario del deserto.",
+        "compito":   "Copertura sanitaria della Contea di Blaine, interventi rurali e supporto ai traumi del deserto.",
+    },
+    {
+        "nome":      "🚁 Base Aerea EMS — LSIA",
+        "posizione": "Los Santos International Airport, settore nord — hangar EMS con elicottero medico in standby.",
+        "compito":   "Trasporti aerei d'emergenza, interventi in zone inaccessibili via terra.",
+    },
+    {
+        "nome":      "🏥 Paleto Bay Clinic — Paleto Bay",
+        "posizione": "Paleto Bay, Route 1 — piccola clinica costiera con ambulanza in permanenza.",
+        "compito":   "Presidio sanitario del nord della mappa, primo intervento su traumi da arma da fuoco.",
+    },
+]
+
 
 @bot.tree.command(name="setupmappa", description="[MOD] Pubblica la mappa e le info del canale Import/Export")
 async def setupmappa(interaction: discord.Interaction):
@@ -7266,6 +7298,7 @@ async def setupmappa(interaction: discord.Interaction):
     app_commands.Choice(name="👮 Poliziotto — 300€/ora · max 1.800€",         value="polizia"),
     app_commands.Choice(name="🔧 Meccanico — 225€/ora · max 1.350€",          value="meccanico"),
     app_commands.Choice(name="🏎️ Concessionario — 250€/ora · max 1.500€",    value="concessionario"),
+    app_commands.Choice(name="🚑 Paramedico — 275€/ora · max 1.650€",         value="paramedico"),
 ])
 async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True): return
@@ -7476,6 +7509,45 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
             print(f"[LOG_LAVORI] Errore invio messaggio pubblico: {e}")
         print(f"[LAVORO] {interaction.user} avviato turno concessionario → {zona['nome']}")
 
+    # --- Paramedico ---
+    elif lavoro.value == "paramedico":
+        zona = random.choice(ZONE_PARAMEDICO)
+        lavori_attivi[uid] = {
+            "lavoro": "paramedico",
+            "zona":   zona["nome"],
+            "inizio": time.time(),
+        }
+        salva_dati()
+        embed = discord.Embed(
+            title="🚑 Turno Avviato — Paramedico",
+            description=(
+                f"Il tuo turno EMS è iniziato!\n\n"
+                f"**🏥 Postazione assegnata:**\n"
+                f"📍 **{zona['nome']}**\n"
+                f"🗺️ {zona['posizione']}\n"
+                f"🛠️ **Compito:** {zona['compito']}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"Raggiungi la postazione, rispondi alle emergenze in RP "
+                f"e quando hai finito usa `/finelavoro`.\n\n"
+                f"💰 Paga: **275€/ora** · max **1.650€** (raggiunto a 6h, poi si satura)"
+            ),
+            color=discord.Color.from_rgb(220, 50, 50),
+        )
+        embed.set_footer(text=f"Tokyo Horizon RP | Turno paramedico iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            ora_it = discord.utils.utcnow().strftime("%H:%M")
+            embed_pub = discord.Embed(
+                description=f"🟢 {interaction.user.mention} ha iniziato il turno da **🚑 Paramedico**",
+                color=discord.Color.from_rgb(220, 50, 50),
+            )
+            embed_pub.set_footer(text=f"Tokyo Horizon RP • {ora_it} UTC")
+            ch = await bot.fetch_channel(CANALE_LOG_LAVORI)
+            await ch.send(embed=embed_pub)
+        except Exception as e:
+            print(f"[LOG_LAVORI] Errore invio messaggio pubblico: {e}")
+        print(f"[LAVORO] {interaction.user} avviato turno paramedico → {zona['nome']}")
+
 
 @bot.tree.command(name="finelavoro", description="Termina il turno e riscuoti lo stipendio")
 @app_commands.describe(ore="Ore di lavoro reali (es: 2 oppure 1.5 per un'ora e mezza)")
@@ -7533,6 +7605,11 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
         lavoro_label = "🏎️ Concessionario"
         colore       = discord.Color.from_rgb(40, 160, 80)
         paga_desc    = f"`{paga:,}€` (250€/ora · max 1.500€ in 6h)"
+    elif tipo_lavoro == "paramedico":
+        paga         = min(int(ore_effettive * PAGA_ORARIA_PARAMEDICO), PAGA_MAX_PARAMEDICO)
+        lavoro_label = "🚑 Paramedico"
+        colore       = discord.Color.from_rgb(220, 50, 50)
+        paga_desc    = f"`{paga:,}€` (275€/ora · max 1.650€ in 6h)"
     else:
         paga         = min(int(ore_effettive * PAGA_ORARIA_CAMIONISTA), PAGA_MAX_CAMIONISTA)
         lavoro_label = "🚛 Camionista"
@@ -7592,12 +7669,14 @@ _EMOJI_LAVORO = {
     "polizia":        "👮",
     "meccanico":      "🔧",
     "concessionario": "🏎️",
+    "paramedico":     "🚑",
 }
 _LABEL_LAVORO = {
     "camionista":     "Camionista",
     "polizia":        "Poliziotto",
     "meccanico":      "Meccanico",
     "concessionario": "Concessionario",
+    "paramedico":     "Paramedico",
 }
 
 
