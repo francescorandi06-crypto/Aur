@@ -6927,18 +6927,18 @@ PAGA_MAX_CAMIONISTA    = 1500   # €  — massimo assoluto per turno camionista
 PAGA_ORARIA_POLIZIA    = 300    # €/ora — tetto 1.800€ in 6h (scala proporzionalmente)
 PAGA_MAX_POLIZIA       = 1800   # €  — massimo assoluto per turno polizia
 ORE_SAT_LAVORO         = 6      # ore oltre le quali la paga non cresce più (tutti i lavori)
-MAX_ORE_TURNO          = 12     # limite anti-abuso per singolo turno
+MAX_ORE_TURNO          = 6      # limite anti-abuso per singolo turno
 MAX_TURNI_GIORNALIERI       = 2      # turni massimi al giorno per giocatore
 
 PAGA_ORARIA_MECCANICO      = 225    # €/ora — tetto 1.350€ in 6h
 PAGA_MAX_MECCANICO         = 1350
-PAGA_ORARIA_CONCESSIONARIO = 200    # €/ora — tetto 1.200€ in 6h
-PAGA_MAX_CONCESSIONARIO    = 1200
+PAGA_ORARIA_CONCESSIONARIO = 250    # €/ora — tetto 1.500€ in 6h
+PAGA_MAX_CONCESSIONARIO    = 1500
 
 # Ruoli Discord richiesti per ogni lavoro (modificabili dallo staff)
 RUOLI_LAVORO = {
     "camionista":     "Camionista",
-    "polizia":        "Polizia",
+    "polizia":        "Poliziotto",
     "meccanico":      "Meccanico",
     "concessionario": "Concessionario",
 }
@@ -7226,7 +7226,7 @@ async def setupmappa(interaction: discord.Interaction):
             "5️⃣ Usa `/finelavoro` → inserisci le ore reali fatte\n"
             "6️⃣ Ricevi lo **stipendio** direttamente in banca!\n\n"
             "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "💰 **Paga:** `250€/ora` · max `1.500€` (saturazione a 6h) | ⏱️ Max `12 ore` per turno"
+            "💰 **Paga:** `250€/ora` · max `1.500€` (saturazione a 6h) | ⏱️ Max `6 ore` per turno"
         ),
         color=discord.Color.from_rgb(255, 140, 0),
     )
@@ -7252,7 +7252,7 @@ async def setupmappa(interaction: discord.Interaction):
     app_commands.Choice(name="🚛 Camionista — 250€/ora · max 1.500€",         value="camionista"),
     app_commands.Choice(name="👮 Poliziotto — 300€/ora · max 1.800€",         value="polizia"),
     app_commands.Choice(name="🔧 Meccanico — 225€/ora · max 1.350€",          value="meccanico"),
-    app_commands.Choice(name="🏎️ Concessionario — 200€/ora · max 1.200€",    value="concessionario"),
+    app_commands.Choice(name="🏎️ Concessionario — 250€/ora · max 1.500€",    value="concessionario"),
 ])
 async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Choice[str]):
     if not await safe_defer(interaction, ephemeral=True): return
@@ -7411,7 +7411,7 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
                 f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"Raggiungi lo showroom, gestisci le vendite in RP "
                 f"e quando hai finito usa `/finelavoro`.\n\n"
-                f"💰 Paga: **200€/ora** · max **1.200€** (raggiunto a 6h, poi si satura)"
+                f"💰 Paga: **250€/ora** · max **1.500€** (raggiunto a 6h, poi si satura)"
             ),
             color=discord.Color.from_rgb(40, 160, 80),
         )
@@ -7475,7 +7475,7 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
         paga         = min(int(ore_effettive * PAGA_ORARIA_CONCESSIONARIO), PAGA_MAX_CONCESSIONARIO)
         lavoro_label = "🏎️ Concessionario"
         colore       = discord.Color.from_rgb(40, 160, 80)
-        paga_desc    = f"`{paga:,}€` (200€/ora · max 1.200€ in 6h)"
+        paga_desc    = f"`{paga:,}€` (250€/ora · max 1.500€ in 6h)"
     else:
         paga         = min(int(ore_effettive * PAGA_ORARIA_CAMIONISTA), PAGA_MAX_CAMIONISTA)
         lavoro_label = "🚛 Camionista"
