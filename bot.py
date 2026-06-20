@@ -6946,23 +6946,17 @@ RUOLI_LAVORO = {
 def ha_ruolo_lavoro(interaction: discord.Interaction, tipo: str) -> bool:
     """Restituisce True se l'utente ha il ruolo Discord richiesto per quel lavoro."""
     nome = RUOLI_LAVORO.get(tipo, "")
-    if not nome:
+    if not nome or interaction.guild is None:
         return False
-    # Usa get_member per ottenere sempre il membro con i ruoli aggiornati
-    member = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
-    if member is not None:
-        return any(r.name.lower() == nome.lower() for r in member.roles)
-    # Fallback: _roles con ID noti
-    _IDS = {
-        "polizia":        1515441313216991262,
-        "meccanico":      1517200733160734912,
-        "concessionario": 1517103897469124678,
-    }
+    # _roles è sempre popolato per i membri del guild — contiene gli ID dei ruoli
     raw = getattr(interaction.user, '_roles', None)
     if raw is None:
         return False
-    ruolo_id = _IDS.get(tipo)
-    return ruolo_id is not None and ruolo_id in raw
+    # Cerca l'ID del ruolo per nome nella lista ruoli del server (sempre in cache)
+    for role in interaction.guild.roles:
+        if role.name.lower() == nome.lower() and role.id in raw:
+            return True
+    return False
 
 ZONE_POLIZIA = [
     # --- peso 3 → compare ~25% delle volte (pattugliamento libero) ---
