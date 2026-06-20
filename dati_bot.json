@@ -2,7 +2,7 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 36000,
-      "banca": 178525
+      "banca": 179275
     },
     "1214733905349845032": {
       "portafoglio": 995000,
@@ -59,14 +59,20 @@
   "veicoli_posseduti": {},
   "canale_meccanico_id": 1517160752123875339,
   "storico_modifiche": {},
-  "lavori_attivi": {},
+  "lavori_attivi": {
+    "1083459553892499476": {
+      "lavoro": "meccanico",
+      "zona": "\u2699\ufe0f Garage Privato \u2014 Vespucci Canals",
+      "inizio": 1781975120.405651
+    }
+  },
   "canale_importexport_id": 1517261262382305454,
   "trasporti_privati_pendenti": {},
   "cassa_ditta": 0,
   "contatore_lavori_giornalieri": {
     "1083459553892499476": {
       "data": "2026-06-20",
-      "count": 2
+      "count": 4
     }
   }
 }
