@@ -2,7 +2,7 @@
   "economia": {
     "1083459553892499476": {
       "portafoglio": 36000,
-      "banca": 179725
+      "banca": 179950
     },
     "1214733905349845032": {
       "portafoglio": 995000,
@@ -61,9 +61,9 @@
   "storico_modifiche": {},
   "lavori_attivi": {
     "1083459553892499476": {
-      "lavoro": "meccanico",
-      "zona": "\ud83d\ude81 Hangar Sandy Shores \u2014 Veicoli Aerei",
-      "inizio": 1781980192.6136162
+      "lavoro": "paramedico",
+      "zona": "\ud83c\udfe5 Ospedale Paramedico",
+      "inizio": 1781981902.2379265
     }
   },
   "canale_importexport_id": 1517261262382305454,
@@ -72,7 +72,7 @@
   "contatore_lavori_giornalieri": {
     "1083459553892499476": {
       "data": "2026-06-20",
-      "count": 5
+      "count": 6
     }
   }
 }
