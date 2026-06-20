@@ -7208,7 +7208,7 @@ ZONE_CONCESSIONARIO = [
 ]
 
 OSPEDALE_PARAMEDICO = {
-    "nome":      "🏥 Ospedale Principale",
+    "nome":      "🏥 Ospedale Paramedico",
     "posizione": "Da aggiornare — in attesa dei dettagli.",
     "compito":   "Risposta alle emergenze, gestione pronto soccorso e trasporti critici.",
 }
