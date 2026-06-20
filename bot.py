@@ -2379,6 +2379,7 @@ RUOLO_GESTORE_WL         = 1514818877014409227   # ruolo @gestore wl
 CANALE_CARTA             = 1516151385064869928   # canale carta d'identità
 CANALE_MECCANICO_RICHIESTE = 1517160752123875339  # canale richieste modifiche veicolo (player)
 CANALE_MECCANICO_STAFF    = 1517200240510238900  # canale staff meccanico (accetta/rifiuta)
+CANALE_LOG_LAVORI         = 1517956760541986989  # canale pubblico log inizio/fine turni
 RUOLO_POLIZIA_HARDCODED  = 1515441313216991262
 RUOLO_CITTADINO          = 1513574080232558804   # ruolo assegnato al completamento della carta d'identità
 
@@ -7337,6 +7338,17 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
             await interaction.followup.send(embed=embed, file=file_zona, ephemeral=True)
         except FileNotFoundError:
             await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            ora_it = discord.utils.utcnow().strftime("%H:%M")
+            embed_pub = discord.Embed(
+                description=f"🟢 {interaction.user.mention} ha iniziato il turno da **🚛 Camionista**",
+                color=discord.Color.from_rgb(255, 140, 0),
+            )
+            embed_pub.set_footer(text=f"Tokyo Horizon RP • {ora_it} UTC")
+            ch = await bot.fetch_channel(CANALE_LOG_LAVORI)
+            await ch.send(embed=embed_pub)
+        except Exception as e:
+            print(f"[LOG_LAVORI] Errore invio messaggio pubblico: {e}")
         print(f"[LAVORO] {interaction.user} avviato turno camionista → {zona['nome']}")
 
     # --- Poliziotto ---
@@ -7373,6 +7385,17 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
         )
         embed.set_footer(text=f"Tokyo Horizon RP | Turno polizia iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
         await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            ora_it = discord.utils.utcnow().strftime("%H:%M")
+            embed_pub = discord.Embed(
+                description=f"🟢 {interaction.user.mention} ha iniziato il turno da **👮 Poliziotto**",
+                color=discord.Color.from_rgb(30, 100, 200),
+            )
+            embed_pub.set_footer(text=f"Tokyo Horizon RP • {ora_it} UTC")
+            ch = await bot.fetch_channel(CANALE_LOG_LAVORI)
+            await ch.send(embed=embed_pub)
+        except Exception as e:
+            print(f"[LOG_LAVORI] Errore invio messaggio pubblico: {e}")
         print(f"[LAVORO] {interaction.user} avviato turno polizia → {zona['nome']}")
 
     # --- Meccanico ---
@@ -7401,6 +7424,17 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
         )
         embed.set_footer(text=f"Tokyo Horizon RP | Turno meccanico iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
         await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            ora_it = discord.utils.utcnow().strftime("%H:%M")
+            embed_pub = discord.Embed(
+                description=f"🟢 {interaction.user.mention} ha iniziato il turno da **🔧 Meccanico**",
+                color=discord.Color.from_rgb(180, 100, 20),
+            )
+            embed_pub.set_footer(text=f"Tokyo Horizon RP • {ora_it} UTC")
+            ch = await bot.fetch_channel(CANALE_LOG_LAVORI)
+            await ch.send(embed=embed_pub)
+        except Exception as e:
+            print(f"[LOG_LAVORI] Errore invio messaggio pubblico: {e}")
         print(f"[LAVORO] {interaction.user} avviato turno meccanico → {zona['nome']}")
 
     # --- Concessionario ---
@@ -7429,6 +7463,17 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
         )
         embed.set_footer(text=f"Tokyo Horizon RP | Turno concessionario iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
         await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            ora_it = discord.utils.utcnow().strftime("%H:%M")
+            embed_pub = discord.Embed(
+                description=f"🟢 {interaction.user.mention} ha iniziato il turno da **🏎️ Concessionario**",
+                color=discord.Color.from_rgb(40, 160, 80),
+            )
+            embed_pub.set_footer(text=f"Tokyo Horizon RP • {ora_it} UTC")
+            ch = await bot.fetch_channel(CANALE_LOG_LAVORI)
+            await ch.send(embed=embed_pub)
+        except Exception as e:
+            print(f"[LOG_LAVORI] Errore invio messaggio pubblico: {e}")
         print(f"[LAVORO] {interaction.user} avviato turno concessionario → {zona['nome']}")
 
 
@@ -7524,6 +7569,17 @@ async def finelavoro(interaction: discord.Interaction, ore: str):
     )
     embed.set_footer(text=f"Tokyo Horizon RP | Fine turno • {discord.utils.utcnow().strftime('%H:%M')} UTC")
     await interaction.followup.send(embed=embed, ephemeral=True)
+    try:
+        ora_it = discord.utils.utcnow().strftime("%H:%M")
+        embed_pub = discord.Embed(
+            description=f"🔴 {interaction.user.mention} ha terminato il turno da **{lavoro_label}** · `{ore_float}h` · **+{paga:,}€**",
+            color=colore,
+        )
+        embed_pub.set_footer(text=f"Tokyo Horizon RP • {ora_it} UTC")
+        ch = await bot.fetch_channel(CANALE_LOG_LAVORI)
+        await ch.send(embed=embed_pub)
+    except Exception as e:
+        print(f"[LOG_LAVORI] Errore invio messaggio pubblico fine turno: {e}")
     print(f"[LAVORO] {interaction.user} fine turno {tipo_lavoro} — {ore_float}h → +{paga:,}€ (reale: {durata_reale:.1f}h)")
 
 
