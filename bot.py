@@ -7361,6 +7361,27 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
             await interaction.followup.send(embed=embed, file=file_zona, ephemeral=True)
         except FileNotFoundError:
             await interaction.followup.send(embed=embed, ephemeral=True)
+        # --- Foto del punto di partenza: magazzino + panoramica porto ---
+        try:
+            embed_p1 = discord.Embed(
+                description="🏭 **Magazzino di partenza** — qui carichi la merce prima di partire",
+                color=discord.Color.from_rgb(255, 140, 0),
+            )
+            f1 = discord.File("attached_assets/IMG_0448_1782160332123.jpeg", filename="magazzino.jpeg")
+            embed_p1.set_image(url="attachment://magazzino.jpeg")
+            await interaction.followup.send(embed=embed_p1, file=f1, ephemeral=True)
+        except FileNotFoundError:
+            pass
+        try:
+            embed_p2 = discord.Embed(
+                description="🌊 **Porto di Los Santos** — panoramica della zona di partenza",
+                color=discord.Color.from_rgb(255, 140, 0),
+            )
+            f2 = discord.File("attached_assets/IMG_0364_1781815292524.jpeg", filename="porto.jpeg")
+            embed_p2.set_image(url="attachment://porto.jpeg")
+            await interaction.followup.send(embed=embed_p2, file=f2, ephemeral=True)
+        except FileNotFoundError:
+            pass
         try:
             ora_it = discord.utils.utcnow().strftime("%H:%M")
             embed_pub = discord.Embed(
