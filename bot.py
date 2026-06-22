@@ -7255,7 +7255,7 @@ async def setupmappa(interaction: discord.Interaction):
     )
     embed_hub.set_footer(text="Tokyo Horizon RP | Import/Export — Porto di Los Santos")
     try:
-        file_hub = discord.File("attached_assets/IMG_0364_1781815292524.jpeg", filename="hub.jpeg")
+        file_hub = discord.File("attached_assets/IMG_0448_1782160332123.jpeg", filename="hub.jpeg")
         embed_hub.set_image(url="attachment://hub.jpeg")
         await interaction.followup.send(embed=embed_hub, file=file_hub)
     except FileNotFoundError:
@@ -7395,7 +7395,12 @@ async def startlavoro(interaction: discord.Interaction, lavoro: app_commands.Cho
             color=discord.Color.from_rgb(30, 100, 200),
         )
         embed.set_footer(text=f"Tokyo Horizon RP | Turno polizia iniziato • {discord.utils.utcnow().strftime('%H:%M')} UTC")
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            file_pol = discord.File("attached_assets/IMG_0447_1782160332123.jpeg", filename="questura.jpeg")
+            embed.set_image(url="attachment://questura.jpeg")
+            await interaction.followup.send(embed=embed, file=file_pol, ephemeral=True)
+        except FileNotFoundError:
+            await interaction.followup.send(embed=embed, ephemeral=True)
         try:
             ora_it = discord.utils.utcnow().strftime("%H:%M")
             embed_pub = discord.Embed(
