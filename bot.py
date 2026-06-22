@@ -7261,6 +7261,18 @@ async def setupmappa(interaction: discord.Interaction):
     except FileNotFoundError:
         await interaction.followup.send(embed=embed_hub)
 
+    # Seconda foto — panoramica del porto
+    try:
+        embed_porto = discord.Embed(
+            description="📍 **Porto di Los Santos** — zona di partenza per tutti i turni Import/Export",
+            color=discord.Color.from_rgb(255, 140, 0),
+        )
+        file_porto = discord.File("attached_assets/IMG_0364_1781815292524.jpeg", filename="porto.jpeg")
+        embed_porto.set_image(url="attachment://porto.jpeg")
+        await interaction.channel.send(embed=embed_porto, file=file_porto)
+    except FileNotFoundError:
+        pass
+
     # Conferma silenziosa allo staff
     await interaction.channel.send(
         f"✅ Canale Import/Export configurato da {interaction.user.mention}.",
