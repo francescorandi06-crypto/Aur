@@ -7828,7 +7828,12 @@ async def regolamentipolizia(interaction: discord.Interaction):
         color=discord.Color.from_rgb(30, 100, 200),
     )
     embed.set_footer(text="Tokyo Horizon RP | Regolamento Polizia — Rispetta sempre le regole del server")
-    await interaction.followup.send(embed=embed)
+    try:
+        file_q = discord.File("attached_assets/IMG_0447_1782160332123.jpeg", filename="questura.jpeg")
+        embed.set_image(url="attachment://questura.jpeg")
+        await interaction.followup.send(embed=embed, file=file_q)
+    except FileNotFoundError:
+        await interaction.followup.send(embed=embed)
     print(f"[POLIZIA] Regolamento pubblicato in #{interaction.channel.name} da {interaction.user}")
 
 
