@@ -7281,6 +7281,45 @@ async def setupmappa(interaction: discord.Interaction):
     print(f"[IMPORTEXPORT] Hub pubblicato in #{interaction.channel.name} da {interaction.user}")
 
 
+@bot.tree.command(name="setupquestura", description="[MOD] Pubblica la posizione della Questura in questo canale")
+async def setupquestura(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=False): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="🚔 QUESTURA — Punto di Raduno Polizia",
+        description=(
+            "📍 **Posizione ufficiale della Questura di Los Santos**\n\n"
+            "Tutti i poliziotti **iniziano e terminano il turno** dalla Questura.\n"
+            "Prima di usare `/startlavoro` raggiungi questo edificio in RP.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**🎮 COME INIZIARE IL TURNO:**\n"
+            "1️⃣ Raggiungi la **Questura** con il tuo personaggio\n"
+            "2️⃣ Usa `/startlavoro` → scegli **Poliziotto**\n"
+            "3️⃣ Il bot ti assegna la zona di pattugliamento\n"
+            "4️⃣ Al termine del turno usa `/finelavoro`\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "💰 **Paga:** `300€/ora` · max `1.800€` (saturazione a 6h) | ⏱️ Max `6 ore` per turno"
+        ),
+        color=discord.Color.from_rgb(30, 100, 200),
+    )
+    embed.set_footer(text="Tokyo Horizon RP | Polizia — Questura di Los Santos")
+    try:
+        file_q = discord.File("attached_assets/IMG_0447_1782160332123.jpeg", filename="questura.jpeg")
+        embed.set_image(url="attachment://questura.jpeg")
+        await interaction.followup.send(embed=embed, file=file_q)
+    except FileNotFoundError:
+        await interaction.followup.send(embed=embed)
+
+    await interaction.channel.send(
+        f"✅ Canale Questura configurato da {interaction.user.mention}.",
+        delete_after=5
+    )
+    print(f"[POLIZIA] Questura pubblicata in #{interaction.channel.name} da {interaction.user}")
+
+
 @bot.tree.command(name="startlavoro", description="Inizia il tuo turno di lavoro e ricevi la destinazione")
 @app_commands.describe(lavoro="Il tipo di lavoro che vuoi fare")
 @app_commands.choices(lavoro=[
