@@ -7860,9 +7860,7 @@ async def intervistafdo(interaction: discord.Interaction):
         color=discord.Color.from_rgb(0, 30, 100),
     )
     embed_intro.set_footer(text="Tokyo Horizon RP | Selezione FDO — Buona fortuna, candidato")
-    await interaction.followup.send(embed=embed_intro)
 
-    # --- Sezione I ---
     embed_s1 = discord.Embed(
         title="⚡ SEZIONE I — Codice d'Ingaggio e Uso della Forza",
         description=(
@@ -7878,10 +7876,7 @@ async def intervistafdo(interaction: discord.Interaction):
         ),
         color=discord.Color.from_rgb(220, 30, 30),
     )
-    embed_s1.set_footer(text="Sezione 1 di 3 | Rispondi in modo completo")
-    await interaction.channel.send(embed=embed_s1)
 
-    # --- Sezione II ---
     embed_s2 = discord.Embed(
         title="📡 SEZIONE II — Procedure Operative e Radio",
         description=(
@@ -7897,10 +7892,7 @@ async def intervistafdo(interaction: discord.Interaction):
         ),
         color=discord.Color.from_rgb(255, 140, 0),
     )
-    embed_s2.set_footer(text="Sezione 2 di 3 | Rispondi in modo completo")
-    await interaction.channel.send(embed=embed_s2)
 
-    # --- Sezione III ---
     embed_s3 = discord.Embed(
         title="⚖️ SEZIONE III — Diritti e Etica",
         description=(
@@ -7916,10 +7908,7 @@ async def intervistafdo(interaction: discord.Interaction):
         ),
         color=discord.Color.from_rgb(100, 0, 200),
     )
-    embed_s3.set_footer(text="Sezione 3 di 3 | Rispondi in modo completo")
-    await interaction.channel.send(embed=embed_s3)
 
-    # --- Embed chiusura ---
     embed_fine = discord.Embed(
         title="📌 ISTRUZIONI FINALI",
         description=(
@@ -7934,7 +7923,8 @@ async def intervistafdo(interaction: discord.Interaction):
         color=discord.Color.from_rgb(0, 180, 80),
     )
     embed_fine.set_footer(text="Tokyo Horizon RP | Buona fortuna 🚔")
-    await interaction.channel.send(embed=embed_fine)
+
+    await interaction.followup.send(embeds=[embed_intro, embed_s1, embed_s2, embed_s3, embed_fine])
     print(f"[POLIZIA] Intervista FDO pubblicata in #{interaction.channel.name} da {interaction.user}")
 
 
