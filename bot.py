@@ -7837,6 +7837,107 @@ async def regolamentipolizia(interaction: discord.Interaction):
     print(f"[POLIZIA] Regolamento pubblicato in #{interaction.channel.name} da {interaction.user}")
 
 
+@bot.tree.command(name="intervistafdo", description="[MOD] Pubblica il protocollo di selezione FDO in questo canale")
+async def intervistafdo(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=False): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+
+    # --- Embed apertura ---
+    embed_intro = discord.Embed(
+        title="📋 PROTOCOLLO DI SELEZIONE — INTERVISTA FDO",
+        description=(
+            "╔══════════════════════════════╗\n"
+            "       🚔 **FORZE DELL'ORDINE** 🚔\n"
+            "╚══════════════════════════════╝\n\n"
+            "Benvenuto nella fase di selezione per entrare nelle **Forze dell'Ordine** di Tokyo Horizon RP.\n\n"
+            "🔴 **ATTENZIONE:** Il candidato deve rispondere **correttamente e in modo completo** a **tutte e 9 le domande**.\n"
+            "Risposte incomplete, superficiali o errate comportano la **bocciatura immediata** del candidato.\n\n"
+            "⏱️ Prenditi il tempo necessario — qualità prima della velocità.\n"
+            "📌 Le domande sono divise in **3 sezioni tematiche**."
+        ),
+        color=discord.Color.from_rgb(0, 30, 100),
+    )
+    embed_intro.set_footer(text="Tokyo Horizon RP | Selezione FDO — Buona fortuna, candidato")
+    await interaction.followup.send(embed=embed_intro)
+
+    # --- Sezione I ---
+    embed_s1 = discord.Embed(
+        title="⚡ SEZIONE I — Codice d'Ingaggio e Uso della Forza",
+        description=(
+            "🔫 **Domanda 1 — Scenario Letale**\n"
+            "┃ *In quali **tre casi specifici** è autorizzato l'uso delle armi da fuoco letali,*\n"
+            "┃ *nel rispetto del principio di **proporzionalità** della minaccia?*\n\n"
+            "⚡ **Domanda 2 — Utilizzo del Taser**\n"
+            "┃ *Quali sono le **limitazioni operative** nell'uso del Taser per garantire*\n"
+            "┃ *la sicurezza del sospettato e prevenire bug grafici?*\n\n"
+            "🚗 **Domanda 3 — Speronamento Tattico (PIT)**\n"
+            "┃ *Quali sono le **condizioni vincolanti** per eseguire un PIT in sicurezza*\n"
+            "┃ *durante un inseguimento?*"
+        ),
+        color=discord.Color.from_rgb(220, 30, 30),
+    )
+    embed_s1.set_footer(text="Sezione 1 di 3 | Rispondi in modo completo")
+    await interaction.channel.send(embed=embed_s1)
+
+    # --- Sezione II ---
+    embed_s2 = discord.Embed(
+        title="📡 SEZIONE II — Procedure Operative e Radio",
+        description=(
+            "📻 **Domanda 4 — Protocollo Radio**\n"
+            "┃ *Descrivi la distinzione tra **Codice 1, 2 e 3** e come deve variare*\n"
+            "┃ *il comportamento radio in ciascuna situazione.*\n\n"
+            "🚔 **Domanda 5 — Obbligo di Intervento**\n"
+            "┃ *Qual è la responsabilità operativa di fronte a una **violazione del codice*\n"
+            "┃ *della strada** o a un **veicolo in fuga**?*\n\n"
+            "💥 **Domanda 6 — Gestione Incidenti**\n"
+            "┃ *In caso di impatto violento durante un inseguimento, quale procedura*\n"
+            "┃ *impone la **'Crash-Rule'** per mantenere il realismo dei danni?*"
+        ),
+        color=discord.Color.from_rgb(255, 140, 0),
+    )
+    embed_s2.set_footer(text="Sezione 2 di 3 | Rispondi in modo completo")
+    await interaction.channel.send(embed=embed_s2)
+
+    # --- Sezione III ---
+    embed_s3 = discord.Embed(
+        title="⚖️ SEZIONE III — Diritti e Etica",
+        description=(
+            "🔒 **Domanda 7 — Diritti del Fermato**\n"
+            "┃ *Dopo aver ammanettato un sospettato, quali sono gli **obblighi procedurali***\n"
+            "┃ *prima di procedere all'incarcerazione?*\n\n"
+            "💰 **Domanda 8 — Integrità Professionale**\n"
+            "┃ *In base al regolamento anticorruzione, quali sono le **conseguenze***\n"
+            "┃ *per un agente che riceve denaro o favori dalla criminalità (Corruzione Propria)?*\n\n"
+            "🚫 **Domanda 9 — Abuso di Potere**\n"
+            "┃ *Cosa si intende per **'Abuso di Potere'** secondo il regolamento*\n"
+            "┃ *e quali ne sono le **sanzioni**?*"
+        ),
+        color=discord.Color.from_rgb(100, 0, 200),
+    )
+    embed_s3.set_footer(text="Sezione 3 di 3 | Rispondi in modo completo")
+    await interaction.channel.send(embed=embed_s3)
+
+    # --- Embed chiusura ---
+    embed_fine = discord.Embed(
+        title="📌 ISTRUZIONI FINALI",
+        description=(
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "⚠️ **Il candidato deve rispondere a TUTTE LE 9 DOMANDE.**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "✅ Risposte complete e corrette → **ammissione al corpo**\n"
+            "❌ Risposte incomplete o errate → **bocciatura immediata**\n\n"
+            "🕐 Non c'è limite di tempo, ma le risposte devono essere **precise e motivate**.\n"
+            "🔕 Attendi che il candidato risponda prima di procedere alla valutazione."
+        ),
+        color=discord.Color.from_rgb(0, 180, 80),
+    )
+    embed_fine.set_footer(text="Tokyo Horizon RP | Buona fortuna 🚔")
+    await interaction.channel.send(embed=embed_fine)
+    print(f"[POLIZIA] Intervista FDO pubblicata in #{interaction.channel.name} da {interaction.user}")
+
+
 @bot.tree.command(name="regolamentisanitari", description="[MOD] Pubblica il regolamento ufficiale del Soccorso Medico in questo canale")
 async def regolamentisanitari(interaction: discord.Interaction):
     if not await safe_defer(interaction, ephemeral=False): return
