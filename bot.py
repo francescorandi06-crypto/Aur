@@ -7928,6 +7928,96 @@ async def intervistafdo(interaction: discord.Interaction):
     print(f"[POLIZIA] Intervista FDO pubblicata in #{interaction.channel.name} da {interaction.user}")
 
 
+@bot.tree.command(name="intervistaconcessionario", description="[MOD] Pubblica il protocollo di selezione Concessionario in questo canale")
+async def intervistaconcessionario(interaction: discord.Interaction):
+    if not await safe_defer(interaction, ephemeral=False): return
+    if not ha_permessi_staff(interaction):
+        await interaction.followup.send("❌ Non hai i permessi per usare questo comando.", ephemeral=True)
+        return
+
+    embed_intro = discord.Embed(
+        title="🏎️ PROTOCOLLO DI SELEZIONE — CONCESSIONARIO",
+        description=(
+            "╔══════════════════════════════╗\n"
+            "     🚗 **CONCESSIONARIA** 🚗\n"
+            "╚══════════════════════════════╝\n\n"
+            "Benvenuto nella fase di selezione per lavorare nella **Concessionaria** di Tokyo Horizon RP.\n\n"
+            "🔴 **ATTENZIONE:** Il candidato deve rispondere **correttamente e in modo completo** a **tutte e 9 le domande**.\n"
+            "Risposte incomplete, superficiali o errate comportano la **bocciatura immediata** del candidato.\n\n"
+            "⏱️ Prenditi il tempo necessario — qualità prima della velocità.\n"
+            "📌 Le domande sono divise in **3 sezioni tematiche**."
+        ),
+        color=discord.Color.from_rgb(20, 120, 40),
+    )
+    embed_intro.set_footer(text="Tokyo Horizon RP | Selezione Concessionario — Buona fortuna, candidato")
+
+    embed_s1 = discord.Embed(
+        title="🚗 SEZIONE I — Conoscenza Veicoli e Catalogo",
+        description=(
+            "🏎️ **Domanda 1 — Categorie Veicoli**\n"
+            "┃ *Quali sono le principali **categorie di veicoli** disponibili in concessionaria*\n"
+            "┃ *(es. berlina, SUV, sportiva, moto) e come le presenteresti a un cliente?*\n\n"
+            "🔧 **Domanda 2 — Caratteristiche Tecniche**\n"
+            "┃ *Se un cliente ti chiede la differenza tra un veicolo **ad alte prestazioni***\n"
+            "┃ *e un veicolo **standard**, cosa gli spieghi in termini di guida RP?*\n\n"
+            "💎 **Domanda 3 — Veicoli Premium**\n"
+            "┃ *Come gestisci la presentazione di un veicolo di **fascia alta**?*\n"
+            "┃ *Descrivi l'approccio con il cliente e cosa metti in risalto.*"
+        ),
+        color=discord.Color.from_rgb(220, 160, 0),
+    )
+
+    embed_s2 = discord.Embed(
+        title="🤝 SEZIONE II — Gestione Cliente e Processo di Vendita",
+        description=(
+            "👋 **Domanda 4 — Accoglienza**\n"
+            "┃ *Come accogli un cliente che entra in concessionaria per la prima volta?*\n"
+            "┃ *Descrivi l'approccio RP dall'entrata fino alla proposta veicolo.*\n\n"
+            "💬 **Domanda 5 — Gestione Obiezioni**\n"
+            "┃ *Un cliente dice che il prezzo è troppo alto. Come gestisci la situazione*\n"
+            "┃ *in RP senza scontare il prezzo ufficiale?*\n\n"
+            "💰 **Domanda 6 — Procedura di Acquisto**\n"
+            "┃ *Descrivi passo per passo la **procedura di vendita** da seguire*\n"
+            "┃ *dal momento in cui il cliente sceglie il veicolo fino alla consegna.*"
+        ),
+        color=discord.Color.from_rgb(0, 160, 220),
+    )
+
+    embed_s3 = discord.Embed(
+        title="📋 SEZIONE III — Condotta Professionale e RP",
+        description=(
+            "🎭 **Domanda 7 — Comportamento in Servizio**\n"
+            "┃ *Quali sono le regole di **condotta professionale** che un concessionario*\n"
+            "┃ *deve rispettare durante il turno? (abbigliamento, linguaggio, atteggiamento)*\n\n"
+            "⚠️ **Domanda 8 — Situazioni Difficili**\n"
+            "┃ *Un cliente inizia a comportarsi in modo aggressivo o inappropriato in showroom.*\n"
+            "┃ *Come gestisci la situazione in RP senza rompere il roleplay?*\n\n"
+            "🔐 **Domanda 9 — Gestione Cassa e Listino**\n"
+            "┃ *Puoi modificare autonomamente i prezzi del listino veicoli?*\n"
+            "┃ *In quali casi puoi applicare condizioni speciali e chi deve autorizzarle?*"
+        ),
+        color=discord.Color.from_rgb(180, 0, 180),
+    )
+
+    embed_fine = discord.Embed(
+        title="📌 ISTRUZIONI FINALI",
+        description=(
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "⚠️ **Il candidato deve rispondere a TUTTE LE 9 DOMANDE.**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "✅ Risposte complete e corrette → **assunzione in concessionaria**\n"
+            "❌ Risposte incomplete o errate → **bocciatura immediata**\n\n"
+            "🕐 Non c'è limite di tempo, ma le risposte devono essere **precise e motivate**.\n"
+            "🔕 Attendi che il candidato risponda prima di procedere alla valutazione."
+        ),
+        color=discord.Color.from_rgb(0, 180, 80),
+    )
+    embed_fine.set_footer(text="Tokyo Horizon RP | Buona fortuna 🏎️")
+
+    await interaction.followup.send(embeds=[embed_intro, embed_s1, embed_s2, embed_s3, embed_fine])
+    print(f"[CONCESSIONARIO] Intervista pubblicata in #{interaction.channel.name} da {interaction.user}")
+
+
 @bot.tree.command(name="regolamentisanitari", description="[MOD] Pubblica il regolamento ufficiale del Soccorso Medico in questo canale")
 async def regolamentisanitari(interaction: discord.Interaction):
     if not await safe_defer(interaction, ephemeral=False): return
